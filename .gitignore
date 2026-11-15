@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# scratch screenshots (only final, approved shots are committed under art/style/refs/)
+.shots/
+shots-tmp/
+test-results/
+playwright-report/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
