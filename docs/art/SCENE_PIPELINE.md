@@ -61,7 +61,7 @@ web/
   levels/ch3.json
 ```
 
-素材包的原始壓縮檔放在 repo 外（`Claude_repo/asset_drop/`，已經下載好 Quaternius 與 Kenney），repo 只收轉好、實際用到的 GLB。
+素材包的原始壓縮檔放在 repo 外（每個人自己下載到例如 `../asset_drop/`），repo 只收轉好、實際用到的 GLB。實際要貼給 Fable 的任務見 [FABLE_BUILD_PLAN.md](FABLE_BUILD_PLAN.md)。
 
 ## 4. 前置工作（人做，Fable 開工前）
 
@@ -97,7 +97,7 @@ web/
 
 ### 第 2 步：轉素材包
 
-從 `asset_drop/` 挑要用的模型轉成 GLB：枯樹、岩石（Nature）、廢車與路障（ZombieEnvironment、ZombieVehicles）、室內家具（KenneyFurniture）。轉換時統一換成陰森色調的材質（降飽和、加髒污），讓不同來源看起來是同一套。授權記錄寫進 `art/CREDITS.md`。
+從素材資料夾挑要用的模型轉成 GLB：枯樹、岩石（Nature）、廢車與路障（ZombieEnvironment、ZombieVehicles）、室內家具（KenneyFurniture）。轉換時統一換成陰森色調的材質（降飽和、加髒污），讓不同來源看起來是同一套。授權記錄寫進 `art/CREDITS.md`。
 
 ### 第 3 步：故事專屬資產（Fable 寫 Blender 腳本）
 
