@@ -86,8 +86,6 @@
 
       // Level: collision + visuals.
       this.propFactory = new Game.PropFactory(this.style);
-      Game.GreyboxProps.registerAll(this.propFactory);
-      Game.PlazaProps.registerAll(this.propFactory);
       this.builder = new Game.SceneBuilder(this.propFactory, this.style.greybox);
       this.built = this.builder.build(level, { debug: options.debug, dummies: options.dummies });
       this.scene.add(this.built.root);

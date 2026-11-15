@@ -13,9 +13,27 @@
       /** Glowing materials and small coloured lights (accent, alarm, screens). */
       this.emitters = new Game.Emitters(style);
       this._builders = new Map();
+      this._owners = new Map();
       this._materials = new Map();
       /** Prop names that had no builder and were replaced by a fallback box. */
       this.unknownNames = new Set();
+
+      // Every prop set that announced itself (web/js/props/*.js) registers its builders.
+      PropFactory.sets.forEach((set) => {
+        this._registering = set.name;
+        set.register(this);
+      });
+      this._registering = null;
+    }
+
+    /**
+     * Called once by each file in web/js/props/: adds its builders to every PropFactory.
+     * This is what lets a chapter add props without touching App.js or this file.
+     * @param {string} name      who owns these props, e.g. 'common', 'ch1'
+     * @param {(factory: PropFactory) => void} register
+     */
+    static registerSet(name, register) {
+      PropFactory.sets.push({ name, register });
     }
 
     /**
@@ -25,7 +43,15 @@
      * {w, h, d}, else a 1 m cube.
      */
     register(name, builder) {
+      const owner = this._registering || 'runtime';
+      if (this._builders.has(name)) {
+        console.warn(
+          '[props] "' + name + '" is registered by both ' + this._owners.get(name) + ' and ' +
+            owner + '; ' + owner + ' wins. A prop name must belong to one file.'
+        );
+      }
       this._builders.set(name, builder);
+      this._owners.set(name, owner);
       return this;
     }
 
@@ -76,9 +102,11 @@
     material(colorKey) {
       let material = this._materials.get(colorKey);
       if (!material) {
-        const hex = this.greybox[colorKey];
+        let hex = this.greybox[colorKey];
         if (typeof hex !== 'string') {
-          throw new Error('palette greybox.' + colorKey + ' is missing');
+          // e.g. a chapter's own colour key while the level is viewed with another palette block
+          console.warn('[props] palette greybox.' + colorKey + ' is missing; using greybox.prop');
+          hex = this.greybox.prop;
         }
         material = new THREE.MeshStandardMaterial({
           color: Game.Palette.color(hex),
@@ -129,6 +157,9 @@
       return mesh;
     }
   }
+
+  /** Prop sets announced by web/js/props/*.js, in load order. */
+  PropFactory.sets = [];
 
   Game.PropFactory = PropFactory;
 })((window.Game = window.Game || {}));
