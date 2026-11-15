@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "name": "test",
+  "title": "Skeleton test room",
+  "palette": "default",
+
+  "bounds": { "x": 0, "z": 0, "w": 30, "d": 30 },
+
+  "colliders": [
+    { "id": "wall_n", "x": 0, "z": -14.75, "w": 30, "d": 0.5, "h": 3 },
+    { "id": "wall_s", "x": 0, "z": 14.75, "w": 30, "d": 0.5, "h": 3 },
+    { "id": "wall_w", "x": -14.75, "z": 0, "w": 0.5, "d": 29, "h": 3 },
+    { "id": "wall_e", "x": 14.75, "z": 0, "w": 0.5, "d": 29, "h": 3 },
+
+    { "id": "block_tall", "x": -4, "z": -5, "w": 2, "d": 2, "h": 2.4 },
+    { "id": "low_wall", "x": 4, "z": -7, "w": 4, "d": 0.8, "h": 1 },
+    { "id": "thin_wall", "x": 7, "z": 1, "w": 0.2, "d": 6, "h": 2.5 },
+
+    { "id": "post_l", "x": -2.5, "z": -1, "w": 0.5, "d": 0.5, "h": 2.4 },
+    { "id": "post_r", "x": 2.5, "z": -1, "w": 0.5, "d": 0.5, "h": 2.4 },
+    { "id": "beam", "x": 0, "z": -1, "w": 5.5, "d": 0.5, "h": 0.4, "y": 2.4 },
+
+    { "id": "crate_a", "x": -6, "z": 3, "w": 1, "d": 1, "h": 1 },
+    { "id": "crate_b", "x": -7.2, "z": 3.3, "w": 1.2, "d": 1.2, "h": 1.2 },
+    { "id": "generator", "x": 9, "z": -9, "w": 2.2, "d": 1.2, "h": 1.4 },
+
+    { "id": "invisible_fence", "x": -10, "z": 8, "w": 4, "d": 0.3, "h": 2, "visible": false }
+  ],
+
+  "props": [
+    { "name": "pillar", "collider": "post_l" },
+    { "name": "pillar", "collider": "post_r" },
+    { "name": "crate", "collider": "crate_a" },
+    { "name": "crate", "collider": "crate_b", "rotY": 0 },
+    { "name": "generator", "collider": "generator", "rotY": 90 },
+    { "name": "debris", "x": -9, "y": 0, "z": -9, "rotY": 30 },
+    { "name": "crate", "x": 10.5, "y": 0, "z": 5, "rotY": 20, "scale": 0.6 }
+  ],
+
+  "spawns": {
+    "players": [
+      { "x": 0, "z": 10, "yaw": 0 },
+      { "x": -1.5, "z": 11, "yaw": 0 },
+      { "x": 1.5, "z": 11, "yaw": 0 }
+    ],
+    "zombies": [
+      { "id": "north_west", "x": -12, "z": -12, "r": 1.5 },
+      { "id": "north_east", "x": 12, "z": -12, "r": 1.5 },
+      { "id": "north", "x": 0, "z": -13, "r": 2 }
+    ]
+  },
+
+  "bookmarks": [
+    { "name": "spawn", "pos": [0, 1.7, 10], "yaw": 0, "pitch": 0 },
+    { "name": "overview", "pos": [9, 6.5, 12], "lookAt": [-1, 0.5, -3] },
+    { "name": "gate", "pos": [-3.5, 1.7, 4], "lookAt": [0, 1.6, -1] },
+    { "name": "fallback", "pos": [5.5, 1.7, -5], "lookAt": [9, 0.7, -9] }
+  ]
+}
