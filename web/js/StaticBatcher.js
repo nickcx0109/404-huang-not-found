@@ -38,7 +38,16 @@
         root.add(merged);
         after -= meshes.length - 1;
       });
+      StaticBatcher._pruneEmptyGroups(root);
       return { before, after };
+    }
+
+    /** Removes groups that lost all their meshes to a batch. */
+    static _pruneEmptyGroups(object) {
+      object.children.slice().forEach((child) => {
+        StaticBatcher._pruneEmptyGroups(child);
+        if (child.type === 'Group' && child.children.length === 0) object.remove(child);
+      });
     }
 
     static isMergeable(mesh) {

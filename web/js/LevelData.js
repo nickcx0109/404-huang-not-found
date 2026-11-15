@@ -207,9 +207,21 @@
           z: v.number(p, 'z', path, collider ? { fallback: anchor.z } : undefined),
           rotY: v.number(p, 'rotY', path, { fallback: 0 }),
           scale: v.number(p, 'scale', path, { fallback: 1, positive: true }),
+          size: LevelData._readSize(p, v, path),
           collider: collider ? collider.id : null,
         });
       }).filter(Boolean);
+    }
+
+    /** Optional visual size [w, h, d] of a prop; null when the level does not give one. */
+    static _readSize(p, v, path) {
+      const size = v.vec3(p, 'size', path, false);
+      if (!size) return null;
+      if (size.some((n) => n <= 0)) {
+        v.error(path + '.size', 'must be [w, h, d], all > 0');
+        return null;
+      }
+      return Object.freeze({ w: size[0], h: size[1], d: size[2] });
     }
 
     static _readSpawns(raw, v) {

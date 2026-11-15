@@ -82,7 +82,8 @@
       this.atmosphere.configurePost(this.postfx);
 
       // Level: collision + visuals.
-      this.propFactory = new Game.PropFactory(this.style.greybox);
+      this.propFactory = new Game.PropFactory(this.style);
+      Game.GreyboxProps.registerAll(this.propFactory);
       this.builder = new Game.SceneBuilder(this.propFactory, this.style.greybox);
       this.built = this.builder.build(level, { debug: options.debug });
       this.scene.add(this.built.root);

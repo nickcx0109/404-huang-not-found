@@ -5,6 +5,9 @@
   'use strict';
 
   const GRID_TEXTURE_SIZE = 64; // px per 1 m ground cell
+  // The ground is drawn this far beyond the playable bounds, so that in open levels its edge
+  // lies behind the fog instead of showing up as a horizon line.
+  const GROUND_MARGIN = 60;
 
   class BuiltLevel {
     constructor(level) {
@@ -78,10 +81,15 @@
 
     _ground(level) {
       const b = level.bounds;
-      const geometry = new THREE.PlaneGeometry(b.w, b.d);
+      const width = b.w + GROUND_MARGIN * 2;
+      const depth = b.d + GROUND_MARGIN * 2;
+      const geometry = new THREE.PlaneGeometry(width, depth);
       geometry.rotateX(-Math.PI / 2);
       const texture = this._gridTexture();
-      texture.repeat.set(b.w, b.d);
+      texture.repeat.set(width, depth);
+      // Shift the texture so that grid lines fall on whole metres of level space.
+      const fraction = (n) => n - Math.floor(n);
+      texture.offset.set(fraction(b.x - width / 2), -fraction(b.z + depth / 2));
       const material = new THREE.MeshStandardMaterial({
         map: texture,
         roughness: this.greybox.roughness,

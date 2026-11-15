@@ -8,7 +8,7 @@
 node tools/serve.mjs
 ```
 
-打開 <http://localhost:8080/web/index.html?level=test>。`level` 是檔名去掉 `.json`，只能用英數字、`-`、`_`。
+打開 <http://localhost:8080/web/index.html?level=test>（氣氛樣板：<http://localhost:8080/web/index.html?level=mood&preset=medium>）。`level` 是檔名去掉 `.json`，只能用英數字、`-`、`_`。
 
 ## 座標
 
@@ -36,7 +36,8 @@ node tools/serve.mjs
   "props": [
     { "name": "crate", "collider": "crate_a" },
     { "name": "generator", "collider": "generator", "rotY": 90 },
-    { "name": "debris", "x": -9, "y": 0, "z": -9, "rotY": 30, "scale": 1 }
+    { "name": "debris", "x": -9, "y": 0, "z": -9, "rotY": 30, "scale": 1 },
+    { "name": "road", "x": 0, "y": 0, "z": 0, "size": [6, 0.04, 120] }
   ],
 
   "spawns": {
@@ -77,13 +78,14 @@ node tools/serve.mjs
 | `y` | 否 | 底部高度，預設 0（有 collider 時預設是 collider 的 `y`） |
 | `rotY` | 否 | 繞 Y 軸旋轉的角度，預設 0 |
 | `scale` | 否 | 等比例縮放，預設 1 |
+| `size` | 否 | `[寬, 高, 深]`，灰盒替身要畫多大。不寫就用 collider 的大小，也沒有 collider 就是 1 m。只影響外觀 |
 
 規則：
 
 - 沒有被任何道具指到的 collider，會直接畫成 collider 大小的灰色方塊（灰盒）。
 - 被道具指到的 collider 不再另外畫，由那個道具負責外觀。
 - `PropFactory` 不認得的名稱會退回成灰色方塊：有 `collider` 就畫成碰撞盒的大小和位置（不套 `rotY`，因為碰撞盒不能轉），沒有就畫 1 m 的方塊。所以可以先把之後要用的名稱（`barricade`、`guard_booth`…）寫進去，等模型做好再換，碰撞不用動。
-- 目前內建的名稱只有 `crate`（方塊）和 `pillar`（圓柱），大小跟著 collider。新的名稱用 `PropFactory.register(name, builder)` 加。
+- 目前有灰盒替身的名稱（`web/js/GreyboxProps.js`）：`crate`（方塊）、`pillar`（圓柱）、`road`（路面，要給 `size`）、`tree`（枯樹）、`car_wreck`（廢車）、`escape_car`（尾燈會亮的車，用 palette 的重點色）。大小用 `size`，沒有就跟著 collider。新的名稱用 `PropFactory.register(name, builder)` 加。
 
 ### `spawns`（必填）
 
@@ -109,7 +111,7 @@ node tools/serve.mjs
 
 ### `bounds`（選填）
 
-可活動範圍的矩形（中心 `x`、`z`，大小 `w`、`d`），玩家走不出去，地板也鋪這麼大。不寫的話，用所有 collider 和出生點的範圍往外加 2 m。
+可活動範圍的矩形（中心 `x`、`z`，大小 `w`、`d`），玩家走不出去。不寫的話，用所有 collider 和出生點的範圍往外加 2 m。地板會比這個範圍多鋪 60 m，邊緣藏在霧後面。
 
 ### 其他欄位
 
@@ -126,7 +128,7 @@ node tools/serve.mjs
 | `level=<名稱>` | 讀 `web/levels/<名稱>.json`，預設 `test` |
 | `shot=<機位名稱>` | 截圖模式：相機放到該機位，不顯示操作提示，畫完一幀後設 `window.__ready = true`。顆粒固定，每次畫面都一樣 |
 | `palette=<區塊>` | 改用 palette.json 的另一個區塊（蓋過關卡的 `palette`） |
-| `preset=<名稱>` | 選該區塊 `presets` 裡的一組 |
+| `preset=<名稱>` | 選該區塊 `presets` 裡的一組。區塊有 `presets` 但還沒設 `defaultPreset` 時（例如還沒選定的 `mood`）一定要給 |
 | `debug=1` | 顯示碰撞盒外框（含看不見的）、出生點、出怪區、機位，左上角顯示位置和沒有模型的道具名稱 |
 | `perf=1` | 左上角顯示 FPS、draw call、三角面、燈數、解析度倍率 |
 | `scale=<數字>` | 解析度倍率，會被限制在 0.5～1.5。不給就用 `devicePixelRatio`，上限 1.5 |
@@ -136,6 +138,16 @@ node tools/serve.mjs
 走動模式：點一下畫面鎖定滑鼠，滑鼠看、`WASD` 走、`Shift` 跑、`F` 開關手電筒、`Esc` 放開滑鼠。
 
 ## 給截圖工具
+
+現成的工具是 `tools/art/shots.mjs`（會自己開、關 server）：
+
+```
+npm install
+npx playwright install chromium
+node tools/art/shots.mjs --level mood --presets subtle,medium,heavy --out art/style/refs/candidates
+```
+
+自己寫工具的話，頁面提供這些：
 
 ```js
 await page.goto('http://localhost:8080/web/index.html?level=test&shot=overview');
@@ -152,9 +164,10 @@ await page.waitForFunction(() => window.__ready || window.__error);
 LevelData ──▶ SceneBuilder ──▶ CollisionWorld   碰撞（只看 colliders）
 （讀取、驗證）      │
                    └──▶ PropFactory ──▶ mesh     外觀（道具名稱 → mesh，不認得就退回灰色方塊）
+                          ▲ GreyboxProps          還沒有模型前的灰盒替身（樹、車、路面…）
                    └──▶ StaticBatcher            同材質的靜態 mesh 合併，減少 draw call
 
-Palette（art/style/palette.json）──▶ Atmosphere ──▶ 霧、背景、半球光、月光
+Palette（art/style/palette.json）──▶ Atmosphere ──▶ 霧、背景、半球光、月光（霧色是「畫面上看到的顏色」）
                                                ──▶ Flashlight（玩家的 SpotLight）
                                                ──▶ PostFX（tone mapping、暗角、顆粒、1/4 解析度 bloom）
 
