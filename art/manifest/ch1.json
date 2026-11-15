@@ -1,0 +1,21 @@
+{
+  "_about": [
+    "Chapter 1 (find the car): the foggy mountain road.",
+    "One entry per asset. id = art/blender/<id>.py = web/assets/models/<id>.glb = the prop name used in levels.",
+    "class sets the triangle limit: small_prop 1500, large_prop 6000, module 3000, landmark 20000. maxTriangles (optional) lowers it.",
+    "size is [width X, height Y, depth Z] in metres, in game axes; the built model must match it within 10 %.",
+    "status: planned = not made yet (tools skip it), wip = being made (checked when its GLB exists), ready = approved; the game loads a model only when it is ready.",
+    "pivot (optional): \"custom\" when the origin is on the ground but not under the middle of the model (e.g. a lamp post with a long arm).",
+    "Owned by the chapter 1 team member."
+  ],
+  "chapter": "ch1",
+  "assets": [
+    { "id": "tree", "class": "small_prop", "source": "blender", "status": "planned", "notes": "枯樹；會重複上百次，面數越少越好" },
+    { "id": "road_segment_straight", "class": "module", "source": "blender", "status": "planned", "notes": "山路直線段，含路肩與裂縫，接縫要能無縫拼" },
+    { "id": "road_segment_curve", "class": "module", "source": "blender", "status": "planned", "notes": "山路彎道" },
+    { "id": "road_segment_slope", "class": "module", "source": "blender", "status": "planned", "notes": "山路上下坡" },
+    { "id": "guardrail", "class": "small_prop", "source": "blender", "status": "planned", "notes": "護欄" },
+    { "id": "guardrail_broken", "class": "small_prop", "source": "blender", "status": "planned", "notes": "撞壞的護欄" },
+    { "id": "escape_car", "class": "large_prop", "source": "blender", "status": "planned", "size": [1.8, 1.4, 4.2], "notes": "路盡頭的車；尾燈用 glow=\"accent\"" }
+  ]
+}

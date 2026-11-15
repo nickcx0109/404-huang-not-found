@@ -3,6 +3,7 @@
   "name": "test",
   "title": "Skeleton test room",
   "palette": "default",
+  "manifests": ["test"],
 
   "bounds": { "x": 0, "z": 0, "w": 30, "d": 30 },
 
@@ -24,7 +25,11 @@
     { "id": "crate_b", "x": -7.2, "z": 3.3, "w": 1.2, "d": 1.2, "h": 1.2 },
     { "id": "generator", "x": 9, "z": -9, "w": 2.2, "d": 1.2, "h": 1.4 },
 
-    { "id": "invisible_fence", "x": -10, "z": 8, "w": 4, "d": 0.3, "h": 2, "visible": false }
+    { "id": "invisible_fence", "x": -10, "z": 8, "w": 4, "d": 0.3, "h": 2, "visible": false },
+
+    { "id": "model_crate_a", "x": 11.6, "z": 13.2, "w": 1, "d": 1, "h": 1 },
+    { "id": "model_crate_b", "x": 12.8, "z": 13.4, "w": 1, "d": 1, "h": 1 },
+    { "id": "model_crate_c", "x": 12.2, "z": 13.3, "w": 1, "d": 1, "h": 1, "y": 1 }
   ],
 
   "props": [
@@ -34,7 +39,12 @@
     { "name": "crate", "collider": "crate_b", "rotY": 0 },
     { "name": "generator", "collider": "generator", "rotY": 90 },
     { "name": "debris", "x": -9, "y": 0, "z": -9, "rotY": 30 },
-    { "name": "crate", "x": 10.5, "y": 0, "z": 5, "rotY": 20, "scale": 0.6 }
+    { "name": "crate", "x": 10.5, "y": 0, "z": 5, "rotY": 20, "scale": 0.6 },
+
+    { "name": "test_crate", "collider": "model_crate_a" },
+    { "name": "test_crate", "collider": "model_crate_b" },
+    { "name": "test_crate", "collider": "model_crate_c" },
+    { "name": "test_crate", "x": 10.2, "y": 0, "z": 13.5, "rotY": 30, "scale": 0.6 }
   ],
 
   "spawns": {
@@ -54,6 +64,7 @@
     { "name": "spawn", "pos": [0, 1.7, 10], "yaw": 0, "pitch": 0 },
     { "name": "overview", "pos": [9, 6.5, 12], "lookAt": [-1, 0.5, -3] },
     { "name": "gate", "pos": [-3.5, 1.7, 4], "lookAt": [0, 1.6, -1] },
-    { "name": "fallback", "pos": [5.5, 1.7, -5], "lookAt": [9, 0.7, -9] }
+    { "name": "fallback", "pos": [5.5, 1.7, -5], "lookAt": [9, 0.7, -9] },
+    { "name": "crates", "pos": [9.2, 1.7, 10], "lookAt": [12, 0.9, 13.3] }
   ]
 }

@@ -7,7 +7,10 @@
 
   const CONFIG = Object.freeze({
     paletteUrl: '../art/style/palette.json',
+    paletteChaptersUrl: '../art/style/chapters/',
     levelsUrl: 'levels/',
+    manifestUrl: '../art/manifest/',
+    modelsUrl: 'assets/models/',
     defaultLevel: 'test',
     maxPixelRatio: 1.5, // PERFORMANCE_PLAN 3.2-5
     minPixelRatio: 0.5,
@@ -28,6 +31,11 @@
       this.debug = flag('debug');
       this.perf = flag('perf');
       this.flashlight = params.get('flashlight') !== '0';
+      this.dummies = flag('dummies');
+      // ?models=0 shows the greybox stand-ins even where a model exists.
+      this.models = params.get('models') !== '0';
+      // Seconds on the animation clock for ?shot= (flicker and beacons are functions of time).
+      this.time = parseFloat(params.get('t')) || 0;
       this.spawn = Math.max(0, parseInt(params.get('spawn') || '0', 10) || 0);
       const scale = parseFloat(params.get('scale'));
       this.scale = Number.isFinite(scale) ? scale : null;
@@ -60,10 +68,11 @@
     async start() {
       const options = this.options;
       const [palette, level] = await Promise.all([
-        Game.Palette.load(CONFIG.paletteUrl),
+        Game.Palette.load(CONFIG.paletteUrl, CONFIG.paletteChaptersUrl),
         Game.LevelData.load(options.level, CONFIG.levelsUrl),
       ]);
       this.level = level;
+      await palette.ensure(options.palette || level.palette);
       this.style = palette.resolve(options.palette || level.palette, options.preset);
 
       this._createRenderer();
@@ -82,12 +91,16 @@
       this.atmosphere.configurePost(this.postfx);
 
       // Level: collision + visuals.
-      this.propFactory = new Game.PropFactory(this.style);
-      Game.GreyboxProps.registerAll(this.propFactory);
+      this.models = options.models
+        ? new Game.ModelLibrary(CONFIG.manifestUrl, CONFIG.modelsUrl)
+        : Game.ModelLibrary.none();
+      await this.models.load(options.models ? level.manifests : [], level.props.map((p) => p.name));
+      this.propFactory = new Game.PropFactory(this.style, this.models);
       this.builder = new Game.SceneBuilder(this.propFactory, this.style.greybox);
-      this.built = this.builder.build(level, { debug: options.debug });
+      this.built = this.builder.build(level, { debug: options.debug, dummies: options.dummies });
       this.scene.add(this.built.root);
       if (this.built.debug) this.scene.add(this.built.debug);
+      if (this.built.dummies) this.scene.add(this.built.dummies);
       this._reportLevelNotes();
 
       this.player = new Game.PlayerController(
@@ -136,16 +149,34 @@
       this.postfx.resize();
       this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
-      if (this._still) this._render(0);
+      if (this._still) this._render(this.options.time);
     }
 
     _reportLevelNotes() {
       this.level.warnings.forEach((w) => console.warn('[level] ' + w));
+      if (this.options.debug) {
+        this.unreachable = App.findUnreachable(this.level, this.built.collision);
+        this.unreachable.forEach((name) => console.warn('[level] cannot be reached from the first player spawn: ' + name));
+      }
       if (this.built.unknownProps.length > 0) {
         console.warn(
           '[level] props without a model (drawn as grey boxes): ' + this.built.unknownProps.join(', ')
         );
       }
+    }
+
+    /** Zombie spawns and markers that have no walking route to the first player spawn. */
+    static findUnreachable(level, collision) {
+      const finder = new Game.PathFinder(collision);
+      const home = level.spawns.players[0];
+      const missing = [];
+      const check = (label, point) => {
+        if (!finder.findPath(home.x, home.z, point.x, point.z)) missing.push(label);
+      };
+      level.spawns.players.slice(1).forEach((s, i) => check('player spawn ' + (i + 1), s));
+      level.spawns.zombies.forEach((s) => check('zombie spawn ' + s.id, s));
+      level.markers.forEach((m) => check('marker ' + m.id, m));
+      return missing;
     }
 
     // ---- modes ---------------------------------------------------------------
@@ -190,7 +221,8 @@
       }
       this.hud.setStartVisible(false);
       this._still = true;
-      this._render(0); // time 0: the grain is identical on every run
+      this.built.update(this.options.time);
+      this._render(this.options.time); // fixed time: the same frame on every run
       this._updateInfo();
       // Ready once the frame has been presented; the timer covers tabs where rAF is paused.
       const ready = () => {
@@ -210,6 +242,7 @@
 
       this.player.update(dt);
       this.atmosphere.update(dt, now / 1000);
+      this.built.update(now / 1000);
       this._render(now / 1000);
 
       this._frameCount++;
@@ -263,10 +296,17 @@
             '  yaw ' + THREE.MathUtils.radToDeg(p.yaw).toFixed(0) +
             '  pitch ' + THREE.MathUtils.radToDeg(p.pitch).toFixed(0)
         );
+        if (this.built.modelProps.size > 0) {
+          lines.push('models: ' + Array.from(this.built.modelProps, (e) => e[0] + ' x' + e[1]).join(', '));
+        }
+        if (this.models.failed.length > 0) {
+          lines.push('model failed, stand-in used: ' + this.models.failed.join(', '));
+        }
         if (this.built.unknownProps.length > 0) {
           lines.push('no model: ' + this.built.unknownProps.join(', '));
         }
         this.level.warnings.forEach((w) => lines.push('warning: ' + w));
+        (this.unreachable || []).forEach((name) => lines.push('unreachable: ' + name));
       }
       this.hud.setInfo(lines);
     }

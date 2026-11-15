@@ -8,6 +8,9 @@
   // The ground is drawn this far beyond the playable bounds, so that in open levels its edge
   // lies behind the fog instead of showing up as a horizon line.
   const GROUND_MARGIN = 60;
+  // Stand-in figures for ?dummies=1: how far along the route from a zombie spawn to the players.
+  const DUMMY_STEPS = [0.15, 0.4, 0.65];
+  const DUMMY_SIZE = Object.freeze({ w: 0.55, h: 1.75, d: 0.35 });
 
   class BuiltLevel {
     constructor(level) {
@@ -17,10 +20,23 @@
       /** Everything visible that belongs to the level. */
       this.root = new THREE.Group();
       this.root.name = 'level:' + level.name;
-      /** Debug helpers (spawns, bookmarks, collider outlines). Null unless requested. */
+      /** Debug helpers (spawns, markers, bookmarks, collider outlines). Null unless requested. */
       this.debug = null;
+      /** Human-sized stand-ins on the zombies' routes, to judge visibility. Null unless requested. */
+      this.dummies = null;
+      /** @type {Game.Emitters} animated lights and glowing materials of the props */
+      this.emitters = null;
       this.unknownProps = [];
       this.meshCount = { before: 0, after: 0 };
+      /** Props drawn with a GLB model: name -> how many. */
+      this.modelProps = new Map();
+      /** Result of ModelInstancer: instanced meshes created and the meshes they replace. */
+      this.instanced = { parts: 0, instances: 0 };
+    }
+
+    /** Per-frame update of animated props (sign flicker, rotating beacons). */
+    update(time) {
+      if (this.emitters) this.emitters.update(time);
     }
   }
 
@@ -36,15 +52,19 @@
 
     /**
      * @param {Game.LevelData} level
-     * @param {{debug?:boolean}} [options]
+     * @param {{debug?:boolean, dummies?:boolean}} [options]
      * @returns {BuiltLevel}
      */
     build(level, options) {
       const built = new BuiltLevel(level);
       built.collision = this.buildCollision(level);
       this.buildVisuals(level, built);
+      built.emitters = this.props.emitters;
       if (options && options.debug) {
         built.debug = this.buildDebugHelpers(level);
+      }
+      if (options && options.dummies) {
+        built.dummies = this.buildDummies(level, built.collision);
       }
       return built;
     }
@@ -76,7 +96,9 @@
       });
 
       built.unknownProps = Array.from(this.props.unknownNames);
+      built.modelProps = new Map(this.props.modelCounts);
       built.meshCount = Game.StaticBatcher.merge(root);
+      built.instanced = Game.ModelInstancer.instance(root);
     }
 
     _ground(level) {
@@ -92,7 +114,11 @@
       texture.offset.set(fraction(b.x - width / 2), -fraction(b.z + depth / 2));
       const material = new THREE.MeshStandardMaterial({
         map: texture,
-        roughness: this.greybox.roughness,
+        // A wet road is smoother than the props standing on it.
+        roughness:
+          this.greybox.groundRoughness === undefined
+            ? this.greybox.roughness
+            : this.greybox.groundRoughness,
         metalness: 0,
       });
       material.name = 'greybox:ground';
@@ -123,6 +149,30 @@
 
     // ---- debug ---------------------------------------------------------------
 
+    /**
+     * Zombie-sized boxes on the walking route from each zombie spawn to the players, so a
+     * screenshot shows whether an enemy would be visible there in the current atmosphere.
+     */
+    buildDummies(level, collision) {
+      const group = new THREE.Group();
+      group.name = 'dummies';
+      const finder = new Game.PathFinder(collision);
+      const target = level.spawns.players[0];
+      level.spawns.zombies.forEach((spawn) => {
+        const path = finder.findPath(spawn.x, spawn.z, target.x, target.z);
+        if (!path) return;
+        DUMMY_STEPS.forEach((fraction) => {
+          const at = Game.PathFinder.pointAlong(path, fraction);
+          const dummy = this.props.box(DUMMY_SIZE, 'dummy');
+          dummy.position.set(at.x, 0, at.z);
+          dummy.rotation.y = Math.atan2(at.dx, at.dz);
+          group.add(dummy);
+        });
+      });
+      Game.StaticBatcher.merge(group);
+      return group;
+    }
+
     /** Spawn points, bookmarks and the outline of every collider (including invisible ones). */
     buildDebugHelpers(level) {
       const markers = this.greybox.markers;
@@ -149,6 +199,16 @@
         const ring = new THREE.Mesh(new THREE.RingGeometry(r * 0.85, r, 24), zombieMaterial);
         ring.rotation.x = -Math.PI / 2;
         ring.position.set(s.x, 0.05, s.z);
+        group.add(ring);
+      });
+
+      const markerMaterial = glow(markers.marker);
+      level.markers.forEach((m) => {
+        const r = Math.max(m.r, 0.3);
+        const ring = new THREE.Mesh(new THREE.RingGeometry(r * 0.8, r, 4), markerMaterial);
+        ring.rotation.x = -Math.PI / 2;
+        ring.rotation.z = Math.PI / 4;
+        ring.position.set(m.x, 0.05, m.z);
         group.add(ring);
       });
 

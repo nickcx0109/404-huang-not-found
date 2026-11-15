@@ -38,9 +38,13 @@
       );
       this.lights.add(this.hemisphere);
 
-      this.moon = new THREE.DirectionalLight(Game.Palette.color(s.moon.color), s.moon.intensity);
-      this.moon.position.fromArray(s.moon.direction).normalize().multiplyScalar(50);
-      this.lights.add(this.moon);
+      // Intensity 0 means "no moon": the light is not created, which frees one of the few
+      // dynamic-light slots for the level's own lights.
+      if (s.moon.intensity > 0) {
+        this.moon = new THREE.DirectionalLight(Game.Palette.color(s.moon.color), s.moon.intensity);
+        this.moon.position.fromArray(s.moon.direction).normalize().multiplyScalar(50);
+        this.lights.add(this.moon);
+      }
 
       scene.add(this.lights);
 

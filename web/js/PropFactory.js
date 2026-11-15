@@ -1,20 +1,50 @@
 // PropFactory: prop name -> mesh. Visuals only; it never creates or changes collision.
-// A name with no registered builder falls back to a grey box the size of the prop's collider,
-// so a level stays playable while its art is still missing.
+// For each prop it uses, in this order:
+//   1. the model web/assets/models/<name>.glb, when ModelLibrary has it (manifest says "ready");
+//   2. the greybox stand-in registered under that name (web/js/props/*.js);
+//   3. a grey box the size of the prop's collider.
+// So a level stays playable while its art is missing, and a missing or broken model only
+// costs its looks.
 (function (Game) {
   'use strict';
 
   const DEFAULT_SIZE = Object.freeze({ w: 1, h: 1, d: 1 });
 
   class PropFactory {
-    /** @param {object} style  resolved palette style; uses its "greybox" and "accent" sections */
-    constructor(style) {
+    /**
+     * @param {object} style  resolved palette style
+     * @param {Game.ModelLibrary} [models]  loaded models; without it only stand-ins are used
+     */
+    constructor(style, models) {
       this.greybox = style.greybox;
-      this.accent = style.accent;
+      this.models = models || null;
+      this._extras = new Map();
+      /** How many props were drawn with a model, by name. */
+      this.modelCounts = new Map();
+      /** Glowing materials and small coloured lights (accent, alarm, screens). */
+      this.emitters = new Game.Emitters(style);
       this._builders = new Map();
+      this._owners = new Map();
       this._materials = new Map();
       /** Prop names that had no builder and were replaced by a fallback box. */
       this.unknownNames = new Set();
+
+      // Every prop set that announced itself (web/js/props/*.js) registers its builders.
+      PropFactory.sets.forEach((set) => {
+        this._registering = set.name;
+        set.register(this);
+      });
+      this._registering = null;
+    }
+
+    /**
+     * Called once by each file in web/js/props/: adds its builders to every PropFactory.
+     * This is what lets a chapter add props without touching App.js or this file.
+     * @param {string} name      who owns these props, e.g. 'common', 'ch1'
+     * @param {(factory: PropFactory) => void} register
+     */
+    static registerSet(name, register) {
+      PropFactory.sets.push({ name, register });
     }
 
     /**
@@ -24,7 +54,26 @@
      * {w, h, d}, else a 1 m cube.
      */
     register(name, builder) {
+      const owner = this._registering || 'runtime';
+      if (this._builders.has(name)) {
+        console.warn(
+          '[props] "' + name + '" is registered by both ' + this._owners.get(name) + ' and ' +
+            owner + '; ' + owner + ' wins. A prop name must belong to one file.'
+        );
+      }
       this._builders.set(name, builder);
+      this._owners.set(name, owner);
+      return this;
+    }
+
+    /**
+     * Registers code that completes a MODEL of this name with what a GLB cannot carry:
+     * lights and other objects made at run time. It receives { prop, size, factory, object }
+     * and adds children to `object` (the placed model, origin at its bottom centre).
+     * The stand-in builder is not involved: it builds its own lights.
+     */
+    registerExtras(name, addExtras) {
+      this._extras.set(name, addExtras);
       return this;
     }
 
@@ -47,7 +96,17 @@
       const builder = this._builders.get(prop.name);
       let object;
 
-      if (builder) {
+      if (this.models && this.models.has(prop.name)) {
+        // A model has its own real size; "size" and the collider's size only shape stand-ins.
+        object = this.models.instantiate(prop.name, this.emitters);
+        object.position.set(prop.x, prop.y, prop.z);
+        object.rotation.y = THREE.MathUtils.degToRad(prop.rotY);
+        object.scale.setScalar(prop.scale);
+        const addExtras = this._extras.get(prop.name);
+        if (addExtras) addExtras({ prop, size, factory: this, object });
+        object.userData.model = true;
+        this.modelCounts.set(prop.name, (this.modelCounts.get(prop.name) || 0) + 1);
+      } else if (builder) {
         object = builder({ prop, size, factory: this });
         object.position.set(prop.x, prop.y, prop.z);
         object.rotation.y = THREE.MathUtils.degToRad(prop.rotY);
@@ -75,9 +134,11 @@
     material(colorKey) {
       let material = this._materials.get(colorKey);
       if (!material) {
-        const hex = this.greybox[colorKey];
+        let hex = this.greybox[colorKey];
         if (typeof hex !== 'string') {
-          throw new Error('palette greybox.' + colorKey + ' is missing');
+          // e.g. a chapter's own colour key while the level is viewed with another palette block
+          console.warn('[props] palette greybox.' + colorKey + ' is missing; using greybox.prop');
+          hex = this.greybox.prop;
         }
         material = new THREE.MeshStandardMaterial({
           color: Game.Palette.color(hex),
@@ -88,33 +149,6 @@
         this._materials.set(colorKey, material);
       }
       return material;
-    }
-
-    /**
-     * Shared self-lit material in the palette's accent colour (the one saturated colour that
-     * guides the player). Brighter than 1 so it survives the fog and feeds the bloom.
-     */
-    accentMaterial() {
-      let material = this._materials.get('@accent');
-      if (!material) {
-        material = new THREE.MeshBasicMaterial({
-          color: Game.Palette.color(this.accent.color).multiplyScalar(this.accent.intensity),
-        });
-        material.name = 'accent';
-        this._materials.set('@accent', material);
-      }
-      return material;
-    }
-
-    /** Small light in the accent colour, or null when the palette turns it off (intensity 0). */
-    accentLight() {
-      const cfg = this.accent.light;
-      if (!cfg || !(cfg.intensity > 0)) return null;
-      const light = new THREE.PointLight(
-        Game.Palette.color(this.accent.color), cfg.intensity, cfg.distance, cfg.decay
-      );
-      light.name = 'accent-light';
-      return light;
     }
 
     /** Box with its origin at the bottom centre. */
@@ -136,12 +170,28 @@
       return PropFactory._shadowed(new THREE.Mesh(geometry, this.material(colorKey)));
     }
 
+    /** Box in any material, placed by its bottom centre (for parts of a larger prop). */
+    part(material, w, h, d, x, y, z) {
+      const geometry = new THREE.BoxGeometry(w, h, d);
+      geometry.translate(0, h / 2, 0);
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      // Self-lit parts neither take nor throw shadows.
+      const lit = !material.isMeshBasicMaterial;
+      mesh.castShadow = lit;
+      mesh.receiveShadow = lit;
+      return mesh;
+    }
+
     static _shadowed(mesh) {
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       return mesh;
     }
   }
+
+  /** Prop sets announced by web/js/props/*.js, in load order. */
+  PropFactory.sets = [];
 
   Game.PropFactory = PropFactory;
 })((window.Game = window.Game || {}));

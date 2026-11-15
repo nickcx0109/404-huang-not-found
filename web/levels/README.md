@@ -23,7 +23,8 @@ node tools/serve.mjs
   "version": 1,
   "name": "test",              // 選填，預設用檔名
   "title": "Skeleton test room", // 選填
-  "palette": "default",        // 選填，palette.json 裡的區塊名稱；不寫就用 default
+  "palette": "default",        // 選填，氣氛區塊的名稱：palette.json 裡的，或 art/style/chapters/<名稱>.json；不寫就用 default
+  "manifests": ["common", "ch2"], // 選填，這一關可以用哪幾份資產清單（art/manifest/<名稱>.json）裡的模型
 
   "bounds": { "x": 0, "z": 0, "w": 30, "d": 30 },
 
@@ -84,8 +85,15 @@ node tools/serve.mjs
 
 - 沒有被任何道具指到的 collider，會直接畫成 collider 大小的灰色方塊（灰盒）。
 - 被道具指到的 collider 不再另外畫，由那個道具負責外觀。
+- 每個道具照這個順序決定外觀：**模型**（`web/assets/models/<name>.glb`，要這一關的 `manifests` 裡有一份把它標成 `ready`，而且檔案載得到）→ **灰盒替身**（`web/js/props/` 裡註冊的）→ **灰色方塊**。模型壞掉或不見只會退回下一種，關卡照常能玩，console 會有一行警告。模型有自己的實際大小，`size` 和 collider 的大小只影響替身。
 - `PropFactory` 不認得的名稱會退回成灰色方塊：有 `collider` 就畫成碰撞盒的大小和位置（不套 `rotY`，因為碰撞盒不能轉），沒有就畫 1 m 的方塊。所以可以先把之後要用的名稱（`barricade`、`guard_booth`…）寫進去，等模型做好再換，碰撞不用動。
-- 目前有灰盒替身的名稱（`web/js/GreyboxProps.js`）：`crate`（方塊）、`pillar`（圓柱）、`road`（路面，要給 `size`）、`tree`（枯樹）、`car_wreck`（廢車）、`escape_car`（尾燈會亮的車，用 palette 的重點色）。大小用 `size`，沒有就跟著 collider。新的名稱用 `PropFactory.register(name, builder)` 加。
+- 目前有灰盒替身的名稱，大小用 `size`，沒有就跟著 collider。新的替身加在**自己那一章**的檔案裡（`factory.register(name, builder)`），一個名稱只能由一個檔案註冊。
+  - `web/js/props/CommonProps.js`（共用）：`crate`（方塊）、`pillar`（圓柱）、`road`（路面，要給 `size`）、`building`、`low_wall`、`fence`、`car_wreck`（廢車）、`car_parked`（停著的車）、`truck_wreck`、`van_wreck`、`street_lamp`。
+  - `web/js/props/Ch1Props.js`：`tree`（枯樹）、`escape_car`（尾燈會亮的車，用 palette 的重點色）。
+  - `web/js/props/Ch2Props.js`：`mvidia_gate`（大門）、`mvidia_sign`（發光招牌，不要 collider，`size` 是 `[板寬, 字高, 厚度]`）、`gate_panel`（門禁面板）、`guard_booth`、`shop_terminal`（商店）、`sandbags`、`barricade`、`warning_light`（警示燈，給 `size` 就立在那麼高的桿子上，`rotY` 是光一開始照的方向）、`hq_wall`。
+  - `web/js/props/Ch3Props.js`：還沒有。
+  - `test_crate` 沒有替身，只有模型（流程測試用，在 test 關卡）。
+- `warning_light` 只有關卡裡**排在最前面的幾個**有真的燈（數量是 palette 的 `alarm.light.count`），其餘只有發光的燈罩。動態燈上限 4 盞（含手電筒），要調整就改 palette，不用改關卡。
 
 ### `spawns`（必填）
 
@@ -109,13 +117,27 @@ node tools/serve.mjs
 
 在走動模式按 `B`，console 會印出目前位置的機位 JSON，可以直接貼進來。
 
+### `markers`（選填）
+
+具名的玩法位置：商店、目標、防守點，之後的補給點、檢查點、燃料桶放置點也放這裡。只是資料，不會畫出東西（`debug=1` 時畫成青色方框）。
+
+| 欄位 | 必填 | 說明 |
+|---|---|---|
+| `type` | 是 | 種類，例如 `shop`、`objective`、`post` |
+| `x`, `z` | 是 | 位置 |
+| `id` | 否 | 不能重複，不寫會自動叫 `m0`、`m1`… |
+| `r` | 否 | 範圍半徑，預設 1 |
+| `yaw` | 否 | 朝向（度），預設 0 |
+
+程式用 `level.markersOfType('shop')` 取。
+
 ### `bounds`（選填）
 
 可活動範圍的矩形（中心 `x`、`z`，大小 `w`、`d`），玩家走不出去。不寫的話，用所有 collider 和出生點的範圍往外加 2 m。地板會比這個範圍多鋪 60 m，邊緣藏在霧後面。
 
 ### 其他欄位
 
-不認得的欄位會被忽略，之後的任務（商店位置、補給點、檢查點…）可以直接加。
+不認得的欄位會被忽略。
 
 ## 驗證
 
@@ -129,11 +151,14 @@ node tools/serve.mjs
 | `shot=<機位名稱>` | 截圖模式：相機放到該機位，不顯示操作提示，畫完一幀後設 `window.__ready = true`。顆粒固定，每次畫面都一樣 |
 | `palette=<區塊>` | 改用 palette.json 的另一個區塊（蓋過關卡的 `palette`） |
 | `preset=<名稱>` | 選該區塊 `presets` 裡的一組。區塊有 `presets` 但還沒設 `defaultPreset` 時（例如還沒選定的 `mood`）一定要給 |
-| `debug=1` | 顯示碰撞盒外框（含看不見的）、出生點、出怪區、機位，左上角顯示位置和沒有模型的道具名稱 |
+| `debug=1` | 顯示碰撞盒外框（含看不見的）、出生點、出怪區、markers、機位，左上角顯示位置和沒有模型的道具名稱。也會檢查每個出怪區、marker、其他玩家出生點是不是從第一個玩家出生點走得到，走不到會列出來 |
 | `perf=1` | 左上角顯示 FPS、draw call、三角面、燈數、解析度倍率 |
 | `scale=<數字>` | 解析度倍率，會被限制在 0.5～1.5。不給就用 `devicePixelRatio`，上限 1.5 |
 | `flashlight=0` | 一開始關手電筒 |
 | `spawn=<編號>` | 從第幾個玩家出生點開始（從 0 算） |
+| `models=0` | 不載入模型，全部用灰盒替身（拿來和有模型的畫面比較） |
+| `dummies=1` | 在每個出怪區走到玩家的路線上放 3 個殭屍大小的方塊，用來看這個氣氛下看不看得到敵人 |
+| `t=<秒>` | 截圖模式用的動畫時間（招牌閃爍、警示燈擺動都是時間的函數），預設 0 |
 
 走動模式：點一下畫面鎖定滑鼠，滑鼠看、`WASD` 走、`Shift` 跑、`F` 開關手電筒、`Esc` 放開滑鼠。
 
@@ -146,6 +171,16 @@ npm install
 npx playwright install chromium
 node tools/art/shots.mjs --level mood --presets subtle,medium,heavy --out art/style/refs/candidates
 ```
+
+第二章灰盒的三組截圖（氣氛、俯視配置圖、放了假殭屍的版本）：
+
+```
+node tools/art/shots.mjs --level ch2 --out art/style/refs/ch2-greybox --shots gate_view,left_post,right_post,front_post,gate,street_in,overview
+node tools/art/shots.mjs --level ch2 --out art/style/refs/ch2-greybox --shots plan --palette blockout --query "debug=1&flashlight=0"
+node tools/art/shots.mjs --level ch2 --out art/style/refs/ch2-greybox --shots gate_view,left_post,right_post,front_post --query "dummies=1" --suffix=-dummies
+```
+
+`plan` 是從正上方看的機位，要配 `blockout` 這個沒有霧的區塊才看得到東西。
 
 自己寫工具的話，頁面提供這些：
 
@@ -163,16 +198,22 @@ await page.waitForFunction(() => window.__ready || window.__error);
 ```
 LevelData ──▶ SceneBuilder ──▶ CollisionWorld   碰撞（只看 colliders）
 （讀取、驗證）      │
-                   └──▶ PropFactory ──▶ mesh     外觀（道具名稱 → mesh，不認得就退回灰色方塊）
-                          ▲ GreyboxProps          還沒有模型前的灰盒替身（樹、車、路面…）
+                   └──▶ PropFactory ──▶ mesh     外觀（道具名稱 → 模型 → 灰盒替身 → 灰色方塊）
+                          ▲ ModelLibrary          讀資產清單，載入標成 ready 的 GLB；載不到就退回替身
+                          ▲ props/*.js            灰盒替身，一個負責人一個檔案：CommonProps、Ch1Props、Ch2Props、Ch3Props
+                          ▲ Emitters              會發光的材質和小燈：重點色、紅色警示燈、螢幕，以及閃爍和擺動
                    └──▶ StaticBatcher            同材質的靜態 mesh 合併，減少 draw call
+                   └──▶ ModelInstancer           同一個模型出現兩次以上，改成一個 InstancedMesh
 
-Palette（art/style/palette.json）──▶ Atmosphere ──▶ 霧、背景、半球光、月光（霧色是「畫面上看到的顏色」）
+Palette（art/style/palette.json ＋ chapters/<章>.json）──▶ Atmosphere ──▶ 霧、背景、半球光、月光（霧色是「畫面上看到的顏色」）
                                                ──▶ Flashlight（玩家的 SpotLight）
                                                ──▶ PostFX（tone mapping、暗角、顆粒、1/4 解析度 bloom）
 
 PlayerController  pointer lock + WASD，眼睛高度 1.7 m，和 CollisionWorld 做 AABB 碰撞
+PathFinder        在 CollisionWorld 上找走得通的路線；檢查灰盒用（不是遊戲裡殭屍的尋路）
 App               把上面接起來；處理網址參數、走動模式與截圖模式
 ```
 
 每個類別一個檔案，放在 `web/js/`，用一般 `<script>` 依序載入，掛在全域的 `Game` 底下（例如 `Game.LevelData`）。
+
+誰可以改哪些檔案，看 [docs/art/OWNERSHIP.md](../../docs/art/OWNERSHIP.md)；怎麼做一個模型，看 [docs/art/ADDING_AN_ASSET.md](../../docs/art/ADDING_AN_ASSET.md)。

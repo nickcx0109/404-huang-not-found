@@ -2,12 +2,44 @@
   "_about": [
     "Single source of truth for colours, fog, lights and post-processing. Code must not hard-code these.",
     "Top-level keys other than those starting with '_' are blocks. A level picks one with its \"palette\" field (or ?palette=<block>).",
+    "This file holds the shared blocks only: default, blockout and mood. Each chapter's block lives in its own file, art/style/chapters/<name>.json (the file is the block; its name is the file name), and is loaded when a level asks for it.",
     "Every block is merged over \"default\", so a block only lists what it changes.",
     "A block may hold \"presets\": { name: partial block }; ?preset=<name> picks one. \"defaultPreset\" names the one used when the URL gives none; a block with presets but no defaultPreset must be opened with ?preset=.",
     "Hex colours are sRGB, as seen in a colour picker. Angles are degrees, distances are metres.",
     "fog.color is the colour as it appears on screen: the renderer compensates for exposure, tone mapping and saturation. Every other colour is a surface or light colour and gets darker or lighter with exposure.",
-    "accent is the one saturated colour of a chapter, used only on what the player must find. accent.intensity above 1 makes it glow (bloom) and read through fog."
+    "accent is the one saturated colour of a chapter, used only on what the player must find. accent.intensity above 1 makes it glow (bloom) and read through fog. accent.flicker (optional) makes it stutter like a failing sign.",
+    "alarm is the red warning beacon. alarm.light.count beacons carry a real rotating spot light; the others only glow. Every real light counts against the budget of 4 dynamic lights (flashlight included), so keep count small; moon.intensity 0 removes the moon light.",
+    "\"extends\": \"<block>\" or \"<block>/<preset>\" starts a block from another block's look instead of from default.",
+    "_assets is not a block: it is read by the Blender asset scripts (art/blender/_lib). colors are the surface colours an asset may use, by name; style is the shared grime treatment that makes every asset look like part of the same set. A chapter file may add its own colours under \"_assets\": { \"colors\": { ... } }."
   ],
+
+  "_assets": {
+    "style": {
+      "desaturate": 0.25,
+      "grime": 0.3,
+      "grimeScale": 0.45,
+      "bottomDirt": 0.4,
+      "dirtHeight": 0.45,
+      "faceVariation": 0.07,
+      "roughness": 0.9
+    },
+    "colors": {
+      "wood": "#6b5a45",
+      "wood_dark": "#40362b",
+      "metal": "#4c5256",
+      "metal_dark": "#2b2f32",
+      "rust": "#5c3e2f",
+      "concrete": "#6f716d",
+      "asphalt": "#303437",
+      "rubber": "#161718",
+      "glass": "#1d2327",
+      "fabric": "#6e6854",
+      "plastic_dark": "#24272a",
+      "paint_white": "#b8b7ac",
+      "paint_yellow": "#a18b2f",
+      "paint_red": "#7b2c25"
+    }
+  },
 
   "default": {
     "fog": {
@@ -65,6 +97,23 @@
         "decay": 2
       }
     },
+    "alarm": {
+      "color": "#ff2a1f",
+      "intensity": 4,
+      "pulseMin": 0.25,
+      "light": {
+        "count": 1,
+        "intensity": 3,
+        "distance": 30,
+        "angle": 30,
+        "penumbra": 0.7,
+        "decay": 1.2,
+        "rpm": 14,
+        "tilt": -4,
+        "startAngle": 0,
+        "sweep": 0
+      }
+    },
     "greybox": {
       "ground": "#5a605d",
       "grid": "#454a48",
@@ -76,14 +125,48 @@
       "tree": "#2a2d28",
       "car": "#4f5655",
       "tire": "#1c1e1d",
+      "truck": "#565d5c",
+      "building": "#4a4f4e",
+      "hqWall": "#565c5c",
+      "gate": "#3d4444",
+      "gateDoor": "#6a7272",
+      "signBoard": "#151817",
+      "booth": "#737b7a",
+      "glass": "#222827",
+      "shop": "#5d6665",
+      "sandbags": "#7d7763",
+      "barricade": "#8a8f8d",
+      "barricadeStripe": "#b9b6a4",
+      "lowWall": "#6b716f",
+      "fence": "#4e5453",
+      "metal": "#3a3f3e",
+      "dummy": "#4a504b",
+      "screen": { "color": "#b9c6cc", "intensity": 0.6 },
       "roughness": 0.95,
       "markers": {
         "playerSpawn": "#3aa0ff",
         "zombieSpawn": "#ff3b2f",
+        "marker": "#3affc8",
         "bookmark": "#ffd23a",
         "intensity": 1.6
       }
     }
+  },
+
+  "blockout": {
+    "_about": "Flat, bright, almost fog-free look for checking a level's layout from above (plan views). Not a game look.",
+    "fog": { "color": "#8a9094", "density": 0.003 },
+    "hemisphere": { "sky": "#ffffff", "ground": "#8a8a8a", "intensity": 1.6 },
+    "moon": { "color": "#ffffff", "intensity": 0.9 },
+    "post": {
+      "exposure": 1.0,
+      "saturation": 1.0,
+      "vignette": { "strength": 0 },
+      "grain": 0,
+      "bloom": { "enabled": false }
+    },
+    "accent": { "light": { "intensity": 0 } },
+    "alarm": { "light": { "count": 0 } }
   },
 
   "mood": {
