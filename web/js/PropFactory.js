@@ -7,10 +7,11 @@
   const DEFAULT_SIZE = Object.freeze({ w: 1, h: 1, d: 1 });
 
   class PropFactory {
-    /** @param {object} style  resolved palette style; uses its "greybox" and "accent" sections */
+    /** @param {object} style  resolved palette style */
     constructor(style) {
       this.greybox = style.greybox;
-      this.accent = style.accent;
+      /** Glowing materials and small coloured lights (accent, alarm, screens). */
+      this.emitters = new Game.Emitters(style);
       this._builders = new Map();
       this._materials = new Map();
       /** Prop names that had no builder and were replaced by a fallback box. */
@@ -90,33 +91,6 @@
       return material;
     }
 
-    /**
-     * Shared self-lit material in the palette's accent colour (the one saturated colour that
-     * guides the player). Brighter than 1 so it survives the fog and feeds the bloom.
-     */
-    accentMaterial() {
-      let material = this._materials.get('@accent');
-      if (!material) {
-        material = new THREE.MeshBasicMaterial({
-          color: Game.Palette.color(this.accent.color).multiplyScalar(this.accent.intensity),
-        });
-        material.name = 'accent';
-        this._materials.set('@accent', material);
-      }
-      return material;
-    }
-
-    /** Small light in the accent colour, or null when the palette turns it off (intensity 0). */
-    accentLight() {
-      const cfg = this.accent.light;
-      if (!cfg || !(cfg.intensity > 0)) return null;
-      const light = new THREE.PointLight(
-        Game.Palette.color(this.accent.color), cfg.intensity, cfg.distance, cfg.decay
-      );
-      light.name = 'accent-light';
-      return light;
-    }
-
     /** Box with its origin at the bottom centre. */
     box(size, colorKey) {
       const geometry = new THREE.BoxGeometry(size.w, size.h, size.d);
@@ -134,6 +108,19 @@
       const geometry = new THREE.CylinderGeometry(top, radius, size.h, segments || 12);
       geometry.translate(0, size.h / 2, 0);
       return PropFactory._shadowed(new THREE.Mesh(geometry, this.material(colorKey)));
+    }
+
+    /** Box in any material, placed by its bottom centre (for parts of a larger prop). */
+    part(material, w, h, d, x, y, z) {
+      const geometry = new THREE.BoxGeometry(w, h, d);
+      geometry.translate(0, h / 2, 0);
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      // Self-lit parts neither take nor throw shadows.
+      const lit = !material.isMeshBasicMaterial;
+      mesh.castShadow = lit;
+      mesh.receiveShadow = lit;
+      return mesh;
     }
 
     static _shadowed(mesh) {

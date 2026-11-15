@@ -1,0 +1,279 @@
+// PlazaProps: greybox stand-ins for chapter 2 (the plaza in front of the MVIDIA gate).
+// Same contract as GreyboxProps: each builder gets { prop, size, factory } and returns an
+// Object3D around the origin (metres, +Y up, front toward -Z, origin at bottom centre).
+// Each name here is the id of the real asset that will replace it later (mvidia_gate,
+// guard_booth, barricade, sandbags, warning_light ...). Colours come from the palette.
+(function (Game) {
+  'use strict';
+
+  // The sign's wordmark, drawn with straight strokes. Each glyph is [width, strokes], strokes
+  // being [u0, v0, u1, v1] centre lines in units of the letter height (u right, v up).
+  // The emblem is our own mark (an open square with a rising stroke and a dot), not a copy
+  // of any real company's logo.
+  const EMBLEM = [1.0, [[0, 0, 0, 1], [0, 1, 0.6, 1], [0, 0, 1, 0], [1, 0, 1, 0.6], [0.26, 0.26, 0.72, 0.72]]];
+  const EMBLEM_DOT = [0.92, 0.92, 0.24]; // u, v, side
+  const WORDMARK = [
+    [0.9, [[0, 0, 0, 1], [0.9, 0, 0.9, 1], [0, 1, 0.45, 0.35], [0.9, 1, 0.45, 0.35]]], // M
+    [0.8, [[0, 1, 0.4, 0], [0.8, 1, 0.4, 0]]], // V
+    [0.0, [[0, 0, 0, 1]]], // I
+    [0.7, [[0, 0, 0, 1], [0, 1, 0.45, 1], [0, 0, 0.45, 0], [0.7, 0.25, 0.7, 0.75], [0.45, 1, 0.7, 0.75], [0.45, 0, 0.7, 0.25]]], // D
+    [0.0, [[0, 0, 0, 1]]], // I
+    [0.8, [[0, 0, 0.4, 1], [0.8, 0, 0.4, 1], [0.2, 0.4, 0.6, 0.4]]], // A
+  ];
+  const FAULTY_LETTER = 3; // the "D" is the part of the sign that keeps failing
+  const STROKE = 0.16; // stroke thickness, in letter heights
+  const LETTER_GAP = 0.26;
+  const EMBLEM_GAP = 0.5;
+
+  /** Simple box in a palette colour. */
+  function block(colorKey) {
+    return (ctx) => ctx.factory.box(ctx.size, colorKey);
+  }
+
+  /** A group whose long side runs along X, turned 90° when the given size is deeper than wide. */
+  function alongLongSide(size, build) {
+    const outer = new THREE.Group();
+    const inner = new THREE.Group();
+    const turned = size.d > size.w;
+    build(inner, turned ? size.d : size.w, turned ? size.w : size.d);
+    if (turned) inner.rotation.y = Math.PI / 2;
+    outer.add(inner);
+    return outer;
+  }
+
+  class PlazaProps {
+    /** @param {Game.PropFactory} factory */
+    static registerAll(factory) {
+      factory
+        .register('building', block('building'))
+        .register('hq_wall', block('hqWall'))
+        .register('low_wall', block('lowWall'))
+        .register('fence', block('fence'))
+        .register('mvidia_gate', PlazaProps.gate)
+        .register('mvidia_sign', PlazaProps.sign)
+        .register('gate_panel', PlazaProps.gatePanel)
+        .register('guard_booth', PlazaProps.guardBooth)
+        .register('shop_terminal', PlazaProps.shopTerminal)
+        .register('sandbags', PlazaProps.sandbags)
+        .register('barricade', PlazaProps.barricade)
+        .register('warning_light', PlazaProps.warningLight)
+        .register('street_lamp', PlazaProps.streetLamp)
+        .register('truck_wreck', PlazaProps.truckWreck)
+        .register('van_wreck', PlazaProps.vanWreck);
+    }
+
+    /** Locked double gate: two posts, a lintel and two leaves with cross bars. */
+    static gate(ctx) {
+      const { factory, size } = ctx;
+      const { w, h, d } = size;
+      const frame = factory.material('gate');
+      const door = factory.material('gateDoor');
+      const post = 0.6;
+      const lintel = 0.5;
+      const leaf = (w - post * 2) / 2 - 0.03;
+      const gate = new THREE.Group();
+      [-1, 1].forEach((side) => {
+        gate.add(factory.part(frame, post, h, d, side * (w / 2 - post / 2), 0, 0));
+        gate.add(factory.part(door, leaf, h - lintel, 0.25, side * (leaf / 2 + 0.015), 0, 0.12));
+      });
+      gate.add(factory.part(frame, w, lintel, d, 0, h - lintel, 0));
+      [0.22, 0.66].forEach((height) => {
+        gate.add(factory.part(frame, w - post * 2, 0.18, 0.1, 0, (h - lintel) * height, -0.04));
+      });
+      return gate;
+    }
+
+    /**
+     * Glowing company sign: emblem + "MVIDIA" on a dark board. One letter uses the failing
+     * material, and a point light in front of the sign spills the accent colour on the gate.
+     * `size` is [board width, letter height, depth].
+     */
+    static sign(ctx) {
+      const { factory, size } = ctx;
+      const emitters = factory.emitters;
+      const steady = emitters.accentMaterial();
+      const faulty = emitters.accentFaultyMaterial();
+
+      // Lay everything out in "reader" space (u to the reader's right), facing +Z ...
+      const face = new THREE.Group();
+      const stroke = (material, u0, v0, u1, v1, scale, originU) => {
+        const length = Math.hypot(u1 - u0, v1 - v0) * scale + STROKE * scale;
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(length, STROKE * scale, size.d), material);
+        bar.position.set(originU + ((u0 + u1) / 2) * scale, ((v0 + v1) / 2) * scale, 0);
+        bar.rotation.z = Math.atan2(v1 - v0, u1 - u0);
+        face.add(bar);
+      };
+
+      const glyphs = [EMBLEM].concat(WORDMARK);
+      const units =
+        glyphs.reduce((sum, g) => sum + g[0], 0) + EMBLEM_GAP + LETTER_GAP * (WORDMARK.length - 1);
+      const margin = 0.5; // board margin around the lettering, in letter heights
+      const scale = Math.min(size.h, size.w / (units + margin * 2));
+      let cursor = (-units * scale) / 2;
+      glyphs.forEach((glyph, index) => {
+        const material = index - 1 === FAULTY_LETTER ? faulty : steady;
+        glyph[1].forEach((s) => stroke(material, s[0], s[1], s[2], s[3], scale, cursor));
+        if (index === 0) {
+          const dot = EMBLEM_DOT[2] * scale;
+          const mesh = new THREE.Mesh(new THREE.BoxGeometry(dot, dot, size.d), steady);
+          mesh.position.set(cursor + EMBLEM_DOT[0] * scale, EMBLEM_DOT[1] * scale, 0);
+          face.add(mesh);
+        }
+        cursor += (glyph[0] + (index === 0 ? EMBLEM_GAP : LETTER_GAP)) * scale;
+      });
+
+      const boardWidth = (units + margin * 2) * scale;
+      const boardHeight = (1 + margin * 2) * scale;
+      const board = factory.part(
+        factory.material('signBoard'), boardWidth, boardHeight, 0.08, 0, -margin * scale, -size.d / 2 - 0.04
+      );
+      board.castShadow = false;
+      face.add(board);
+
+      // ... then turn it around so that the front faces -Z like every other prop.
+      face.rotation.y = Math.PI;
+      const sign = new THREE.Group();
+      sign.add(face);
+
+      const glow = emitters.accentLight();
+      if (glow) {
+        glow.position.set(0, -scale * 0.6, -2.2);
+        sign.add(glow);
+      }
+      return sign;
+    }
+
+    /** Access panel beside the gate: where the players start the unlock countdown. */
+    static gatePanel(ctx) {
+      const { factory, size } = ctx;
+      const { w, h, d } = size;
+      const panel = new THREE.Group();
+      panel.add(factory.part(factory.material('gate'), w, h, d, 0, 0, 0));
+      panel.add(factory.part(factory.emitters.accentMaterial(), w * 0.62, h * 0.3, 0.02, 0, h * 0.55, -d / 2 - 0.01));
+      return panel;
+    }
+
+    /** Security booth: body, window band on the front, overhanging roof. */
+    static guardBooth(ctx) {
+      const { factory, size } = ctx;
+      const { w, h, d } = size;
+      const booth = new THREE.Group();
+      booth.add(factory.part(factory.material('booth'), w * 0.92, h * 0.9, d * 0.92, 0, 0, 0));
+      booth.add(factory.part(factory.material('glass'), w * 0.7, h * 0.3, 0.05, 0, h * 0.48, -d * 0.46 - 0.025));
+      booth.add(factory.part(factory.material('booth'), w, h * 0.1, d, 0, h * 0.9, 0));
+      return booth;
+    }
+
+    /** Shop: a terminal with a dimly lit screen on the front. */
+    static shopTerminal(ctx) {
+      const { factory, size } = ctx;
+      const { w, h, d } = size;
+      const shop = new THREE.Group();
+      shop.add(factory.part(factory.material('shop'), w, h, d, 0, 0, 0));
+      shop.add(factory.part(factory.emitters.screenMaterial(), w * 0.7, h * 0.3, 0.03, 0, h * 0.52, -d / 2 - 0.015));
+      return shop;
+    }
+
+    /** Sandbag wall: two courses, the upper one narrower. */
+    static sandbags(ctx) {
+      const { factory, size } = ctx;
+      const material = factory.material('sandbags');
+      return alongLongSide(size, (group, length, thickness) => {
+        group.add(factory.part(material, length, size.h * 0.56, thickness, 0, 0, 0));
+        group.add(factory.part(material, length * 0.94, size.h * 0.44, thickness * 0.72, 0, size.h * 0.56, 0));
+      });
+    }
+
+    /** Road barricade: two end plates, a top beam and a striped warning board. */
+    static barricade(ctx) {
+      const { factory, size } = ctx;
+      const metal = factory.material('barricade');
+      const board = factory.material('barricadeStripe');
+      const h = size.h;
+      return alongLongSide(size, (group, length, thickness) => {
+        [-1, 1].forEach((end) => {
+          group.add(factory.part(metal, 0.1, h, thickness * 0.9, end * length * 0.42, 0, 0));
+        });
+        group.add(factory.part(metal, length, h * 0.12, 0.14, 0, h * 0.88, 0));
+        group.add(factory.part(board, length * 0.84, h * 0.24, 0.06, 0, h * 0.42, 0));
+      });
+    }
+
+    /**
+     * Red warning beacon: a base and a glowing lens, on a pole when the level gives it a
+     * "size" (its height is the pole). The palette decides how many beacons carry a real
+     * moving light (the first ones listed in the level); the rest only glow. The beam starts
+     * out toward the prop's front, so rotY aims it.
+     */
+    static warningLight(ctx) {
+      const { factory, prop, size } = ctx;
+      const emitters = factory.emitters;
+      const pole = prop.size ? size.h : 0;
+      const beacon = new THREE.Group();
+      const cylinder = (material, radius, height, y) => {
+        const geometry = new THREE.CylinderGeometry(radius, radius, height, 10);
+        geometry.translate(0, height / 2, 0);
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.y = y;
+        return mesh;
+      };
+      if (pole > 0) beacon.add(cylinder(factory.material('metal'), 0.04, pole, 0));
+      beacon.add(cylinder(factory.material('metal'), 0.12, 0.1, pole));
+      beacon.add(cylinder(emitters.alarmMaterial(), 0.09, 0.18, pole + 0.1));
+      const rig = emitters.alarmLight();
+      if (rig) {
+        rig.position.y = pole + 0.2;
+        beacon.add(rig);
+      }
+      return beacon;
+    }
+
+    /** Street lamp with the power out: pole and an arm reaching toward the front (-Z). */
+    static streetLamp(ctx) {
+      const { factory, size } = ctx;
+      const metal = factory.material('metal');
+      const lamp = new THREE.Group();
+      lamp.add(factory.cylinder({ w: 0.16, h: size.h, d: 0.16 }, 'metal', 8));
+      lamp.add(factory.part(metal, 0.1, 0.1, 1.5, 0, size.h - 0.1, -0.7));
+      lamp.add(factory.part(metal, 0.32, 0.12, 0.6, 0, size.h - 0.2, -1.4));
+      return lamp;
+    }
+
+    /** Box truck left across a street: cab at the front (-Z), cargo box behind it. */
+    static truckWreck(ctx) {
+      const { factory, size } = ctx;
+      const { w, h, d } = size;
+      const body = factory.material('truck');
+      const tire = factory.material('tire');
+      const truck = new THREE.Group();
+      truck.add(factory.part(body, w, h * 0.74, d * 0.66, 0, h * 0.24, d * 0.17));
+      truck.add(factory.part(body, w * 0.94, h * 0.6, d * 0.26, 0, h * 0.16, -d * 0.36));
+      [-1, 1].forEach((side) => {
+        [-0.36, 0.1, 0.38].forEach((along) => {
+          truck.add(factory.part(tire, w * 0.16, h * 0.3, d * 0.13, side * w * 0.42, 0, along * d));
+        });
+      });
+      truck.rotation.z = THREE.MathUtils.degToRad(1.5);
+      return truck;
+    }
+
+    /** Van: one tall box with a lower nose at the front (-Z). */
+    static vanWreck(ctx) {
+      const { factory, size } = ctx;
+      const { w, h, d } = size;
+      const body = factory.material('truck');
+      const tire = factory.material('tire');
+      const van = new THREE.Group();
+      van.add(factory.part(body, w, h * 0.8, d * 0.8, 0, h * 0.2, d * 0.1));
+      van.add(factory.part(body, w * 0.96, h * 0.5, d * 0.22, 0, h * 0.18, -d * 0.39));
+      [-1, 1].forEach((side) => {
+        [-0.32, 0.32].forEach((along) => {
+          van.add(factory.part(tire, w * 0.16, h * 0.32, d * 0.14, side * w * 0.42, 0, along * d));
+        });
+      });
+      return van;
+    }
+  }
+
+  Game.PlazaProps = PlazaProps;
+})((window.Game = window.Game || {}));

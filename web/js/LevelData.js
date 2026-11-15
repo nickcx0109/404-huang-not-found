@@ -114,6 +114,7 @@
       this.spawns = LevelData._readSpawns(raw, v);
       this.bookmarks = LevelData._readBookmarks(raw, v);
       this._bookmarkByName = new Map(this.bookmarks.map((b) => [b.name, b]));
+      this.markers = LevelData._readMarkers(raw, v);
       this.bounds = LevelData._readBounds(raw, v, this);
 
       this._checkSpawnsAreFree(v);
@@ -161,6 +162,11 @@
 
     bookmarkNames() {
       return this.bookmarks.map((b) => b.name);
+    }
+
+    /** Markers of one type, e.g. markersOfType('shop'). */
+    markersOfType(type) {
+      return this.markers.filter((m) => m.type === type);
     }
 
     // ---- readers -----------------------------------------------------------
@@ -297,6 +303,27 @@
       }).filter(Boolean);
     }
 
+    /** Optional named gameplay points: shop, objective, defence posts, later pickups ... */
+    static _readMarkers(raw, v) {
+      const seen = new Set();
+      return v.array(raw, 'markers', 'level', false).map((m, i) => {
+        const path = 'markers[' + i + ']';
+        if (!v.object(m, path)) return null;
+        if (typeof m.type !== 'string' || m.type === '') v.error(path + '.type', 'is required (string)');
+        const id = m.id === undefined ? 'm' + i : String(m.id);
+        if (seen.has(id)) v.error(path + '.id', 'duplicate id "' + id + '"');
+        seen.add(id);
+        return Object.freeze({
+          id,
+          type: String(m.type),
+          x: v.number(m, 'x', path),
+          z: v.number(m, 'z', path),
+          r: v.number(m, 'r', path, { fallback: 1, min: 0 }),
+          yaw: v.number(m, 'yaw', path, { fallback: 0 }),
+        });
+      }).filter(Boolean);
+    }
+
     /** Playable rectangle. If the level does not give one, it is the extent of everything + 2 m. */
     static _readBounds(raw, v, level) {
       if (raw.bounds !== undefined) {
@@ -344,6 +371,7 @@
         });
       check(this.spawns.players, 'spawns.players');
       check(this.spawns.zombies, 'spawns.zombies');
+      check(this.markers, 'markers');
     }
   }
 

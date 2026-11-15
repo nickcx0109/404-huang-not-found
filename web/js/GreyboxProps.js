@@ -1,7 +1,8 @@
 // GreyboxProps: primitive stand-ins registered with PropFactory until real models exist.
 // Each builder gets { prop, size, factory } and returns an Object3D built around the origin
-// (metres, +Y up, front toward -Z, origin at bottom centre). Colours come from the palette's
-// "greybox" and "accent" sections through the factory; none are written here.
+// (metres, +Y up, front toward -Z, origin at bottom centre). Colours come from the palette
+// through the factory; none are written here.
+// This file holds the generic ones and chapter 1's; PlazaProps.js holds chapter 2's.
 (function (Game) {
   'use strict';
 
@@ -27,6 +28,7 @@
         .register('road', GreyboxProps.road)
         .register('tree', GreyboxProps.tree)
         .register('car_wreck', GreyboxProps.carWreck)
+        .register('car_parked', GreyboxProps.carBody)
         .register('escape_car', GreyboxProps.escapeCar);
     }
 
@@ -93,11 +95,11 @@
       const car = GreyboxProps.carBody(ctx);
       [-1, 1].forEach((side) => {
         const geometry = new THREE.BoxGeometry(w * 0.28, h * 0.11, 0.05);
-        const lamp = new THREE.Mesh(geometry, factory.accentMaterial());
+        const lamp = new THREE.Mesh(geometry, factory.emitters.accentMaterial());
         lamp.position.set(side * w * 0.33, h * 0.5, d / 2 + 0.02);
         car.add(lamp);
       });
-      const glow = factory.accentLight();
+      const glow = factory.emitters.accentLight();
       if (glow) {
         glow.position.set(0, h * 0.5, d / 2 + 0.7);
         car.add(glow);

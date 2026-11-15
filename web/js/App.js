@@ -28,6 +28,9 @@
       this.debug = flag('debug');
       this.perf = flag('perf');
       this.flashlight = params.get('flashlight') !== '0';
+      this.dummies = flag('dummies');
+      // Seconds on the animation clock for ?shot= (flicker and beacons are functions of time).
+      this.time = parseFloat(params.get('t')) || 0;
       this.spawn = Math.max(0, parseInt(params.get('spawn') || '0', 10) || 0);
       const scale = parseFloat(params.get('scale'));
       this.scale = Number.isFinite(scale) ? scale : null;
@@ -84,10 +87,12 @@
       // Level: collision + visuals.
       this.propFactory = new Game.PropFactory(this.style);
       Game.GreyboxProps.registerAll(this.propFactory);
+      Game.PlazaProps.registerAll(this.propFactory);
       this.builder = new Game.SceneBuilder(this.propFactory, this.style.greybox);
-      this.built = this.builder.build(level, { debug: options.debug });
+      this.built = this.builder.build(level, { debug: options.debug, dummies: options.dummies });
       this.scene.add(this.built.root);
       if (this.built.debug) this.scene.add(this.built.debug);
+      if (this.built.dummies) this.scene.add(this.built.dummies);
       this._reportLevelNotes();
 
       this.player = new Game.PlayerController(
@@ -136,16 +141,34 @@
       this.postfx.resize();
       this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
-      if (this._still) this._render(0);
+      if (this._still) this._render(this.options.time);
     }
 
     _reportLevelNotes() {
       this.level.warnings.forEach((w) => console.warn('[level] ' + w));
+      if (this.options.debug) {
+        this.unreachable = App.findUnreachable(this.level, this.built.collision);
+        this.unreachable.forEach((name) => console.warn('[level] cannot be reached from the first player spawn: ' + name));
+      }
       if (this.built.unknownProps.length > 0) {
         console.warn(
           '[level] props without a model (drawn as grey boxes): ' + this.built.unknownProps.join(', ')
         );
       }
+    }
+
+    /** Zombie spawns and markers that have no walking route to the first player spawn. */
+    static findUnreachable(level, collision) {
+      const finder = new Game.PathFinder(collision);
+      const home = level.spawns.players[0];
+      const missing = [];
+      const check = (label, point) => {
+        if (!finder.findPath(home.x, home.z, point.x, point.z)) missing.push(label);
+      };
+      level.spawns.players.slice(1).forEach((s, i) => check('player spawn ' + (i + 1), s));
+      level.spawns.zombies.forEach((s) => check('zombie spawn ' + s.id, s));
+      level.markers.forEach((m) => check('marker ' + m.id, m));
+      return missing;
     }
 
     // ---- modes ---------------------------------------------------------------
@@ -190,7 +213,8 @@
       }
       this.hud.setStartVisible(false);
       this._still = true;
-      this._render(0); // time 0: the grain is identical on every run
+      this.built.update(this.options.time);
+      this._render(this.options.time); // fixed time: the same frame on every run
       this._updateInfo();
       // Ready once the frame has been presented; the timer covers tabs where rAF is paused.
       const ready = () => {
@@ -210,6 +234,7 @@
 
       this.player.update(dt);
       this.atmosphere.update(dt, now / 1000);
+      this.built.update(now / 1000);
       this._render(now / 1000);
 
       this._frameCount++;
@@ -267,6 +292,7 @@
           lines.push('no model: ' + this.built.unknownProps.join(', '));
         }
         this.level.warnings.forEach((w) => lines.push('warning: ' + w));
+        (this.unreachable || []).forEach((name) => lines.push('unreachable: ' + name));
       }
       this.hud.setInfo(lines);
     }
