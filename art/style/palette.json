@@ -87,7 +87,8 @@
   },
 
   "mood": {
-    "_about": "Mood board for web/levels/mood.json (T2). Three candidates; the team picks one, then it becomes defaultPreset.",
+    "_about": "Mood board for web/levels/mood.json (T2). Team picked heavy; subtle and medium are kept for comparison.",
+    "defaultPreset": "heavy",
     "greybox": {
       "ground": "#33382f",
       "grid": "#33382f",

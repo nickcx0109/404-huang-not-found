@@ -32,7 +32,9 @@
 - **`fog.color` 是「畫面上看到的顏色」**。程式會把曝光、tone mapping、飽和度反推回去，所以色票寫 `#2a3330`，畫面上的霧就是 `#2a3330`（畫面中央；四角會被暗角壓暗）。其他顏色是物體或燈光的顏色，會跟著曝光變亮變暗。
 - `accent` 是該章的重點色。`intensity` 大於 1 才會發光（bloom）並穿過霧；`light` 是它照在旁邊地面上的小燈，算一盞動態燈。
 
-## 三組候選（還沒選定）
+## 三組候選（已選定 heavy）
+
+**2026-11-15 選定 heavy**，已設為 `mood` 的 `defaultPreset`。subtle、medium 留著做比較。之後各章的氣氛以 heavy 為基準；表格裡提到 heavy 整章使用會累、難瞄準，做戰鬥章節（例如第二章）時要特別注意手電筒範圍和重點光，必要時在該章區塊局部調亮。
 
 場景是 `web/levels/mood.json`：一段約 30 m 的灰盒山路，兩旁枯樹，路中間一台廢車，盡頭是亮著紅色尾燈的車。三個機位：`road`（起點往前看，尾燈在 26 m 外）、`wreck`（廢車旁）、`car`（離車 8 m）。
 
@@ -63,7 +65,7 @@ node tools/serve.mjs
 - <http://localhost:8080/web/index.html?level=mood&preset=medium>
 - <http://localhost:8080/web/index.html?level=mood&preset=heavy>
 
-`mood` 區塊還沒有 `defaultPreset`，所以網址一定要帶 `preset`。**三人選定之後**，在 palette.json 的 `mood` 加上 `"defaultPreset": "<選的那組>"`，另外兩組留著，並把選定的截圖放進 `refs/`。
+`mood` 的 `defaultPreset` 是 `heavy`，不帶 `preset` 時就用 heavy。
 
 ## 重拍截圖
 
