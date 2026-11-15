@@ -11,6 +11,7 @@ import os
 
 import bmesh
 import bpy
+import numpy as np
 from mathutils import Euler, Matrix, Vector, noise
 
 from .palette import REPO_ROOT, AssetPalette
@@ -20,8 +21,33 @@ BASE_MATERIAL = "vertex_color"
 # Parts whose material is called glow_<name> are replaced in the game by the palette's
 # glowing material of that name (accent, accent_faulty, alarm, screen).
 GLOW_PREFIX = "glow_"
+# Imported pack textures are repainted this many times larger, up to TEXTURE_MAX pixels.
+TEXTURE_UPSCALE = 4
+TEXTURE_MAX = 512  # keeps small props under their 300 KB file limit
 PIPELINE_NAME = "404-build_assets"
 PIPELINE_VERSION = 1
+
+
+def _resize(a, h, w):
+    """Bilinear resize of an (H, W, C) array to (h, w, C)."""
+    H, W = a.shape[:2]
+    y = np.linspace(0, H - 1, h)
+    x = np.linspace(0, W - 1, w)
+    y0 = np.floor(y).astype(int)
+    x0 = np.floor(x).astype(int)
+    y1 = np.minimum(y0 + 1, H - 1)
+    x1 = np.minimum(x0 + 1, W - 1)
+    wy = (y - y0)[:, None, None].astype(np.float32)
+    wx = (x - x0)[None, :, None].astype(np.float32)
+    top = a[y0][:, x0] * (1 - wx) + a[y0][:, x1] * wx
+    bottom = a[y1][:, x0] * (1 - wx) + a[y1][:, x1] * wx
+    return top * (1 - wy) + bottom * wy
+
+
+def _value_noise(rng, h, w, cells):
+    """Smooth random field in [0, 1] with about `cells` blobs across the image."""
+    grid = rng.random((cells + 1, cells + 1, 1)).astype(np.float32)
+    return _resize(grid, h, w)[..., 0]
 
 
 def asset_drop_dir():
@@ -338,19 +364,54 @@ class Asset:
             if image.get("_weathered"):
                 continue
             image["_weathered"] = True
-            pixels = list(image.pixels)
-            for i in range(0, len(pixels), 4):
-                r, g, b = pixels[i], pixels[i + 1], pixels[i + 2]
-                luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
-                pixels[i] = (r + (luma - r) * desaturate) * darken
-                pixels[i + 1] = (g + (luma - g) * desaturate) * darken
-                pixels[i + 2] = (b + (luma - b) * desaturate) * darken
-            image.pixels[:] = pixels
-            # Save the weathered copy beside Blender's temp files; never touch the pack.
-            out = os.path.join(bpy.app.tempdir, "%s_%s.png" % (self.id, bpy.path.clean_name(image.name)))
-            image.filepath_raw = out
-            image.file_format = "PNG"
-            image.save()
+            node.image = self._repaint(image, desaturate, darken, node.outputs["Alpha"].is_linked)
+
+    def _repaint(self, image, desaturate, darken, uses_alpha):
+        """A sharper, larger copy of a pack texture with painted-in wear.
+
+        Low-resolution pack textures (often 128 px) look blocky or blurry up close. This
+        scales them up (TEXTURE_UPSCALE times, at most TEXTURE_MAX px), sharpens the edges
+        back, and paints fine detail that the small original could not hold: film-like grain,
+        blotchy stains at several sizes and faint vertical rain streaks. Then the palette
+        style greys and darkens it. Shapes and UVs stay as the pack made them.
+        """
+        w, h = image.size
+        src = np.empty(w * h * 4, dtype=np.float32)
+        image.pixels.foreach_get(src)
+        src = src.reshape(h, w, 4)
+
+        factor = max(1, min(TEXTURE_UPSCALE, TEXTURE_MAX // max(w, h)))
+        H, W = h * factor, w * factor
+        img = _resize(src, H, W)
+        if factor > 1:
+            blur = (img + np.roll(img, 1, 0) + np.roll(img, -1, 0) + np.roll(img, 1, 1) + np.roll(img, -1, 1)) / 5.0
+            img = img + 0.8 * (img - blur)  # unsharp mask: undo the softness of scaling up
+
+        rng = np.random.default_rng(abs(hash((self.id, image.name))) % (2 ** 32))
+        rgb = img[..., :3]
+        stains = sum(_value_noise(rng, H, W, cells) * weight
+                     for cells, weight in ((5, 0.45), (13, 0.3), (37, 0.17), (90, 0.08)))
+        rgb *= (1.0 - 0.32 * np.clip((stains - 0.45) * 2.2, 0.0, 1.0))[..., None]
+        streaks = _resize(rng.random((6, max(4, W // 6))).astype(np.float32)[..., None], H, W)[..., 0]
+        rgb *= (1.0 - 0.12 * np.clip((streaks - 0.55) * 3.0, 0.0, 1.0))[..., None]
+        rgb += ((rng.random((H, W)) - 0.5) * 0.05).astype(np.float32)[..., None]
+
+        luma = rgb @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
+        rgb += (luma[..., None] - rgb) * desaturate
+        rgb *= darken
+        img[..., :3] = np.clip(rgb, 0.0, 1.0)
+        img[..., 3] = np.clip(img[..., 3], 0.0, 1.0)
+
+        name = "%s_%s" % (self.id, bpy.path.clean_name(image.name))
+        out = bpy.data.images.new(name, W, H, alpha=True)
+        out.colorspace_settings.name = image.colorspace_settings.name
+        out.pixels.foreach_set(img.ravel())
+        # Saved beside Blender's temp files (never into the pack); JPEG keeps the GLB small.
+        opaque = not uses_alpha or bool(np.all(img[..., 3] > 0.99))
+        out.filepath_raw = os.path.join(bpy.app.tempdir, name + (".jpg" if opaque else ".png"))
+        out.file_format = "JPEG" if opaque else "PNG"
+        out.save()
+        return out
 
     @staticmethod
     def _join(name, parts):
