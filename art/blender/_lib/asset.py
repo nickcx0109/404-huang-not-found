@@ -331,7 +331,11 @@ class Asset:
         darken = 1.0 - 0.5 * style.get("grime", 0.0)
         for node in material.node_tree.nodes:
             image = getattr(node, "image", None)
-            if node.type != "TEX_IMAGE" or image is None or image.get("_weathered"):
+            if node.type != "TEX_IMAGE" or image is None:
+                continue
+            # Packs often ask for nearest-pixel sampling (the retro "PS1" look); smooth it.
+            node.interpolation = "Linear"
+            if image.get("_weathered"):
                 continue
             image["_weathered"] = True
             pixels = list(image.pixels)
