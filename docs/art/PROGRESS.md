@@ -10,7 +10,7 @@
 | T2 氣氛樣板 | ✅ 完成，**選定 heavy** | `palette.json` 的 `mood.defaultPreset = "heavy"`；候選截圖在 `art/style/refs/candidates/` |
 | T3 第二章灰盒 | ✅ 完成，**待章節負責人確認** | `web/levels/ch2.json`、`palette.json` 的 `ch2` 區塊；截圖在 `art/style/refs/ch2-greybox/`（先看 `plan.jpg`） |
 | T4 資產工具 | ⏭ 下一步 | 要先裝 Blender 4.2 LTS 並把 `blender` 加進 PATH |
-| T5～T7 | 未開始 | |
+| T5～T7 | 未開始 | **T5 改了**：不用 Quaternius／Kenney 素材包（卡通風，和陰森風格不合）。改成用 Blender Python 腳本自己做通用道具（廢車、路障、油桶、路燈、垃圾、圍欄），流程和 T6 一樣，不需要下載任何東西。 |
 
 ## 接手的人要知道的
 
