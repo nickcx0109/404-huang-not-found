@@ -1,0 +1,13 @@
+{
+  "name": "404-huang-not-found",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Three-player co-op zombie shooter (course project). The game itself needs no build step; the dependencies here are only for tooling.",
+  "scripts": {
+    "serve": "node tools/serve.mjs",
+    "shots": "node tools/art/shots.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.1"
+  }
+}
