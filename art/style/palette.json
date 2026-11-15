@@ -6,7 +6,9 @@
     "A block may hold \"presets\": { name: partial block }; ?preset=<name> picks one. \"defaultPreset\" names the one used when the URL gives none; a block with presets but no defaultPreset must be opened with ?preset=.",
     "Hex colours are sRGB, as seen in a colour picker. Angles are degrees, distances are metres.",
     "fog.color is the colour as it appears on screen: the renderer compensates for exposure, tone mapping and saturation. Every other colour is a surface or light colour and gets darker or lighter with exposure.",
-    "accent is the one saturated colour of a chapter, used only on what the player must find. accent.intensity above 1 makes it glow (bloom) and read through fog."
+    "accent is the one saturated colour of a chapter, used only on what the player must find. accent.intensity above 1 makes it glow (bloom) and read through fog. accent.flicker (optional) makes it stutter like a failing sign.",
+    "alarm is the red warning beacon. alarm.light.count beacons carry a real rotating spot light; the others only glow. Every real light counts against the budget of 4 dynamic lights (flashlight included), so keep count small; moon.intensity 0 removes the moon light.",
+    "\"extends\": \"<block>\" or \"<block>/<preset>\" starts a block from another block's look instead of from default."
   ],
 
   "default": {
@@ -65,6 +67,23 @@
         "decay": 2
       }
     },
+    "alarm": {
+      "color": "#ff2a1f",
+      "intensity": 4,
+      "pulseMin": 0.25,
+      "light": {
+        "count": 1,
+        "intensity": 3,
+        "distance": 30,
+        "angle": 30,
+        "penumbra": 0.7,
+        "decay": 1.2,
+        "rpm": 14,
+        "tilt": -4,
+        "startAngle": 0,
+        "sweep": 0
+      }
+    },
     "greybox": {
       "ground": "#5a605d",
       "grid": "#454a48",
@@ -76,13 +95,94 @@
       "tree": "#2a2d28",
       "car": "#4f5655",
       "tire": "#1c1e1d",
+      "truck": "#565d5c",
+      "building": "#4a4f4e",
+      "hqWall": "#565c5c",
+      "gate": "#3d4444",
+      "gateDoor": "#6a7272",
+      "signBoard": "#151817",
+      "booth": "#737b7a",
+      "glass": "#222827",
+      "shop": "#5d6665",
+      "sandbags": "#7d7763",
+      "barricade": "#8a8f8d",
+      "barricadeStripe": "#b9b6a4",
+      "lowWall": "#6b716f",
+      "fence": "#4e5453",
+      "metal": "#3a3f3e",
+      "dummy": "#4a504b",
+      "screen": { "color": "#b9c6cc", "intensity": 0.6 },
       "roughness": 0.95,
       "markers": {
         "playerSpawn": "#3aa0ff",
         "zombieSpawn": "#ff3b2f",
+        "marker": "#3affc8",
         "bookmark": "#ffd23a",
         "intensity": 1.6
       }
+    }
+  },
+
+  "blockout": {
+    "_about": "Flat, bright, almost fog-free look for checking a level's layout from above (plan views). Not a game look.",
+    "fog": { "color": "#8a9094", "density": 0.003 },
+    "hemisphere": { "sky": "#ffffff", "ground": "#8a8a8a", "intensity": 1.6 },
+    "moon": { "color": "#ffffff", "intensity": 0.9 },
+    "post": {
+      "exposure": 1.0,
+      "saturation": 1.0,
+      "vignette": { "strength": 0 },
+      "grain": 0,
+      "bloom": { "enabled": false }
+    },
+    "accent": { "light": { "intensity": 0 } },
+    "alarm": { "light": { "count": 0 } }
+  },
+
+  "ch2": {
+    "_about": "Chapter 2, hold the gate. Starts from the chosen mood (heavy) and changes only what a three-way defence needs; the differences are listed in STYLE_GUIDE.md.",
+    "extends": "mood/heavy",
+    "fog": { "color": "#28313b", "density": 0.04 },
+    "hemisphere": { "sky": "#8090a4", "ground": "#22272e", "intensity": 2.6 },
+    "moon": { "intensity": 0 },
+    "flashlight": { "intensity": 2.8, "angle": 30, "penumbra": 0.55, "distance": 40 },
+    "post": {
+      "vignette": { "strength": 0.55 }
+    },
+    "accent": {
+      "color": "#76ff3a",
+      "intensity": 3,
+      "light": { "intensity": 0 },
+      "flicker": { "rate": 11, "dropChance": 0.14, "dim": 0.3, "faultyDropChance": 0.62, "faultyDim": 0.05 }
+    },
+    "alarm": {
+      "color": "#ff2a1f",
+      "intensity": 4,
+      "light": { "count": 3, "intensity": 8, "distance": 30, "angle": 36, "decay": 1, "rpm": 14, "tilt": -12, "sweep": 55 }
+    },
+    "greybox": {
+      "ground": "#3a4149",
+      "grid": "#333a42",
+      "groundRoughness": 0.6,
+      "collider": "#59616a",
+      "car": "#3a4047",
+      "tire": "#15181b",
+      "truck": "#4a525b",
+      "building": "#333a42",
+      "hqWall": "#3f4750",
+      "gate": "#2b3138",
+      "gateDoor": "#5a646f",
+      "signBoard": "#0f1215",
+      "booth": "#66717c",
+      "glass": "#1a1f25",
+      "shop": "#525d68",
+      "sandbags": "#77735f",
+      "barricade": "#848b93",
+      "barricadeStripe": "#b5b3a2",
+      "lowWall": "#5c656e",
+      "fence": "#3d444c",
+      "metal": "#2f353b",
+      "dummy": "#454c47"
     }
   },
 

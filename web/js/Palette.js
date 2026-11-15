@@ -54,7 +54,7 @@
      * Returns the style for a block: default <- block <- preset.
      * Unknown names fail loudly so a typo never silently falls back to another look.
      */
-    resolve(blockName, presetName) {
+    resolve(blockName, presetName, _chain) {
       const name = blockName || BASE_BLOCK;
       if (name.startsWith('_') || !isPlainObject(this.raw[name])) {
         throw new Error(
@@ -62,7 +62,18 @@
         );
       }
       const block = this.raw[name];
-      let style = merge(this.raw[BASE_BLOCK], block);
+
+      // "extends": "<block>" or "<block>/<preset>" — start from that look instead of "default".
+      let base = this.raw[BASE_BLOCK];
+      if (typeof block.extends === 'string') {
+        const chain = (_chain || []).concat(name);
+        const parts = block.extends.split('/');
+        if (chain.includes(parts[0])) {
+          throw new Error('Palette blocks extend each other in a loop: ' + chain.join(' -> ') + ' -> ' + parts[0]);
+        }
+        base = this.resolve(parts[0], parts[1], chain);
+      }
+      let style = merge(base, block);
 
       const presets = isPlainObject(block.presets) ? block.presets : null;
       const chosen = presetName || (presets ? block.defaultPreset : null);
@@ -83,6 +94,7 @@
       }
       delete style.presets;
       delete style.defaultPreset;
+      delete style.extends;
       style.blockName = name;
       style.presetName = chosen || null;
       return style;
