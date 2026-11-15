@@ -202,43 +202,84 @@
       return Promise.all(Array.from(this._textures.values(), (entry) => entry.loaded));
     }
 
+    /**
+     * A textured material that keeps the palette's brightness: once the texture has loaded,
+     * the material is scaled so that its average brightness equals the greybox colour of the
+     * same key (so a darker palette or preset still darkens the scene). "tint" (optional)
+     * then colours it; "gain" (optional, default 1) brightens or darkens it.
+     */
     _surfaceMaterial(colorKey, spec) {
-      const fallback = Game.Palette.color(this.greybox[colorKey] || this.greybox.prop);
+      const base = Game.Palette.color(this.greybox[colorKey] || this.greybox.prop);
       const material = new THREE.MeshStandardMaterial({
-        color: spec.tint ? Game.Palette.color(spec.tint) : 0xffffff,
+        color: base.clone(),
         roughness: spec.roughness === undefined ? this.greybox.roughness : spec.roughness,
         metalness: 0,
       });
       material.name = 'surface:' + colorKey;
       const metres = Array.isArray(spec.metres) ? spec.metres : [spec.metres || 2, spec.metres || 2];
       material.userData.metres = metres;
-      material.map = this._texture(spec.texture, () => {
-        // texture missing: fall back to the flat palette colour, still a working level
-        material.map = null;
-        material.color.copy(fallback);
-        material.needsUpdate = true;
-      });
+      material.map = this._texture(
+        spec.texture,
+        (average) => {
+          const luma = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+          const factor = (luma(base) / Math.max(0.02, luma(average))) * (spec.gain || 1);
+          const tint = spec.tint ? Game.Palette.color(spec.tint) : new THREE.Color(1, 1, 1);
+          material.color.setRGB(tint.r * factor, tint.g * factor, tint.b * factor);
+        },
+        () => {
+          // texture missing: fall back to the flat palette colour, still a working level
+          material.map = null;
+          material.color.copy(base);
+          material.needsUpdate = true;
+        }
+      );
       return material;
     }
 
-    _texture(id, onError) {
+    _texture(id, onLoad, onError) {
       let entry = this._textures.get(id);
       if (!entry) {
-        entry = { texture: null, onError: [] };
+        entry = { texture: null, average: null, onLoad: [], onError: [] };
         let settle;
         entry.loaded = new Promise((resolve) => (settle = resolve));
-        entry.texture = new THREE.TextureLoader().load(this.texturesUrl + id + '.jpg', settle, undefined, () => {
-          console.warn('[props] texture ' + id + '.jpg did not load; using flat colours');
-          entry.onError.forEach((fn) => fn());
-          settle();
-        });
+        entry.texture = new THREE.TextureLoader().load(
+          this.texturesUrl + id + '.jpg',
+          (texture) => {
+            entry.average = PropFactory._averageColor(texture.image);
+            entry.onLoad.forEach((fn) => fn(entry.average));
+            settle();
+          },
+          undefined,
+          () => {
+            console.warn('[props] texture ' + id + '.jpg did not load; using flat colours');
+            entry.onError.forEach((fn) => fn());
+            settle();
+          }
+        );
         entry.texture.encoding = THREE.sRGBEncoding;
         entry.texture.wrapS = entry.texture.wrapT = THREE.RepeatWrapping;
         entry.texture.anisotropy = 8;
         this._textures.set(id, entry);
       }
+      if (entry.average) onLoad(entry.average);
+      else entry.onLoad.push(onLoad);
       entry.onError.push(onError);
       return entry.texture;
+    }
+
+    /** Average colour of an image, in linear RGB (what the material colour multiplies). */
+    static _averageColor(image) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 16;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0, 16, 16);
+      const data = ctx.getImageData(0, 0, 16, 16).data;
+      const sum = [0, 0, 0];
+      for (let i = 0; i < data.length; i += 4) {
+        for (let c = 0; c < 3; c++) sum[c] += Math.pow(data[i + c] / 255, 2.2);
+      }
+      const n = data.length / 4;
+      return new THREE.Color(sum[0] / n, sum[1] / n, sum[2] / n);
     }
 
     /**

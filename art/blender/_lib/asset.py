@@ -331,7 +331,8 @@ class Asset:
         material["_weathered"] = True
         style = self.palette.style
         desaturate = style.get("desaturate", 0.0)
-        darken = 1.0 - 0.5 * style.get("grime", 0.0)
+        # pack textures are painted for daylight; bring them down to the night palette
+        darken = (1.0 - 0.5 * style.get("grime", 0.0)) * style.get("importExposure", 0.55)
         for node in material.node_tree.nodes:
             image = getattr(node, "image", None)
             if node.type != "TEX_IMAGE" or image is None:
