@@ -1,0 +1,28 @@
+{
+  "_about": [
+    "Chapter 3 (rescue at headquarters): office floor, server room, freight lift, rooftop launch pad.",
+    "One entry per asset. id = art/blender/<id>.py = web/assets/models/<id>.glb = the prop name used in levels.",
+    "class sets the triangle limit: small_prop 1500, large_prop 6000, module 3000, landmark 20000. maxTriangles (optional) lowers it.",
+    "size is [width X, height Y, depth Z] in metres, in game axes; the built model must match it within 10 %.",
+    "status: planned = not made yet (tools skip it), wip = being made (checked when its GLB exists), ready = approved; the game loads a model only when it is ready.",
+    "pivot (optional): \"custom\" when the origin is on the ground but not under the middle of the model (e.g. a lamp post with a long arm).",
+    "Owned by the chapter 3 team member."
+  ],
+  "chapter": "ch3",
+  "assets": [
+    { "id": "office_kit_wall", "class": "module", "source": "blender", "status": "planned", "notes": "辦公室牆，2 m 格子對齊" },
+    { "id": "office_kit_door", "class": "module", "source": "blender", "status": "planned", "notes": "門" },
+    { "id": "office_kit_window", "class": "module", "source": "blender", "status": "planned", "notes": "窗" },
+    { "id": "office_kit_corridor", "class": "module", "source": "blender", "status": "planned", "notes": "走廊一段" },
+    { "id": "office_kit_corner", "class": "module", "source": "blender", "status": "planned", "notes": "轉角" },
+    { "id": "office_kit_stairs", "class": "module", "source": "blender", "status": "planned", "notes": "樓梯" },
+    { "id": "server_rack", "class": "small_prop", "source": "blender", "status": "planned", "notes": "機房機櫃；LED 用 glow" },
+    { "id": "freight_elevator", "class": "large_prop", "source": "blender", "status": "planned", "notes": "貨梯，含「3/10」顯示面板的位置" },
+    { "id": "fuel_barrel", "class": "small_prop", "source": "blender", "status": "planned", "notes": "燃料桶；一定要醒目，用 glow=\"accent\"" },
+    { "id": "fuel_barrel_smoking", "class": "small_prop", "source": "blender", "status": "planned", "notes": "冒煙的燃料桶" },
+    { "id": "fuel_barrel_wrecked", "class": "small_prop", "source": "blender", "status": "planned", "notes": "炸掉的燃料桶" },
+    { "id": "rocket", "class": "landmark", "source": "blender", "status": "planned", "notes": "頂樓火箭" },
+    { "id": "launch_pad", "class": "landmark", "source": "blender", "status": "planned", "notes": "發射台" },
+    { "id": "cage", "class": "large_prop", "source": "blender", "status": "planned", "notes": "關老黃的籠子" }
+  ]
+}

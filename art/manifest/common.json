@@ -1,0 +1,22 @@
+{
+  "_about": [
+    "Assets shared by several chapters.",
+    "One entry per asset. id = art/blender/<id>.py = web/assets/models/<id>.glb = the prop name used in levels.",
+    "class sets the triangle limit: small_prop 1500, large_prop 6000, module 3000, landmark 20000. maxTriangles (optional) lowers it.",
+    "size is [width X, height Y, depth Z] in metres, in game axes; the built model must match it within 10 %.",
+    "status: planned = not made yet (tools skip it), wip = being made (checked when its GLB exists), ready = approved; the game loads a model only when it is ready.",
+    "pivot (optional): \"custom\" when the origin is on the ground but not under the middle of the model (e.g. a lamp post with a long arm).",
+    "SHARED: props used by more than one chapter. Agree with the team lead who makes each one before starting."
+  ],
+  "chapter": "common",
+  "assets": [
+    { "id": "car_wreck", "class": "large_prop", "source": "blender", "status": "planned", "size": [1.8, 1.4, 4.2], "notes": "廢車" },
+    { "id": "car_parked", "class": "large_prop", "source": "blender", "status": "planned", "size": [1.8, 1.4, 4.2], "notes": "停著的車，可和 car_wreck 共用車身" },
+    { "id": "truck_wreck", "class": "large_prop", "source": "blender", "status": "planned", "size": [2.6, 3.2, 7], "notes": "廂式貨車" },
+    { "id": "van_wreck", "class": "large_prop", "source": "blender", "status": "planned", "size": [2.2, 2.5, 5.6], "notes": "廂型車" },
+    { "id": "street_lamp", "class": "small_prop", "source": "blender", "status": "planned", "notes": "路燈（沒電），高約 6 m；燈臂伸出去，pivot 用 custom" },
+    { "id": "fence", "class": "module", "source": "blender", "status": "planned", "notes": "圍欄一段" },
+    { "id": "oil_barrel", "class": "small_prop", "source": "blender", "status": "planned", "size": [0.6, 0.9, 0.6], "notes": "油桶" },
+    { "id": "trash_pile", "class": "small_prop", "source": "blender", "status": "planned", "notes": "垃圾堆" }
+  ]
+}
