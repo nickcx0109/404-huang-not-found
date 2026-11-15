@@ -10,11 +10,11 @@
   ],
   "chapter": "common",
   "assets": [
-    { "id": "car_wreck", "class": "large_prop", "source": "blender", "status": "planned", "size": [1.8, 1.4, 4.2], "notes": "廢車" },
-    { "id": "car_parked", "class": "large_prop", "source": "blender", "status": "planned", "size": [1.8, 1.4, 4.2], "notes": "停著的車，可和 car_wreck 共用車身" },
+    { "id": "car_wreck", "class": "large_prop", "source": "blender", "status": "ready", "size": [1.64, 1.1, 4.2], "notes": "燒毀的車；模型來自 PSX Style Cars (GGBotNet, CC0) Car 06" },
+    { "id": "car_parked", "class": "large_prop", "source": "blender", "status": "ready", "size": [1.86, 1.41, 4.2], "notes": "停著的轎車；模型來自 PSX Style Cars (GGBotNet, CC0) Car 02" },
     { "id": "truck_wreck", "class": "large_prop", "source": "blender", "status": "planned", "size": [2.6, 3.2, 7], "notes": "廂式貨車" },
-    { "id": "van_wreck", "class": "large_prop", "source": "blender", "status": "planned", "size": [2.2, 2.5, 5.6], "notes": "廂型車" },
-    { "id": "street_lamp", "class": "small_prop", "source": "blender", "status": "planned", "notes": "路燈（沒電），高約 6 m；燈臂伸出去，pivot 用 custom" },
+    { "id": "van_wreck", "class": "large_prop", "source": "blender", "status": "ready", "size": [2.57, 2.63, 5.6], "notes": "廂型貨車；模型來自 PSX Style Cars (GGBotNet, CC0) Car 08" },
+    { "id": "street_lamp", "class": "small_prop", "source": "blender", "status": "ready", "size": [2.06, 6.61, 0.71], "pivot": "custom", "notes": "路燈（沒電）；模型來自 PSX urban stacked pack (valsekamerplant, CC0) street_light" },
     { "id": "fence", "class": "module", "source": "blender", "status": "planned", "notes": "圍欄一段" },
     { "id": "oil_barrel", "class": "small_prop", "source": "blender", "status": "planned", "size": [0.6, 0.9, 0.6], "notes": "油桶" },
     { "id": "trash_pile", "class": "small_prop", "source": "blender", "status": "planned", "notes": "垃圾堆" }

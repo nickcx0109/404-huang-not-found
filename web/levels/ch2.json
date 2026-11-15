@@ -3,6 +3,7 @@
   "name": "ch2",
   "title": "Chapter 2: hold the gate (greybox)",
   "palette": "ch2",
+  "manifests": ["common", "ch2"],
 
   "bounds": { "x": 0, "z": -9, "w": 76, "d": 59 },
 

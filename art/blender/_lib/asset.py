@@ -7,12 +7,13 @@ every asset looks like part of the same set.
 """
 
 import math
+import os
 
 import bmesh
 import bpy
 from mathutils import Euler, Matrix, Vector, noise
 
-from .palette import AssetPalette
+from .palette import REPO_ROOT, AssetPalette
 
 COLOR_LAYER = "Col"
 BASE_MATERIAL = "vertex_color"
@@ -21,6 +22,11 @@ BASE_MATERIAL = "vertex_color"
 GLOW_PREFIX = "glow_"
 PIPELINE_NAME = "404-build_assets"
 PIPELINE_VERSION = 1
+
+
+def asset_drop_dir():
+    """Where downloaded asset packs live: $ASSET_DROP, or <repo>/../asset_drop."""
+    return os.environ.get("ASSET_DROP") or os.path.normpath(os.path.join(REPO_ROOT, "..", "asset_drop"))
 
 
 class AssetError(Exception):
@@ -103,6 +109,76 @@ class Asset:
         self._parts.append(part)
         return part
 
+    def import_model(self, path, at=(0, 0, 0), rot=(0, 0, 0), length=None, scale=1.0):
+        """Brings in a model from a downloaded asset pack (.glb, .gltf, .obj, .fbx or .blend).
+
+        path: relative to the asset drop folder, which lives OUTSIDE the repo (packs are big
+            and only the built GLB is committed). Default <repo>/../asset_drop; set the
+            ASSET_DROP environment variable to use another folder.
+        rot: degrees around X, Y, Z (Blender axes), to turn the model's front toward -Y.
+        length: if given, scales the model evenly so that its longest side on the ground
+            (X or Y) is this many metres. Otherwise `scale` is used as is.
+        at: where the model's bottom centre goes.
+
+        The model keeps its own textures (made greyer and darker by the palette's style, so it
+        sits with the rest of the set); it does not get the vertex-colour grime.
+        """
+        if self._finished:
+            raise AssetError("%s: models cannot be imported after finish()" % self.id)
+        full = os.path.join(asset_drop_dir(), path)
+        if not os.path.isfile(full):
+            raise AssetError("%s: no file %s (download the pack into %s)" % (self.id, full, asset_drop_dir()))
+
+        before = set(bpy.data.objects)
+        ext = os.path.splitext(full)[1].lower()
+        if ext in (".glb", ".gltf"):
+            bpy.ops.import_scene.gltf(filepath=full)
+        elif ext == ".obj":
+            bpy.ops.wm.obj_import(filepath=full)
+        elif ext == ".fbx":
+            bpy.ops.import_scene.fbx(filepath=full)
+        elif ext == ".blend":
+            # every mesh object of the file, as placed there (e.g. a car body with its wheels)
+            with bpy.data.libraries.load(full, link=False) as (source, target):
+                target.objects = list(source.objects)
+            for obj in target.objects:
+                if obj is not None and obj.type == "MESH":
+                    bpy.context.scene.collection.objects.link(obj)
+        else:
+            raise AssetError("%s: cannot import %s files" % (self.id, ext))
+        new = [o for o in bpy.data.objects if o not in before]
+        bpy.context.view_layer.update()  # so matrix_world includes parents
+
+        others = [o for o in new if o.type != "MESH"]
+        parts = []
+        for obj in new:
+            if obj.type != "MESH":
+                continue
+            world = obj.matrix_world.copy()
+            obj.parent = None
+            obj.data = obj.data.copy()
+            obj.data.transform(world)
+            obj.matrix_world = Matrix.Identity(4)
+            parts.extend(self._split_by_material(obj))
+        for obj in others:
+            bpy.data.objects.remove(obj)
+        if not parts:
+            raise AssetError("%s: %s has no meshes" % (self.id, path))
+
+        low, high = self._bounds(parts)
+        if length:
+            scale = length / max(high.x - low.x, high.y - low.y)
+        centre = Matrix.Translation(Vector((-(low.x + high.x) / 2.0, -(low.y + high.y) / 2.0, -low.z)))
+        turn = Euler([math.radians(a) for a in rot], "XYZ").to_matrix().to_4x4()
+        matrix = Matrix.Translation(Vector(at)) @ turn @ Matrix.Scale(scale, 4) @ centre
+        for part in parts:
+            part.data.transform(matrix)
+            part.data.update()
+        for material in {p.data.materials[0] for p in parts if p.data.materials}:
+            self._weather_textures(material)
+        self._parts.extend(parts)
+        return parts
+
     def align_bottom_center(self):
         """Moves everything so that the asset stands on z = 0, centred on x = y = 0."""
         low, high = self._bounds(self._parts)
@@ -173,7 +249,7 @@ class Asset:
             export_yup=True,
             export_normals=True,
             export_tangents=False,
-            export_texcoords=False,
+            export_texcoords=True,  # imported pack models keep their textures
             export_materials="EXPORT",
             export_vertex_color="MATERIAL",
             export_cameras=False,
@@ -212,6 +288,65 @@ class Asset:
             shader.inputs["Emission Color"].default_value = (rgb[0], rgb[1], rgb[2], 1.0)
             shader.inputs["Emission Strength"].default_value = 1.0
         return material
+
+    def _split_by_material(self, obj):
+        """One object per material, so that finish() can group parts by material."""
+        data = obj.data
+        if len(data.materials) == 0:
+            data.materials.append(self._base_material())
+            layer = data.color_attributes.new(COLOR_LAYER, "FLOAT_COLOR", "CORNER")
+            grey = (0.35, 0.35, 0.35)
+            for corner in layer.data:
+                corner.color = (grey[0], grey[1], grey[2], 1.0)
+        if len(data.materials) == 1:
+            return [obj]
+        pieces = []
+        for index, material in enumerate(data.materials):
+            mesh = bmesh.new()
+            mesh.from_mesh(data)
+            drop = [f for f in mesh.faces if f.material_index != index]
+            bmesh.ops.delete(mesh, geom=drop, context="FACES")
+            if not mesh.faces:
+                mesh.free()
+                continue
+            for face in mesh.faces:
+                face.material_index = 0
+            piece_data = bpy.data.meshes.new("%s.%d" % (data.name, index))
+            mesh.to_mesh(piece_data)
+            mesh.free()
+            piece_data.materials.append(material)
+            piece = bpy.data.objects.new(piece_data.name, piece_data)
+            bpy.context.scene.collection.objects.link(piece)
+            pieces.append(piece)
+        bpy.data.objects.remove(obj)
+        return pieces
+
+    def _weather_textures(self, material):
+        """Greys and darkens a pack's textures with the palette style (desaturate, grime)."""
+        if not material.use_nodes or material.get("_weathered"):
+            return
+        material["_weathered"] = True
+        style = self.palette.style
+        desaturate = style.get("desaturate", 0.0)
+        darken = 1.0 - 0.5 * style.get("grime", 0.0)
+        for node in material.node_tree.nodes:
+            image = getattr(node, "image", None)
+            if node.type != "TEX_IMAGE" or image is None or image.get("_weathered"):
+                continue
+            image["_weathered"] = True
+            pixels = list(image.pixels)
+            for i in range(0, len(pixels), 4):
+                r, g, b = pixels[i], pixels[i + 1], pixels[i + 2]
+                luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
+                pixels[i] = (r + (luma - r) * desaturate) * darken
+                pixels[i + 1] = (g + (luma - g) * desaturate) * darken
+                pixels[i + 2] = (b + (luma - b) * desaturate) * darken
+            image.pixels[:] = pixels
+            # Save the weathered copy beside Blender's temp files; never touch the pack.
+            out = os.path.join(bpy.app.tempdir, "%s_%s.png" % (self.id, bpy.path.clean_name(image.name)))
+            image.filepath_raw = out
+            image.file_format = "PNG"
+            image.save()
 
     @staticmethod
     def _join(name, parts):
