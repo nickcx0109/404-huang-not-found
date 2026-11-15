@@ -7,16 +7,18 @@
 //
 // The server root is the repository root, because the page (web/) reads
 // art/style/palette.json, which lives outside web/.
+//
+// Other tools can import it:  const { url, close } = await startServer({ port: 0, quiet: true });
 
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { dirname, extname, join, normalize, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const PORT = Number(process.argv[2] || process.env.PORT || 8080);
-const HOST = process.env.HOST || '127.0.0.1';
+const DEFAULT_PORT = 8080;
+const DEFAULT_HOST = '127.0.0.1';
 const START_PAGE = '/web/index.html';
 
 const MIME = {
@@ -64,11 +66,14 @@ function resolveRequestPath(urlPath) {
   return filePath;
 }
 
-const server = createServer(async (req, res) => {
+async function handle(req, res, quiet) {
   const started = Date.now();
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const log = (status) =>
-    console.log(`${status} ${req.method} ${url.pathname}${url.search} ${Date.now() - started}ms`);
+  const log = (status) => {
+    if (!quiet) {
+      console.log(`${status} ${req.method} ${url.pathname}${url.search} ${Date.now() - started}ms`);
+    }
+  };
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     send(res, 405, 'Method Not Allowed', { Allow: 'GET, HEAD' });
@@ -111,20 +116,51 @@ const server = createServer(async (req, res) => {
     send(res, 404, `Not Found: ${url.pathname}`);
     log(404);
   }
-});
+}
 
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Try: node tools/serve.mjs ${PORT + 1}`);
-  } else {
-    console.error(err.message);
+/**
+ * Starts the server. Port 0 picks any free port.
+ * @param {{port?: number, host?: string, quiet?: boolean}} [options]
+ * @returns {Promise<{server: import('node:http').Server, port: number, url: string, close: () => Promise<void>}>}
+ */
+export function startServer(options = {}) {
+  const port = options.port ?? DEFAULT_PORT;
+  const host = options.host ?? DEFAULT_HOST;
+  const quiet = Boolean(options.quiet);
+  return new Promise((resolvePromise, reject) => {
+    const server = createServer((req, res) => handle(req, res, quiet));
+    server.once('error', reject);
+    server.listen(port, host, () => {
+      const actualPort = server.address().port;
+      const shownHost = host === '0.0.0.0' || host === '127.0.0.1' ? 'localhost' : host;
+      resolvePromise({
+        server,
+        port: actualPort,
+        url: `http://${shownHost}:${actualPort}`,
+        close: () =>
+          new Promise((done) => {
+            server.close(() => done());
+            server.closeAllConnections();
+          }),
+      });
+    });
+  });
+}
+
+// Command line: node tools/serve.mjs [port]
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const port = Number(process.argv[2] || process.env.PORT || DEFAULT_PORT);
+  try {
+    const { url } = await startServer({ port, host: process.env.HOST });
+    console.log(`Serving ${ROOT}`);
+    console.log(`Open ${url}${START_PAGE}?level=test`);
+    console.log('Press Ctrl+C to stop.');
+  } catch (err) {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${port} is already in use. Try: node tools/serve.mjs ${port + 1}`);
+    } else {
+      console.error(err.message);
+    }
+    process.exit(1);
   }
-  process.exit(1);
-});
-
-server.listen(PORT, HOST, () => {
-  const shownHost = HOST === '0.0.0.0' || HOST === '127.0.0.1' ? 'localhost' : HOST;
-  console.log(`Serving ${ROOT}`);
-  console.log(`Open http://${shownHost}:${PORT}${START_PAGE}?level=test`);
-  console.log('Press Ctrl+C to stop.');
-});
+}
