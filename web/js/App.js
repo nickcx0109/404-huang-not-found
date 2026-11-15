@@ -7,6 +7,7 @@
 
   const CONFIG = Object.freeze({
     paletteUrl: '../art/style/palette.json',
+    paletteChaptersUrl: '../art/style/chapters/',
     levelsUrl: 'levels/',
     defaultLevel: 'test',
     maxPixelRatio: 1.5, // PERFORMANCE_PLAN 3.2-5
@@ -63,10 +64,11 @@
     async start() {
       const options = this.options;
       const [palette, level] = await Promise.all([
-        Game.Palette.load(CONFIG.paletteUrl),
+        Game.Palette.load(CONFIG.paletteUrl, CONFIG.paletteChaptersUrl),
         Game.LevelData.load(options.level, CONFIG.levelsUrl),
       ]);
       this.level = level;
+      await palette.ensure(options.palette || level.palette);
       this.style = palette.resolve(options.palette || level.palette, options.preset);
 
       this._createRenderer();

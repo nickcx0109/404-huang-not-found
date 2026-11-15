@@ -1,9 +1,11 @@
-// Palette: loads art/style/palette.json and resolves one block (+ optional preset)
-// into a plain "style" object. All colour / fog / light / post numbers come from here.
+// Palette: loads art/style/palette.json (shared blocks) plus, on demand, one file per chapter
+// block from art/style/chapters/<name>.json, and resolves a block (+ optional preset) into a
+// plain "style" object. All colour / fog / light / post numbers come from here.
 (function (Game) {
   'use strict';
 
   const BASE_BLOCK = 'default';
+  const BLOCK_NAME = /^[A-Za-z0-9_-]+$/;
 
   function isPlainObject(v) {
     return v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -22,23 +24,58 @@
   }
 
   class Palette {
-    constructor(raw) {
+    /**
+     * @param {object} raw            parsed palette.json
+     * @param {string} [chaptersUrl]  folder holding one <block>.json per chapter block
+     */
+    constructor(raw, chaptersUrl) {
       if (!isPlainObject(raw) || !isPlainObject(raw[BASE_BLOCK])) {
         throw new Error('palette.json must contain a "' + BASE_BLOCK + '" block');
       }
       this.raw = raw;
+      this.chaptersUrl = chaptersUrl || null;
     }
 
-    static async load(url) {
+    static async load(url, chaptersUrl) {
+      return new Palette(await Palette._fetchJson(url, 'palette'), chaptersUrl);
+    }
+
+    static async _fetchJson(url, what) {
       const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error('Cannot load palette ' + url + ' (HTTP ' + res.status + ')');
-      let raw;
+      if (!res.ok) throw new Error('Cannot load ' + what + ' ' + url + ' (HTTP ' + res.status + ')');
       try {
-        raw = await res.json();
+        return await res.json();
       } catch (err) {
-        throw new Error('Palette ' + url + ' is not valid JSON: ' + err.message);
+        throw new Error(what + ' ' + url + ' is not valid JSON: ' + err.message);
       }
-      return new Palette(raw);
+    }
+
+    /**
+     * Makes sure a block is loaded before resolve(): a block that palette.json does not hold
+     * is read from <chaptersUrl><name>.json, and so is whatever it extends.
+     */
+    async ensure(blockName) {
+      const pending = [blockName || BASE_BLOCK];
+      const seen = new Set();
+      while (pending.length > 0) {
+        const name = pending.pop();
+        if (seen.has(name)) continue;
+        seen.add(name);
+        if (!isPlainObject(this.raw[name])) {
+          if (!this.chaptersUrl || !BLOCK_NAME.test(name) || name.startsWith('_')) {
+            return; // resolve() reports the unknown name
+          }
+          const res = await fetch(this.chaptersUrl + name + '.json', { cache: 'no-store' });
+          if (!res.ok) return;
+          try {
+            this.raw[name] = await res.json();
+          } catch (err) {
+            throw new Error('Palette block file ' + name + '.json is not valid JSON: ' + err.message);
+          }
+        }
+        const parent = this.raw[name].extends;
+        if (typeof parent === 'string') pending.push(parent.split('/')[0]);
+      }
     }
 
     blockNames() {
@@ -58,7 +95,8 @@
       const name = blockName || BASE_BLOCK;
       if (name.startsWith('_') || !isPlainObject(this.raw[name])) {
         throw new Error(
-          'Palette block "' + name + '" not found. Available: ' + this.blockNames().join(', ')
+          'Palette block "' + name + '" not found in palette.json or art/style/chapters/' + name +
+            '.json. Shared blocks: ' + this.blockNames().join(', ')
         );
       }
       const block = this.raw[name];

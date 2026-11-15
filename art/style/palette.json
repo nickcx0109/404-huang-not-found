@@ -2,6 +2,7 @@
   "_about": [
     "Single source of truth for colours, fog, lights and post-processing. Code must not hard-code these.",
     "Top-level keys other than those starting with '_' are blocks. A level picks one with its \"palette\" field (or ?palette=<block>).",
+    "This file holds the shared blocks only: default, blockout and mood. Each chapter's block lives in its own file, art/style/chapters/<name>.json (the file is the block; its name is the file name), and is loaded when a level asks for it.",
     "Every block is merged over \"default\", so a block only lists what it changes.",
     "A block may hold \"presets\": { name: partial block }; ?preset=<name> picks one. \"defaultPreset\" names the one used when the URL gives none; a block with presets but no defaultPreset must be opened with ?preset=.",
     "Hex colours are sRGB, as seen in a colour picker. Angles are degrees, distances are metres.",
@@ -137,53 +138,6 @@
     },
     "accent": { "light": { "intensity": 0 } },
     "alarm": { "light": { "count": 0 } }
-  },
-
-  "ch2": {
-    "_about": "Chapter 2, hold the gate. Starts from the chosen mood (heavy) and changes only what a three-way defence needs; the differences are listed in STYLE_GUIDE.md.",
-    "extends": "mood/heavy",
-    "fog": { "color": "#28313b", "density": 0.04 },
-    "hemisphere": { "sky": "#8090a4", "ground": "#22272e", "intensity": 2.6 },
-    "moon": { "intensity": 0 },
-    "flashlight": { "intensity": 2.8, "angle": 30, "penumbra": 0.55, "distance": 40 },
-    "post": {
-      "vignette": { "strength": 0.55 }
-    },
-    "accent": {
-      "color": "#76ff3a",
-      "intensity": 3,
-      "light": { "intensity": 0 },
-      "flicker": { "rate": 11, "dropChance": 0.14, "dim": 0.3, "faultyDropChance": 0.62, "faultyDim": 0.05 }
-    },
-    "alarm": {
-      "color": "#ff2a1f",
-      "intensity": 4,
-      "light": { "count": 3, "intensity": 8, "distance": 30, "angle": 36, "decay": 1, "rpm": 14, "tilt": -12, "sweep": 55 }
-    },
-    "greybox": {
-      "ground": "#3a4149",
-      "grid": "#333a42",
-      "groundRoughness": 0.6,
-      "collider": "#59616a",
-      "car": "#3a4047",
-      "tire": "#15181b",
-      "truck": "#4a525b",
-      "building": "#333a42",
-      "hqWall": "#3f4750",
-      "gate": "#2b3138",
-      "gateDoor": "#5a646f",
-      "signBoard": "#0f1215",
-      "booth": "#66717c",
-      "glass": "#1a1f25",
-      "shop": "#525d68",
-      "sandbags": "#77735f",
-      "barricade": "#848b93",
-      "barricadeStripe": "#b5b3a2",
-      "lowWall": "#5c656e",
-      "fence": "#3d444c",
-      "metal": "#2f353b",
-      "dummy": "#454c47"
-    }
   },
 
   "mood": {
