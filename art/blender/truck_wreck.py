@@ -3,4 +3,4 @@ step van), scaled up to box-truck size."""
 
 
 def build(asset):
-    asset.import_model("psx_cars/Car 08/Car8.blend", length=7)
+    asset.import_model("psx_cars/Car 08/Car8.blend", length=7, wear=2.5, exposure=0.6)
