@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 Huang Not Found — 場景</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="view"></div>
+
+  <pre id="info" hidden></pre>
+
+  <div id="start" hidden>
+    <div class="panel">
+      <h1>點一下開始</h1>
+      <p>滑鼠：視角　WASD：移動　Shift：跑步</p>
+      <p>F：手電筒　Esc：放開滑鼠</p>
+    </div>
+  </div>
+
+  <pre id="error" hidden></pre>
+
+  <!-- Three.js r128 (global THREE). No bundler: plain scripts, loaded in dependency order. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="js/Palette.js"></script>
+  <script src="js/LevelData.js"></script>
+  <script src="js/CollisionWorld.js"></script>
+  <script src="js/PropFactory.js"></script>
+  <script src="js/StaticBatcher.js"></script>
+  <script src="js/SceneBuilder.js"></script>
+  <script src="js/Flashlight.js"></script>
+  <script src="js/PostFX.js"></script>
+  <script src="js/Atmosphere.js"></script>
+  <script src="js/PlayerController.js"></script>
+  <script src="js/Hud.js"></script>
+  <script src="js/App.js"></script>
+  <script>
+    Game.App.boot();
+  </script>
+</body>
+</html>
