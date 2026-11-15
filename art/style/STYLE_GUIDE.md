@@ -27,8 +27,10 @@
 
 ## palette.json 怎麼讀
 
-- 最上層每個鍵是一個區塊（`default`、`mood`、`ch2`，之後 `ch1`、`ch3`；`blockout` 是看配置圖用的，不是遊戲的樣子）。每個區塊都疊在 `default` 上面，只要寫不一樣的地方。關卡用 `"palette"` 欄位選區塊。
+- `palette.json` 只放共用的區塊：`default`、`mood`、`blockout`（看配置圖用的，不是遊戲的樣子）。每個區塊都疊在 `default` 上面，只要寫不一樣的地方。
+- **每一章的區塊是自己的檔案**：[chapters/ch1.json](chapters/ch1.json)、[chapters/ch2.json](chapters/ch2.json)、[chapters/ch3.json](chapters/ch3.json)。整個檔案就是那個區塊，檔名就是區塊名稱；關卡寫 `"palette": "ch2"` 就會去讀。各章只改自己的檔案。
 - 章節區塊用 `"extends": "mood/heavy"` 從選定的氣氛出發，再寫這一章要改的地方。
+- `palette.json` 的 `_assets` 不是區塊，是給 Blender 資產腳本用的：`colors` 是模型可以用的表面顏色（用名字取），`style` 是所有模型共用的「降飽和＋髒污」處理。章節檔可以用 `"_assets": { "colors": { … } }` 加自己的顏色。
 - 區塊可以有 `presets`，網址用 `?preset=<名稱>` 切換；`defaultPreset` 是沒給時用哪一組。
 - **`fog.color` 是「畫面上看到的顏色」**。程式會把曝光、tone mapping、飽和度反推回去，所以色票寫 `#2a3330`，畫面上的霧就是 `#2a3330`（畫面中央；四角會被暗角壓暗）。其他顏色是物體或燈光的顏色，會跟著曝光變亮變暗。
 - `accent` 是該章的重點色。`intensity` 大於 1 才會發光（bloom）並穿過霧；`light` 是它照在旁邊地面上的小燈，算一盞動態燈；`flicker` 讓它像故障的招牌一樣閃。
