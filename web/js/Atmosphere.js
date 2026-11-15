@@ -24,7 +24,8 @@
     applyTo(scene, camera) {
       const s = this.style;
 
-      const fogColor = Game.Palette.color(s.fog.color);
+      // fog.color in the palette is the colour as seen on screen, so undo the post chain here.
+      const fogColor = Game.PostFX.sceneColorForDisplay(Game.Palette.color(s.fog.color), s.post);
       this.fog = new THREE.FogExp2(fogColor.getHex(), s.fog.density);
       this.fog.color.copy(fogColor);
       scene.fog = this.fog;

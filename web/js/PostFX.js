@@ -14,6 +14,31 @@
   // 1.9 ms vs 0.5 ms per frame at 1080p on Intel Iris Xe.)
   const BLOOM_FIRST_DIVISOR = 4;
 
+  // ACES filmic fit, the same numbers as THREE.ACESFilmicToneMapping. Written row by row here;
+  // the GLSL in FINAL_FRAGMENT lists the same matrices column by column. Keep the two in sync.
+  const ACES_INPUT = new THREE.Matrix3().set(
+    0.59719, 0.35458, 0.04823,
+    0.07600, 0.90834, 0.01566,
+    0.02840, 0.13383, 0.83777
+  );
+  const ACES_OUTPUT = new THREE.Matrix3().set(
+    1.60475, -0.53108, -0.07367,
+    -0.10208, 1.10813, -0.00605,
+    -0.00327, -0.07276, 1.07602
+  );
+  const ACES_INPUT_INVERSE = ACES_INPUT.clone().invert();
+  const ACES_OUTPUT_INVERSE = ACES_OUTPUT.clone().invert();
+  const LUMA = new THREE.Vector3(0.2126, 0.7152, 0.0722);
+
+  /** Inverse of the GLSL RRTAndODTFit curve for one channel (y = displayed, returns scene value). */
+  function inverseToneCurve(y) {
+    y = Math.min(0.99, Math.max(0, y));
+    const a = 1 - 0.983729 * y;
+    const b = 0.0245786 - 0.432951 * y;
+    const c = -(0.000090537 + 0.238081 * y);
+    return (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+  }
+
   const VERTEX = [
     'varying vec2 vUv;',
     'void main() {',
@@ -203,6 +228,30 @@
       this._black = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1, THREE.RGBAFormat);
       this._black.needsUpdate = true;
       this._final.uniforms.tBloom.value = this._black;
+    }
+
+    /**
+     * The scene-linear colour that ends up on screen as `display` after this chain's exposure,
+     * tone mapping and saturation (at the screen centre, where the vignette is 0).
+     * Lets the palette state a colour "as seen" — used for the fog, which fills most of the frame.
+     * @param {THREE.Color} display  wanted on-screen colour, linear (see Palette.color)
+     * @param {object} post  the "post" section of the resolved palette style
+     * @returns {THREE.Color}
+     */
+    static sceneColorForDisplay(display, post) {
+      const v = new THREE.Vector3(display.r, display.g, display.b);
+      // undo saturation (it keeps luma, so the mix can be solved directly)
+      if (post.saturation > 0.05) {
+        const luma = v.dot(LUMA);
+        v.subScalar(luma).divideScalar(post.saturation).addScalar(luma);
+      }
+      // undo tone mapping
+      v.applyMatrix3(ACES_OUTPUT_INVERSE);
+      v.set(inverseToneCurve(v.x), inverseToneCurve(v.y), inverseToneCurve(v.z));
+      v.applyMatrix3(ACES_INPUT_INVERSE);
+      // undo exposure
+      v.multiplyScalar(0.6 / post.exposure);
+      return new THREE.Color(Math.max(0, v.x), Math.max(0, v.y), Math.max(0, v.z));
     }
 
     static supportsHalfFloatTargets(renderer) {
