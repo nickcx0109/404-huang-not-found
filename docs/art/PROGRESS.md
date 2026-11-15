@@ -10,8 +10,8 @@
 | T2 氣氛樣板 | ✅ 完成，**選定 heavy** | `palette.json` 的 `mood.defaultPreset = "heavy"`；候選截圖在 `art/style/refs/candidates/` |
 | T3 第二章灰盒 | ✅ 完成，**待章節負責人確認** | `web/levels/ch2.json`、`palette.json` 的 `ch2` 區塊；截圖在 `art/style/refs/ch2-greybox/`（先看 `plan.jpg`） |
 | T4 資產工具＋共用框架 | ✅ 完成 | Blender 資產流程（build → preview → check）、每章各自的清單／替身／palette 檔、GLB 模型載入。用 `test_crate` 跑通 |
-| 三章平行製作 | ⏭ 下一步 | 三個人各做一章：灰盒（第二章已有）→ 資產 → 擺模型與打光。先讀 [OWNERSHIP.md](OWNERSHIP.md)（誰改哪些檔案）和 [ADDING_AN_ASSET.md](ADDING_AN_ASSET.md) |
-| 共用道具（原 T5） | 未開始 | 不用素材包，改成用 Blender 腳本自己做：`art/manifest/common.json` 列了 8 個（廢車、卡車、廂型車、路燈、圍欄、油桶、垃圾堆），**要先分配誰做哪一個** |
+| 三章平行製作 | ⏭ 下一步 | **分工與各自要貼給 Claude 的任務見 [TEAM_SPLIT.md](TEAM_SPLIT.md)**。三個人各做一章：灰盒（第二章已有）→ 資產 → 擺模型與打光。先讀 [OWNERSHIP.md](OWNERSHIP.md)（誰改哪些檔案）和 [ADDING_AN_ASSET.md](ADDING_AN_ASSET.md) |
+| 共用道具（原 T5） | 未開始 | 不用素材包，改成用 Blender 腳本自己做：`art/manifest/common.json` 列了 8 個，分配寫在 TEAM_SPLIT.md |
 
 ## 接手的人要知道的
 
@@ -40,4 +40,4 @@
   - 效能（1080p）：draw call 29～44、三角面約 5 千、Iris Xe 每幀約 7.4 ms。
 - **已知待辦**：見 [docs/tech/KNOWN_ISSUES.md](../tech/KNOWN_ISSUES.md)（PR #1 審查找到的 10 項，加上 T1～T3 回報過還沒處理的）。做框架時沒有動其中任何一項。
 - **git 身分**：全域設定為 `Hsu <109849259+big0527@users.noreply.github.com>`。commit 結尾加 `Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>`。
-- **PR**：T1、T2 已 push 並開 PR #1。T3 的 commit 還在本機，沒有 push。
+- **PR**：T1、T2 在 PR #1，已合併。T3＋框架＋分工文件在 PR #2（`feat/scene-ch2`）。
