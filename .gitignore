@@ -11,3 +11,6 @@ playwright-report/
 .DS_Store
 Thumbs.db
 *.log
+
+# Python bytecode (Blender tools)
+__pycache__/

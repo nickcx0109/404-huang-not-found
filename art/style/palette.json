@@ -9,8 +9,37 @@
     "fog.color is the colour as it appears on screen: the renderer compensates for exposure, tone mapping and saturation. Every other colour is a surface or light colour and gets darker or lighter with exposure.",
     "accent is the one saturated colour of a chapter, used only on what the player must find. accent.intensity above 1 makes it glow (bloom) and read through fog. accent.flicker (optional) makes it stutter like a failing sign.",
     "alarm is the red warning beacon. alarm.light.count beacons carry a real rotating spot light; the others only glow. Every real light counts against the budget of 4 dynamic lights (flashlight included), so keep count small; moon.intensity 0 removes the moon light.",
-    "\"extends\": \"<block>\" or \"<block>/<preset>\" starts a block from another block's look instead of from default."
+    "\"extends\": \"<block>\" or \"<block>/<preset>\" starts a block from another block's look instead of from default.",
+    "_assets is not a block: it is read by the Blender asset scripts (art/blender/_lib). colors are the surface colours an asset may use, by name; style is the shared grime treatment that makes every asset look like part of the same set. A chapter file may add its own colours under \"_assets\": { \"colors\": { ... } }."
   ],
+
+  "_assets": {
+    "style": {
+      "desaturate": 0.25,
+      "grime": 0.3,
+      "grimeScale": 0.45,
+      "bottomDirt": 0.4,
+      "dirtHeight": 0.45,
+      "faceVariation": 0.07,
+      "roughness": 0.9
+    },
+    "colors": {
+      "wood": "#6b5a45",
+      "wood_dark": "#40362b",
+      "metal": "#4c5256",
+      "metal_dark": "#2b2f32",
+      "rust": "#5c3e2f",
+      "concrete": "#6f716d",
+      "asphalt": "#303437",
+      "rubber": "#161718",
+      "glass": "#1d2327",
+      "fabric": "#6e6854",
+      "plastic_dark": "#24272a",
+      "paint_white": "#b8b7ac",
+      "paint_yellow": "#a18b2f",
+      "paint_red": "#7b2c25"
+    }
+  },
 
   "default": {
     "fog": {
