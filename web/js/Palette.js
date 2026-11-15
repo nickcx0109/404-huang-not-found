@@ -66,6 +66,12 @@
 
       const presets = isPlainObject(block.presets) ? block.presets : null;
       const chosen = presetName || (presets ? block.defaultPreset : null);
+      if (presets && !chosen) {
+        throw new Error(
+          'Palette block "' + name + '" has no default preset yet. Add &preset=<name> to the URL. ' +
+            'Available: ' + this.presetNames(name).join(', ')
+        );
+      }
       if (chosen) {
         if (!presets || !isPlainObject(presets[chosen])) {
           throw new Error(

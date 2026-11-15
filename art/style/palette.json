@@ -3,8 +3,10 @@
     "Single source of truth for colours, fog, lights and post-processing. Code must not hard-code these.",
     "Top-level keys other than those starting with '_' are blocks. A level picks one with its \"palette\" field (or ?palette=<block>).",
     "Every block is merged over \"default\", so a block only lists what it changes.",
-    "A block may hold \"presets\": { name: partial block } plus \"defaultPreset\"; ?preset=<name> picks one.",
-    "Hex colours are sRGB, as seen in a colour picker. Angles are degrees, distances are metres."
+    "A block may hold \"presets\": { name: partial block }; ?preset=<name> picks one. \"defaultPreset\" names the one used when the URL gives none; a block with presets but no defaultPreset must be opened with ?preset=.",
+    "Hex colours are sRGB, as seen in a colour picker. Angles are degrees, distances are metres.",
+    "fog.color is the colour as it appears on screen: the renderer compensates for exposure, tone mapping and saturation. Every other colour is a surface or light colour and gets darker or lighter with exposure.",
+    "accent is the one saturated colour of a chapter, used only on what the player must find. accent.intensity above 1 makes it glow (bloom) and read through fog."
   ],
 
   "default": {
@@ -50,8 +52,17 @@
         "enabled": true,
         "threshold": 1.0,
         "knee": 0.5,
-        "strength": 0.35,
+        "strength": 0.5,
         "levels": 3
+      }
+    },
+    "accent": {
+      "color": "#ff3b2f",
+      "intensity": 5,
+      "light": {
+        "intensity": 0.7,
+        "distance": 7,
+        "decay": 2
       }
     },
     "greybox": {
@@ -61,12 +72,68 @@
       "prop": "#6d7a76",
       "crate": "#8a7a62",
       "pillar": "#7c8582",
+      "road": "#4a4d4c",
+      "tree": "#2a2d28",
+      "car": "#4f5655",
+      "tire": "#1c1e1d",
       "roughness": 0.95,
       "markers": {
         "playerSpawn": "#3aa0ff",
         "zombieSpawn": "#ff3b2f",
         "bookmark": "#ffd23a",
         "intensity": 1.6
+      }
+    }
+  },
+
+  "mood": {
+    "_about": "Mood board for web/levels/mood.json (T2). Three candidates; the team picks one, then it becomes defaultPreset.",
+    "greybox": {
+      "ground": "#33382f",
+      "grid": "#33382f",
+      "collider": "#666d69",
+      "road": "#535655",
+      "tree": "#23261f",
+      "car": "#363c3b",
+      "tire": "#171918"
+    },
+    "presets": {
+      "subtle": {
+        "fog": { "color": "#333d39", "density": 0.035 },
+        "hemisphere": { "intensity": 1.3 },
+        "moon": { "intensity": 0.5 },
+        "flashlight": { "intensity": 2.6, "angle": 28, "penumbra": 0.65 },
+        "post": {
+          "exposure": 0.95,
+          "saturation": 0.85,
+          "vignette": { "strength": 0.45 },
+          "grain": 0.035
+        }
+      },
+      "medium": {
+        "fog": { "color": "#2a3330", "density": 0.042 },
+        "hemisphere": { "intensity": 0.8 },
+        "moon": { "intensity": 0.28 },
+        "flashlight": { "intensity": 2.4, "angle": 26, "penumbra": 0.6 },
+        "post": {
+          "exposure": 0.88,
+          "saturation": 0.8,
+          "vignette": { "strength": 0.6 },
+          "grain": 0.05
+        }
+      },
+      "heavy": {
+        "fog": { "color": "#222a27", "density": 0.05 },
+        "hemisphere": { "intensity": 0.62 },
+        "moon": { "intensity": 0.18 },
+        "flashlight": { "intensity": 2.2, "angle": 23, "penumbra": 0.5, "distance": 28 },
+        "post": {
+          "exposure": 0.8,
+          "saturation": 0.75,
+          "vignette": { "strength": 0.7, "start": 0.3 },
+          "grain": 0.07,
+          "chromaticAberration": 0.0025
+        }
       }
     }
   }
