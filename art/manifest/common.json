@@ -12,7 +12,7 @@
   "assets": [
     { "id": "car_wreck", "class": "large_prop", "source": "blender", "status": "ready", "size": [1.64, 1.1, 4.2], "notes": "燒毀的車；模型來自 PSX Style Cars (GGBotNet, CC0) Car 06" },
     { "id": "car_parked", "class": "large_prop", "source": "blender", "status": "ready", "size": [1.86, 1.41, 4.2], "notes": "停著的轎車；模型來自 PSX Style Cars (GGBotNet, CC0) Car 02" },
-    { "id": "truck_wreck", "class": "large_prop", "source": "blender", "status": "planned", "size": [2.6, 3.2, 7], "notes": "廂式貨車" },
+    { "id": "truck_wreck", "class": "large_prop", "source": "blender", "status": "ready", "size": [3.22, 3.29, 7], "notes": "廂式貨車；模型來自 PSX Style Cars (GGBotNet, CC0) Car 08 放大" },
     { "id": "van_wreck", "class": "large_prop", "source": "blender", "status": "ready", "size": [2.57, 2.63, 5.6], "notes": "廂型貨車；模型來自 PSX Style Cars (GGBotNet, CC0) Car 08" },
     { "id": "street_lamp", "class": "small_prop", "source": "blender", "status": "ready", "size": [2.06, 6.61, 0.71], "pivot": "custom", "notes": "路燈（沒電）；模型來自 PSX urban stacked pack (valsekamerplant, CC0) street_light" },
     { "id": "fence", "class": "module", "source": "blender", "status": "planned", "notes": "圍欄一段" },

@@ -2,6 +2,7 @@
 // One entry point for the asset tools, so nobody has to remember Blender's command line.
 //
 //   node tools/art/assets.mjs build   <ids... | --chapter ch2 | --all>   art/blender/<id>.py -> web/assets/models/<id>.glb
+//   node tools/art/assets.mjs textures [ids...]                       art/textures.json -> web/assets/textures/<id>.jpg
 //   node tools/art/assets.mjs preview <ids... | --chapter ch2 | --all>   4 preview images per asset -> art/previews/<id>/
 //   node tools/art/assets.mjs check   [ids... | --chapter ch2]            limits, size, axes, naming (no Blender needed)
 //   node tools/art/assets.mjs all     <ids... | --chapter ch2 | --all>   build, then preview, then check
@@ -51,6 +52,9 @@ switch (command) {
   case 'preview':
     code = runBlender('preview.py', args);
     break;
+  case 'textures':
+    code = runBlender('build_textures.py', args);
+    break;
   case 'check':
     code = runCheck(args);
     break;
@@ -58,7 +62,7 @@ switch (command) {
     code = runBlender('build_assets.py', args) || runBlender('preview.py', args) || runCheck(args.filter((a) => a !== '--all'));
     break;
   default:
-    console.error('usage: node tools/art/assets.mjs <build|preview|check|all> <ids... | --chapter <name> | --all>');
+    console.error('usage: node tools/art/assets.mjs <build|preview|check|all> <ids... | --chapter <name> | --all>  |  textures [ids...]');
     code = 2;
 }
 process.exit(code);

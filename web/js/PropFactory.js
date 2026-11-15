@@ -14,9 +14,13 @@
     /**
      * @param {object} style  resolved palette style
      * @param {Game.ModelLibrary} [models]  loaded models; without it only stand-ins are used
+     * @param {string} [texturesUrl]  folder of the surface textures (web/assets/textures/);
+     *   without it stand-ins keep their flat palette colours (the plain greybox look)
      */
-    constructor(style, models) {
+    constructor(style, models, texturesUrl) {
       this.greybox = style.greybox;
+      this.texturesUrl = texturesUrl || null;
+      this._textures = new Map();
       this.models = models || null;
       this._extras = new Map();
       /** How many props were drawn with a model, by name. */
@@ -130,9 +134,24 @@
       return object;
     }
 
+    /**
+     * The palette's tiling surface for a colour key (greybox.surfaces.<key>), e.g.
+     * { "texture": "brick", "metres": [3, 3] }: web/assets/textures/brick.jpg, one tile per
+     * 3 x 3 m. Null when textures are off or the key has none.
+     */
+    surface(colorKey) {
+      const surfaces = this.greybox.surfaces;
+      const spec = this.texturesUrl && surfaces && surfaces[colorKey];
+      return spec && /^[a-z0-9_]+$/.test(spec.texture) ? spec : null;
+    }
+
     /** Shared, cached greybox material for a colour key of the palette's "greybox" section. */
     material(colorKey) {
       let material = this._materials.get(colorKey);
+      if (!material && this.surface(colorKey)) {
+        material = this._surfaceMaterial(colorKey, this.surface(colorKey));
+        this._materials.set(colorKey, material);
+      }
       if (!material) {
         let hex = this.greybox[colorKey];
         if (typeof hex !== 'string') {
@@ -151,11 +170,75 @@
       return material;
     }
 
-    /** Box with its origin at the bottom centre. */
+    /** Box with its origin at the bottom centre. A textured surface tiles at real size. */
     box(size, colorKey) {
       const geometry = new THREE.BoxGeometry(size.w, size.h, size.d);
       geometry.translate(0, size.h / 2, 0);
-      return PropFactory._shadowed(new THREE.Mesh(geometry, this.material(colorKey)));
+      const material = this.material(colorKey);
+      if (material.userData.metres) PropFactory.tileBoxUVs(geometry, size, material.userData.metres);
+      return PropFactory._shadowed(new THREE.Mesh(geometry, material));
+    }
+
+    /**
+     * Rescales a BoxGeometry's UVs so that its texture repeats every `metres` = [u, v] metres
+     * on every face, whatever the box's size (faces: +x, -x, +y, -y, +z, -z; 4 vertices each).
+     */
+    static tileBoxUVs(geometry, size, metres) {
+      const faces = [
+        [size.d, size.h], [size.d, size.h],
+        [size.w, size.d], [size.w, size.d],
+        [size.w, size.h], [size.w, size.h],
+      ];
+      const uv = geometry.attributes.uv;
+      for (let i = 0; i < uv.count; i++) {
+        const [fu, fv] = faces[Math.floor(i / 4)] || [1, 1];
+        uv.setXY(i, (uv.getX(i) * fu) / metres[0], (uv.getY(i) * fv) / metres[1]);
+      }
+      uv.needsUpdate = true;
+    }
+
+    /** Resolves when every surface texture requested so far has loaded (or failed). */
+    texturesLoaded() {
+      return Promise.all(Array.from(this._textures.values(), (entry) => entry.loaded));
+    }
+
+    _surfaceMaterial(colorKey, spec) {
+      const fallback = Game.Palette.color(this.greybox[colorKey] || this.greybox.prop);
+      const material = new THREE.MeshStandardMaterial({
+        color: spec.tint ? Game.Palette.color(spec.tint) : 0xffffff,
+        roughness: spec.roughness === undefined ? this.greybox.roughness : spec.roughness,
+        metalness: 0,
+      });
+      material.name = 'surface:' + colorKey;
+      const metres = Array.isArray(spec.metres) ? spec.metres : [spec.metres || 2, spec.metres || 2];
+      material.userData.metres = metres;
+      material.map = this._texture(spec.texture, () => {
+        // texture missing: fall back to the flat palette colour, still a working level
+        material.map = null;
+        material.color.copy(fallback);
+        material.needsUpdate = true;
+      });
+      return material;
+    }
+
+    _texture(id, onError) {
+      let entry = this._textures.get(id);
+      if (!entry) {
+        entry = { texture: null, onError: [] };
+        let settle;
+        entry.loaded = new Promise((resolve) => (settle = resolve));
+        entry.texture = new THREE.TextureLoader().load(this.texturesUrl + id + '.jpg', settle, undefined, () => {
+          console.warn('[props] texture ' + id + '.jpg did not load; using flat colours');
+          entry.onError.forEach((fn) => fn());
+          settle();
+        });
+        entry.texture.encoding = THREE.sRGBEncoding;
+        entry.texture.wrapS = entry.texture.wrapT = THREE.RepeatWrapping;
+        entry.texture.anisotropy = 8;
+        this._textures.set(id, entry);
+      }
+      entry.onError.push(onError);
+      return entry.texture;
     }
 
     /**

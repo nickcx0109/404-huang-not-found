@@ -146,6 +146,34 @@ factory.registerExtras('warning_light', (ctx) => {
 
 它只在這個名字用**模型**顯示時才會被呼叫；灰盒替身自己已經有燈。每一盞真的燈都算進「同時 4 盞動態燈（含手電筒）」的上限。
 
+## 用現成素材包的模型
+
+免費素材包（CC0 或允許任意使用的授權）下載後解壓到 repo **外面**的 `../asset_drop/`（或設環境變數 `ASSET_DROP`），不要放進 repo。腳本裡用 `asset.import_model()` 把模型帶進來，其他步驟（建置、預覽、檢查、核可）完全一樣：
+
+```python
+"""car_parked: a parked saloon. Model: PSX Style Cars by GGBotNet (CC0), Car 02."""
+
+
+def build(asset):
+    asset.import_model("psx_cars/Car 02/Car2.blend", length=4.2)
+```
+
+| 參數 | 作用 |
+|---|---|
+| 路徑 | 相對於 `asset_drop/`；可讀 `.glb`、`.gltf`、`.obj`、`.fbx`、`.blend` |
+| `length=` | 等比例縮放，讓地面上最長的一邊是這麼多公尺 |
+| `scale=`、`rot=`、`at=` | 沒給 `length` 時的縮放；轉向（度，讓正面朝 -Y）；放的位置 |
+
+匯入的模型保留自己的貼圖，工具會把貼圖放大（最多 512 px）、補銳利度、加上顆粒、污漬和雨痕，再依 palette 調灰調暗。規格卡的 `notes` 要寫素材包名稱、作者和授權。
+
+## 牆、建築、地面的材質
+
+大小每處都不同的東西（建築、牆、圍欄、沙包、地面）不用模型，而是灰盒方塊貼上**會依實際大小重複的材質**：
+
+1. 材質清單在 [art/textures.json](../../art/textures.json)，`node tools/art/assets.mjs textures` 會從素材包（或工具自己畫，例如沙包）做出 `web/assets/textures/<id>.jpg`，無縫、放大、加髒污。
+2. 哪個顏色鍵用哪個材質，寫在自己那章 palette 檔的 `greybox.surfaces`，例如 `"building": { "texture": "brick", "metres": [4, 4] }`（一格貼圖蓋 4 × 4 m），可加 `tint`、`roughness`。`ground` 是地面。
+3. 網址加 `&models=0` 會關掉模型和材質，回到純灰盒。
+
 ## 出問題時
 
 | 訊息 | 怎麼辦 |

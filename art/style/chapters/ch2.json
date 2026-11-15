@@ -41,6 +41,18 @@
     "lowWall": "#5c656e",
     "fence": "#3d444c",
     "metal": "#2f353b",
-    "dummy": "#454c47"
+    "dummy": "#454c47",
+    "surfaces": {
+      "ground": { "texture": "asphalt", "metres": [6, 2.2], "roughness": 0.6 },
+      "building": { "texture": "brick", "metres": [4, 4] },
+      "hqWall": { "texture": "concrete", "metres": [4, 1.45], "tint": "#9aa3ad" },
+      "lowWall": { "texture": "concrete", "metres": [3, 1.1] },
+      "fence": { "texture": "metal", "metres": [2, 2], "tint": "#7d858d" },
+      "booth": { "texture": "stucco", "metres": [2, 2] },
+      "sandbags": { "texture": "sandbags", "metres": [1.2, 0.55] },
+      "gateDoor": { "texture": "metal", "metres": [2, 2], "tint": "#9aa3ab" },
+      "shop": { "texture": "metal", "metres": [1.5, 1.5] },
+      "gate": { "texture": "metal", "metres": [2, 2], "tint": "#8a9299" }
+    }
   }
 }
