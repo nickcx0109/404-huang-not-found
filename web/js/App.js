@@ -9,6 +9,8 @@
     paletteUrl: '../art/style/palette.json',
     paletteChaptersUrl: '../art/style/chapters/',
     levelsUrl: 'levels/',
+    manifestUrl: '../art/manifest/',
+    modelsUrl: 'assets/models/',
     defaultLevel: 'test',
     maxPixelRatio: 1.5, // PERFORMANCE_PLAN 3.2-5
     minPixelRatio: 0.5,
@@ -30,6 +32,8 @@
       this.perf = flag('perf');
       this.flashlight = params.get('flashlight') !== '0';
       this.dummies = flag('dummies');
+      // ?models=0 shows the greybox stand-ins even where a model exists.
+      this.models = params.get('models') !== '0';
       // Seconds on the animation clock for ?shot= (flicker and beacons are functions of time).
       this.time = parseFloat(params.get('t')) || 0;
       this.spawn = Math.max(0, parseInt(params.get('spawn') || '0', 10) || 0);
@@ -87,7 +91,11 @@
       this.atmosphere.configurePost(this.postfx);
 
       // Level: collision + visuals.
-      this.propFactory = new Game.PropFactory(this.style);
+      this.models = options.models
+        ? new Game.ModelLibrary(CONFIG.manifestUrl, CONFIG.modelsUrl)
+        : Game.ModelLibrary.none();
+      await this.models.load(options.models ? level.manifests : [], level.props.map((p) => p.name));
+      this.propFactory = new Game.PropFactory(this.style, this.models);
       this.builder = new Game.SceneBuilder(this.propFactory, this.style.greybox);
       this.built = this.builder.build(level, { debug: options.debug, dummies: options.dummies });
       this.scene.add(this.built.root);
@@ -288,6 +296,12 @@
             '  yaw ' + THREE.MathUtils.radToDeg(p.yaw).toFixed(0) +
             '  pitch ' + THREE.MathUtils.radToDeg(p.pitch).toFixed(0)
         );
+        if (this.built.modelProps.size > 0) {
+          lines.push('models: ' + Array.from(this.built.modelProps, (e) => e[0] + ' x' + e[1]).join(', '));
+        }
+        if (this.models.failed.length > 0) {
+          lines.push('model failed, stand-in used: ' + this.models.failed.join(', '));
+        }
         if (this.built.unknownProps.length > 0) {
           lines.push('no model: ' + this.built.unknownProps.join(', '));
         }

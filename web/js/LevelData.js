@@ -107,6 +107,8 @@
       this.title = typeof raw.title === 'string' ? raw.title : this.name;
       /** Name of the block in art/style/palette.json, or null for the default block. */
       this.palette = typeof raw.palette === 'string' ? raw.palette : null;
+      /** Asset manifests (art/manifest/<name>.json) whose ready models this level may use. */
+      this.manifests = LevelData._readManifests(raw, v);
 
       this.colliders = LevelData._readColliders(raw, v);
       this._colliderById = new Map(this.colliders.map((c) => [c.id, c]));
@@ -301,6 +303,14 @@
           fov: v.number(b, 'fov', path, { fallback: 0, min: 0 }),
         });
       }).filter(Boolean);
+    }
+
+    static _readManifests(raw, v) {
+      return v.array(raw, 'manifests', 'level', false).filter((name, i) => {
+        const ok = typeof name === 'string' && NAME_PATTERN.test(name);
+        if (!ok) v.error('manifests[' + i + ']', 'must be a manifest name such as "common" or "ch2"');
+        return ok;
+      });
     }
 
     /** Optional named gameplay points: shop, objective, defence posts, later pickups ... */

@@ -1,15 +1,26 @@
 // PropFactory: prop name -> mesh. Visuals only; it never creates or changes collision.
-// A name with no registered builder falls back to a grey box the size of the prop's collider,
-// so a level stays playable while its art is still missing.
+// For each prop it uses, in this order:
+//   1. the model web/assets/models/<name>.glb, when ModelLibrary has it (manifest says "ready");
+//   2. the greybox stand-in registered under that name (web/js/props/*.js);
+//   3. a grey box the size of the prop's collider.
+// So a level stays playable while its art is missing, and a missing or broken model only
+// costs its looks.
 (function (Game) {
   'use strict';
 
   const DEFAULT_SIZE = Object.freeze({ w: 1, h: 1, d: 1 });
 
   class PropFactory {
-    /** @param {object} style  resolved palette style */
-    constructor(style) {
+    /**
+     * @param {object} style  resolved palette style
+     * @param {Game.ModelLibrary} [models]  loaded models; without it only stand-ins are used
+     */
+    constructor(style, models) {
       this.greybox = style.greybox;
+      this.models = models || null;
+      this._extras = new Map();
+      /** How many props were drawn with a model, by name. */
+      this.modelCounts = new Map();
       /** Glowing materials and small coloured lights (accent, alarm, screens). */
       this.emitters = new Game.Emitters(style);
       this._builders = new Map();
@@ -55,6 +66,17 @@
       return this;
     }
 
+    /**
+     * Registers code that completes a MODEL of this name with what a GLB cannot carry:
+     * lights and other objects made at run time. It receives { prop, size, factory, object }
+     * and adds children to `object` (the placed model, origin at its bottom centre).
+     * The stand-in builder is not involved: it builds its own lights.
+     */
+    registerExtras(name, addExtras) {
+      this._extras.set(name, addExtras);
+      return this;
+    }
+
     has(name) {
       return this._builders.has(name);
     }
@@ -74,7 +96,17 @@
       const builder = this._builders.get(prop.name);
       let object;
 
-      if (builder) {
+      if (this.models && this.models.has(prop.name)) {
+        // A model has its own real size; "size" and the collider's size only shape stand-ins.
+        object = this.models.instantiate(prop.name, this.emitters);
+        object.position.set(prop.x, prop.y, prop.z);
+        object.rotation.y = THREE.MathUtils.degToRad(prop.rotY);
+        object.scale.setScalar(prop.scale);
+        const addExtras = this._extras.get(prop.name);
+        if (addExtras) addExtras({ prop, size, factory: this, object });
+        object.userData.model = true;
+        this.modelCounts.set(prop.name, (this.modelCounts.get(prop.name) || 0) + 1);
+      } else if (builder) {
         object = builder({ prop, size, factory: this });
         object.position.set(prop.x, prop.y, prop.z);
         object.rotation.y = THREE.MathUtils.degToRad(prop.rotY);

@@ -28,6 +28,10 @@
       this.emitters = null;
       this.unknownProps = [];
       this.meshCount = { before: 0, after: 0 };
+      /** Props drawn with a GLB model: name -> how many. */
+      this.modelProps = new Map();
+      /** Result of ModelInstancer: instanced meshes created and the meshes they replace. */
+      this.instanced = { parts: 0, instances: 0 };
     }
 
     /** Per-frame update of animated props (sign flicker, rotating beacons). */
@@ -92,7 +96,9 @@
       });
 
       built.unknownProps = Array.from(this.props.unknownNames);
+      built.modelProps = new Map(this.props.modelCounts);
       built.meshCount = Game.StaticBatcher.merge(root);
+      built.instanced = Game.ModelInstancer.instance(root);
     }
 
     _ground(level) {
