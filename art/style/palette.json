@@ -1,0 +1,73 @@
+{
+  "_about": [
+    "Single source of truth for colours, fog, lights and post-processing. Code must not hard-code these.",
+    "Top-level keys other than those starting with '_' are blocks. A level picks one with its \"palette\" field (or ?palette=<block>).",
+    "Every block is merged over \"default\", so a block only lists what it changes.",
+    "A block may hold \"presets\": { name: partial block } plus \"defaultPreset\"; ?preset=<name> picks one.",
+    "Hex colours are sRGB, as seen in a colour picker. Angles are degrees, distances are metres."
+  ],
+
+  "default": {
+    "fog": {
+      "color": "#2a3330",
+      "density": 0.04
+    },
+    "hemisphere": {
+      "sky": "#55645f",
+      "ground": "#1a1f1c",
+      "intensity": 0.9
+    },
+    "moon": {
+      "color": "#9fb3aa",
+      "intensity": 0.3,
+      "direction": [-0.45, 1.0, 0.35]
+    },
+    "flashlight": {
+      "color": "#fff0d2",
+      "intensity": 2.4,
+      "distance": 34,
+      "angle": 26,
+      "penumbra": 0.6,
+      "decay": 1.4,
+      "offset": [0.22, -0.18, 0.05],
+      "shadow": {
+        "enabled": true,
+        "mapSize": 1024,
+        "bias": -0.002
+      }
+    },
+    "post": {
+      "exposure": 0.9,
+      "saturation": 0.8,
+      "vignette": {
+        "strength": 0.6,
+        "start": 0.35,
+        "end": 1.05
+      },
+      "grain": 0.05,
+      "chromaticAberration": 0.0,
+      "bloom": {
+        "enabled": true,
+        "threshold": 1.0,
+        "knee": 0.5,
+        "strength": 0.35,
+        "levels": 3
+      }
+    },
+    "greybox": {
+      "ground": "#5a605d",
+      "grid": "#454a48",
+      "collider": "#8b908d",
+      "prop": "#6d7a76",
+      "crate": "#8a7a62",
+      "pillar": "#7c8582",
+      "roughness": 0.95,
+      "markers": {
+        "playerSpawn": "#3aa0ff",
+        "zombieSpawn": "#ff3b2f",
+        "bookmark": "#ffd23a",
+        "intensity": 1.6
+      }
+    }
+  }
+}
