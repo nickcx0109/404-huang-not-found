@@ -105,7 +105,11 @@
   },
 
   "markers": [
-
+    {"id": "to_ch3_2f", "type": "exit", "x": -10, "z": -41, "r": 0.6, "yaw": 90},
+    {"id": "lift_top", "type": "objective", "x": 8.4, "z": -44.2, "r": 1.6, "yaw": -90},
+    {"id": "launch_pad", "type": "objective", "x": 2, "z": -11.6, "r": 2.5, "yaw": 0},
+    {"id": "hostage", "type": "hostage", "x": 10.6, "z": -25.6, "r": 1.2, "yaw": 180},
+    {"id": "boss", "type": "boss_spawn", "x": 1, "z": -1.5, "r": 2.5, "yaw": 0}
   ],
 
   "bookmarks": [

@@ -355,7 +355,9 @@
     {"id": "fuel_09", "type": "fuel", "x": -1.8, "z": -35.2, "r": 0.8},
     {"id": "fuel_10", "type": "fuel", "x": 13.8, "z": -25.8, "r": 0.8},
     {"id": "fuel_11", "type": "fuel", "x": 14.4, "z": -28.6, "r": 0.8},
-    {"id": "fuel_12", "type": "fuel", "x": 6.6, "z": -46.8, "r": 0.8}
+    {"id": "fuel_12", "type": "fuel", "x": 6.6, "z": -46.8, "r": 0.8},
+    {"id": "lift", "type": "objective", "x": 8.4, "z": -44.2, "r": 1.6, "yaw": -90},
+    {"id": "to_ch3_2f", "type": "exit", "x": -12.9, "z": -41.2, "r": 0.8, "yaw": 180}
   ],
 
   "bookmarks": [
