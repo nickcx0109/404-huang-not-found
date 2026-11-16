@@ -22,32 +22,14 @@
 
   <pre id="error" hidden></pre>
 
-  <!-- Three.js r128 (global THREE). No bundler: plain scripts, loaded in dependency order. -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="js/Palette.js"></script>
-  <script src="js/LevelData.js"></script>
-  <script src="js/CollisionWorld.js"></script>
-  <script src="js/PathFinder.js"></script>
-  <script src="js/Emitters.js"></script>
-  <script src="js/ModelLibrary.js"></script>
-  <script src="js/ModelInstancer.js"></script>
-  <script src="js/PropFactory.js"></script>
-  <!-- Prop sets: one file per owner. Each registers itself with PropFactory. -->
-  <script src="js/props/CommonProps.js"></script>
-  <script src="js/props/Ch1Props.js"></script>
-  <script src="js/props/Ch2Props.js"></script>
-  <script src="js/props/Ch3Props.js"></script>
-  <script src="js/StaticBatcher.js"></script>
-  <script src="js/SceneBuilder.js"></script>
-  <script src="js/Flashlight.js"></script>
-  <script src="js/PostFX.js"></script>
-  <script src="js/Atmosphere.js"></script>
-  <script src="js/PlayerController.js"></script>
-  <script src="js/Hud.js"></script>
-  <script src="js/App.js"></script>
-  <script>
-    Game.App.boot();
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
+        "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
+      }
+    }
   </script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

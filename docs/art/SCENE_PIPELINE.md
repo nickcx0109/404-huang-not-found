@@ -67,7 +67,7 @@ web/
 
 1. 安裝 Blender 4.2 LTS（免安裝版也可以），確認 `blender --background --python-expr "print(1)"` 能跑。
 2. 決定 `art/`、`tools/art/`、`web/levels/` 歸誰負責（建議：關卡資料跟流程同一人，美術資產另外分配）。
-3. 決定 Three.js 版本。原型用 r128（全域 `THREE`），GLB 用 `three@0.128.0/examples/js/loaders/GLTFLoader.js` 載入即可；要升級就在開工前升，不要做到一半換。
+3. Three.js 固定 **0.128.0**，不要升級，以免改變既有光線與色彩。`index.html` 的 import map 指向 CDN 的 `build/three.module.js` 與同版本 `examples/jsm/`；類別用 `import` 取相依模組，GLB 使用 jsm `GLTFLoader`。只有一個 `js/main.js` 入口，不需打包。
 4. 每一章開工前，Fable 跑出來的東西由該章負責人 review 再 commit，用自己的 GitHub 帳號。
 
 ## 5. 流程

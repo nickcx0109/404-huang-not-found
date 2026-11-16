@@ -87,7 +87,7 @@ node tools/serve.mjs
 - 被道具指到的 collider 不再另外畫，由那個道具負責外觀。
 - 每個道具照這個順序決定外觀：**模型**（`web/assets/models/<name>.glb`，要這一關的 `manifests` 裡有一份把它標成 `ready`，而且檔案載得到）→ **灰盒替身**（`web/js/props/` 裡註冊的）→ **灰色方塊**。模型壞掉或不見只會退回下一種，關卡照常能玩，console 會有一行警告。模型有自己的實際大小，`size` 和 collider 的大小只影響替身。
 - `PropFactory` 不認得的名稱會退回成灰色方塊：有 `collider` 就畫成碰撞盒的大小和位置（不套 `rotY`，因為碰撞盒不能轉），沒有就畫 1 m 的方塊。所以可以先把之後要用的名稱（`barricade`、`guard_booth`…）寫進去，等模型做好再換，碰撞不用動。
-- 目前有灰盒替身的名稱，大小用 `size`，沒有就跟著 collider。新的替身加在**自己那一章**的檔案裡（`factory.register(name, builder)`），一個名稱只能由一個檔案註冊。
+- 目前有灰盒替身的名稱，大小用 `size`，沒有就跟著 collider。新的替身加在**自己那一章**繼承 `PropSet` 的檔案裡（`static builders` 的 `name: builder`），由基底統一註冊；一個名稱只能由一個檔案擁有。
   - `web/js/props/CommonProps.js`（共用）：`crate`（方塊）、`pillar`（圓柱）、`road`（路面，要給 `size`）、`building`、`low_wall`、`fence`、`car_wreck`（廢車）、`car_parked`（停著的車）、`truck_wreck`、`van_wreck`、`street_lamp`。
   - `web/js/props/Ch1Props.js`：`tree`（枯樹）、`escape_car`（尾燈會亮的車，用 palette 的重點色）。
   - `web/js/props/Ch2Props.js`：`mvidia_gate`（大門）、`mvidia_sign`（發光招牌，不要 collider，`size` 是 `[板寬, 字高, 厚度]`）、`gate_panel`（門禁面板）、`guard_booth`、`shop_terminal`（商店）、`sandbags`、`barricade`、`warning_light`（警示燈，給 `size` 就立在那麼高的桿子上，`rotY` 是光一開始照的方向）、`hq_wall`。
@@ -192,6 +192,7 @@ await page.waitForFunction(() => window.__ready || window.__error);
 - `window.__ready`：畫完第一幀後變成 `true`。
 - `window.__error`：載入失敗時是錯誤訊息（例如找不到機位），否則是 `null`。
 - `window.__stats`：`{ calls, triangles, lights, fps, frameMs, pixelRatio }`，來自 `renderer.info`，包含陰影和後製的 draw call；`lights` 不含半球光。
+- `window.__app`：目前的 `App` 實例；`window.__app.events` 是該實例自己的 `EventBus`，不是全域事件單例。
 
 ## 程式架構
 
@@ -214,6 +215,8 @@ PathFinder        在 CollisionWorld 上找走得通的路線；檢查灰盒用�
 App               把上面接起來；處理網址參數、走動模式與截圖模式
 ```
 
-每個類別一個檔案，放在 `web/js/`，用一般 `<script>` 依序載入，掛在全域的 `Game` 底下（例如 `Game.LevelData`）。
+類別放在 `web/js/`，以具名 `export` 匯出，使用者明確 `import`。`index.html` 只載入一個 `type="module"` 入口 `js/main.js`，不再依賴 script tag 順序或全域命名空間。import map 將 `three` 與 `three/examples/jsm/` 固定到 CDN 的 **0.128.0**，GLB 使用 jsm `GLTFLoader`；不要升級版本，以免改變第二章打光與色彩。
+
+`main.js` 先註冊 `CommonProps`、`Ch1Props`、`Ch2Props`、`Ch3Props`，再執行 `App.boot()`。`PropSet` 共用道具建置與模型 extras 的註冊契約；`core/` 提供尚未接入玩法的事件、物件池和狀態機。沒有打包步驟，仍用 `node tools/serve.mjs` 啟動；`npm test` 執行不需瀏覽器的單元測試。詳細模組地圖與擴充方式見 [ARCHITECTURE.md](../../docs/tech/ARCHITECTURE.md)。
 
 誰可以改哪些檔案，看 [docs/art/OWNERSHIP.md](../../docs/art/OWNERSHIP.md)；怎麼做一個模型，看 [docs/art/ADDING_AN_ASSET.md](../../docs/art/ADDING_AN_ASSET.md)。
