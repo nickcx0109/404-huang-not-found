@@ -28,7 +28,16 @@
     {"id": "rocket", "x": 2, "z": -18, "w": 3.2, "d": 3.2, "h": 16},
     {"id": "pad_tower", "x": -3.74, "z": -18, "w": 1.8, "d": 1.8, "h": 15, "visible": false},
     {"id": "work_lamp", "x": 9.4, "z": -9.2, "w": 0.7, "d": 0.7, "h": 1.9, "visible": false},
-    {"id": "cage_0", "x": 10.6, "z": -27.4, "w": 1.7, "d": 1.7, "h": 2.2}
+    {"id": "cage_0", "x": 10.6, "z": -27.4, "w": 1.7, "d": 1.7, "h": 2.2},
+    {"id": "vent_0", "x": -12, "z": -2, "w": 3.4, "d": 2.4, "h": 1.7},
+    {"id": "vent_1", "x": -13.2, "z": -27, "w": 2.4, "d": 3.4, "h": 1.7},
+    {"id": "vent_2", "x": 12.4, "z": 3.4, "w": 3, "d": 2.4, "h": 1.5},
+    {"id": "vent_3", "x": -6, "z": 5.4, "w": 2.4, "d": 3.2, "h": 1.5},
+    {"id": "crate_0", "x": 11.6, "z": -7.6, "w": 1, "d": 1, "h": 0.9},
+    {"id": "crate_1", "x": 12.4, "z": -8.8, "w": 0.8, "d": 0.8, "h": 0.7},
+    {"id": "crate_2", "x": -8.4, "z": -12, "w": 1, "d": 1, "h": 0.9},
+    {"id": "crate_3", "x": 13.6, "z": -18, "w": 1.2, "d": 1.2, "h": 1},
+    {"id": "crate_4", "x": 7.6, "z": -38.4, "w": 1, "d": 1, "h": 0.9}
   ],
 
   "props": [
@@ -44,7 +53,16 @@
     {"name": "launch_pad", "x": 2, "y": 0, "z": -18, "size": [14,15,14]},
     {"name": "rocket", "collider": "rocket", "y": 0.4},
     {"name": "ch3_work_lamp", "x": 9.4, "y": 0, "z": -9.2, "rotY": 39, "size": [0.9,1.9,0.9]},
-    {"name": "cage", "collider": "cage_0"}
+    {"name": "cage", "collider": "cage_0"},
+    {"name": "ch3_vent", "collider": "vent_0"},
+    {"name": "ch3_vent", "collider": "vent_1"},
+    {"name": "ch3_vent", "collider": "vent_2"},
+    {"name": "ch3_vent", "collider": "vent_3"},
+    {"name": "crate", "collider": "crate_0"},
+    {"name": "crate", "collider": "crate_1"},
+    {"name": "crate", "collider": "crate_2"},
+    {"name": "crate", "collider": "crate_3"},
+    {"name": "crate", "collider": "crate_4"}
   ],
 
   "spawns": {
