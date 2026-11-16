@@ -63,6 +63,7 @@ export class Ch3Props extends PropSet {
     ch3_partition: Ch3Props.partition,
     ch3_cabinet: Ch3Props.cabinet,
     ch3_papers: Ch3Props.papers,
+    ch3_debris: Ch3Props.debris,
   };
 
   /**
@@ -203,5 +204,22 @@ export class Ch3Props extends PropSet {
       mess.add(sheet);
     }
     return mess;
+  }
+
+  /** Fallen ceiling tiles and broken board on the floor. */
+  static debris(ctx) {
+    const { factory, size, prop } = ctx;
+    const heap = new THREE.Group();
+    const count = 5 + Math.floor(hash01(prop, 1) * 5);
+    for (let i = 0; i < count; i++) {
+      const w = 0.3 + 0.4 * hash01(prop, 10 + i);
+      const piece = part(
+        factory, hash01(prop, 20 + i) < 0.5 ? 'ch3Debris' : 'ch3Ceiling', w, 0.04, w * (0.6 + 0.6 * hash01(prop, 30 + i)),
+        (hash01(prop, 40 + i) - 0.5) * size.w, 0.02 + hash01(prop, 50 + i) * size.h, (hash01(prop, 60 + i) - 0.5) * size.d
+      );
+      piece.rotation.set((hash01(prop, 70 + i) - 0.5) * 0.7, hash01(prop, 80 + i) * Math.PI, (hash01(prop, 90 + i) - 0.5) * 0.7);
+      heap.add(piece);
+    }
+    return heap;
   }
 }
