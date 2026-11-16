@@ -133,7 +133,8 @@ export class GameSession {
     const targetPlayer = this.playerById(info.targetId);
     const sourceEnemy = ctx.enemies.find(enemy => enemy.id === info.sourceId && enemy.damageable.alive);
     const targetEnemy = ctx.enemies.find(enemy => enemy.id === info.targetId && enemy.active);
-    const target = sourcePlayer?.damageable.alive && targetEnemy ? targetEnemy : sourceEnemy && targetPlayer;
+    const target = sourcePlayer?.damageable.alive && targetEnemy ? targetEnemy :
+      sourceEnemy && (targetPlayer || (targetEnemy === sourceEnemy && targetEnemy));
     if (!target) return 0;
     return target.damageable.takeDamage(this.damagePipeline.apply(info));
   }
