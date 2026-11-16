@@ -339,6 +339,12 @@
   ],
 
   "bookmarks": [
-    {"name": "spawn", "pos": [-12.5,1.7,-44.4], "yaw": 180, "pitch": -3}
+    {"name": "spawn", "pos": [-12.5,1.7,-44.4], "yaw": 180, "pitch": -3},
+    {"name": "stairwell", "pos": [-12.5,1.7,-41], "lookAt": [-10.4,1.6,-45]},
+    {"name": "server", "pos": [-12.5,1.7,-38.6], "yaw": -150, "pitch": -3},
+    {"name": "mid", "pos": [0,1.7,-38.4], "yaw": 180, "pitch": -4},
+    {"name": "aisle", "pos": [-14.6,1.7,-35], "yaw": 180, "pitch": -2},
+    {"name": "break", "pos": [-6.4,1.7,-9.6], "lookAt": [-11.6,0.9,1.8]},
+    {"name": "end", "pos": [2,1.7,-9.4], "lookAt": [10.6,0.8,-2]}
   ]
 }
