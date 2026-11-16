@@ -26,11 +26,29 @@ function part(factory, colorKey, w, h, d, x, y, z) {
   return factory.part(factory.material(colorKey), w, h, d, x, y, z);
 }
 
+/** Stick between two points, for legs, bars and struts. */
+function stick(factory, colorKey, from, to, radius, sides) {
+  const direction = new THREE.Vector3().subVectors(to, from);
+  const length = direction.length();
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius, length, sides || 5),
+    factory.material(colorKey)
+  );
+  mesh.position.copy(from).addScaledVector(direction, 0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+
 export class Ch3Props extends PropSet {
   static id = 'ch3';
 
   static builders = {
     ch3_ceiling: Ch3Props.ceiling,
+    ch3_ceiling_lamp: Ch3Props.ceilingLamp,
     ch3_chair: Ch3Props.chair,
     ch3_partition: Ch3Props.partition,
   };
@@ -40,6 +58,24 @@ export class Ch3Props extends PropSet {
     const slab = ctx.factory.box(ctx.size, 'ch3Ceiling');
     slab.castShadow = false;
     return slab;
+  }
+
+  /** Dead strip light hanging from the ceiling by one end. The origin is at the ceiling. */
+  static ceilingLamp(ctx) {
+    const { factory, size, prop } = ctx;
+    const lamp = new THREE.Group();
+    const fixture = part(factory, 'ch3Partition', size.w, 0.07, size.d, 0, 0, 0);
+    const drop = hash01(prop, 1) < 0.45;
+    if (drop) {
+      fixture.position.set(0, -size.w * 0.3, 0);
+      fixture.rotation.z = (28 + 22 * hash01(prop, 2)) * DEG;
+      lamp.add(stick(factory, 'ch3Chair', v3(size.w * 0.42, 0, 0), v3(size.w * 0.42, -0.12, 0), 0.008, 3));
+    } else {
+      fixture.position.y = -0.09;
+    }
+    fixture.castShadow = false;
+    lamp.add(fixture);
+    return lamp;
   }
 
   /** Office chair; about half of them have been knocked over. */
