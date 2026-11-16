@@ -51,7 +51,8 @@
   - 內容：Host 跑 `GameSession`，Client 只送輸入，Host 傳快照；顯示其他玩家；`ChaseBrain` 改成追最近的玩家（現在只追 `ctx.players[0]`）；連線時把第二章的 `alarm.light.count` 降到 1 或 0（動態燈上限）。
   - 完成：兩台電腦在同一個區網可以一起打第二章。
 - [~] **G9 槍的第一人稱模型和動畫**（進行中：@nickcx0109，分支 feat/weapons-art，暫停）
-  - 做到一半，還沒 commit、只在 nickcx0109 的電腦上：手槍模型 `pistol.glb`、`art/manifest/weapons.json`、`web/js/weapons/` 的 `WeaponRig`、`WeaponView`、`PistolView`、`Clip`、`WeaponModel`（開槍、換彈、拿出的動畫）。
+  - 做到一半，已 push 到分支 `feat/weapons-art`（5 個 commit，還沒開 PR、沒合併）：資產庫的可動零件、手槍模型 `pistol.glb`、`art/manifest/weapons.json`、`web/js/weapons/` 的 `WeaponRig`、`WeaponView`、`PistolView`、`Clip`、`WeaponModel`（開槍、換彈、拿出的動畫）。
+  - 接手前：這個分支是從 PR #6 之前的 `main` 開的，要先 `git rebase main`。`web/js/App.js` 會衝突，兩邊的改動都要留。
   - 還沒做：
     - 改用玩法骨架的事件。現在用自己的 `weapon:fire`、`weapon:reload`，還自己綁滑鼠和 R 鍵；要改成訂閱 `game/events.js` 的 `WEAPON_FIRED`、`WEAPON_RELOADED`、`WEAPON_CHANGED`。
     - 走動模式現在預設會拿槍，畫面會變。要決定是只在 `play=1` 顯示，還是接受走動模式的截圖改變。
