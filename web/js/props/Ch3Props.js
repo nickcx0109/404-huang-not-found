@@ -119,6 +119,7 @@ export class Ch3Props extends PropSet {
     freight_elevator: Ch3Props.freightElevator,
     rocket: Ch3Props.rocket,
     launch_pad: Ch3Props.launchPad,
+    cage: Ch3Props.cage,
     ch3_ceiling: Ch3Props.ceiling,
     ch3_ceiling_lamp: Ch3Props.ceilingLamp,
     ch3_desk: Ch3Props.desk,
@@ -278,6 +279,29 @@ export class Ch3Props extends PropSet {
     }
     pad.add(stick(factory, 'ch3RocketDark', v3(towerX + 0.7, towerHeight * 0.62, 0), v3(-radius * 0.24, towerHeight * 0.6, 0), 0.09, 5));
     return pad;
+  }
+
+  /** Steel cage, big enough for one person: bars all round and a flat roof. */
+  static cage(ctx) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const cage = new THREE.Group();
+    cage.add(part(factory, 'ch3Cage', w, 0.08, d, 0, 0, 0));
+    cage.add(part(factory, 'ch3Cage', w, 0.08, d, 0, h - 0.08, 0));
+    const bars = (count, along, fixed, isX) => {
+      for (let i = 0; i <= count; i++) {
+        const at = -along / 2 + (along * i) / count;
+        const x = isX ? at : fixed;
+        const z = isX ? fixed : at;
+        cage.add(stick(factory, 'ch3Cage', v3(x, 0.08, z), v3(x, h - 0.08, z), 0.022, 4));
+      }
+    };
+    const perMetre = 5;
+    bars(Math.max(4, Math.round(w * perMetre)), w - 0.06, -d / 2 + 0.03, true);
+    bars(Math.max(4, Math.round(w * perMetre)), w - 0.06, d / 2 - 0.03, true);
+    bars(Math.max(4, Math.round(d * perMetre)), d - 0.06, -w / 2 + 0.03, false);
+    bars(Math.max(4, Math.round(d * perMetre)), d - 0.06, w / 2 - 0.03, false);
+    return cage;
   }
 
   /** Ceiling slab; the level places it at ceiling height with a "size". */
