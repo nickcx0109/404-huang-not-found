@@ -133,6 +133,7 @@ export class Ch3Props extends PropSet {
     ch3_work_lamp: Ch3Props.workLamp,
     ch3_vent: Ch3Props.vent,
     ch3_parapet: Ch3Props.parapet,
+    ch3_stairs: Ch3Props.stairs,
   };
 
   /**
@@ -536,5 +537,33 @@ export class Ch3Props extends PropSet {
   /** Low wall around the roof edge. */
   static parapet(ctx) {
     return ctx.factory.box(ctx.size, 'ch3Parapet');
+  }
+
+  /**
+   * One flight of stairs going up: the foot is at the back (+Z) and it rises toward the
+   * front (-Z) to the full height of `size`, with a handrail on each side. The engine has no
+   * height, so the level blocks the flight with a collider and puts an exit marker at its
+   * foot: walking up means loading the next floor.
+   */
+  static stairs(ctx) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const flight = new THREE.Group();
+    const steps = Math.max(4, Math.round(h / 0.2));
+    const rise = h / steps;
+    const run = d / steps;
+    for (let i = 0; i < steps; i++) {
+      flight.add(part(factory, 'ch3Stair', w, rise * (i + 1), run, 0, 0, d / 2 - run * (i + 0.5)));
+    }
+    [-1, 1].forEach((side) => {
+      const x = side * (w / 2 - 0.04);
+      flight.add(stick(factory, 'ch3Chair', v3(x, 0.95, d / 2), v3(x, h + 0.95, -d / 2), 0.025, 4));
+      for (let i = 0; i <= 4; i++) {
+        const along = i / 4;
+        const z = d / 2 - d * along;
+        flight.add(stick(factory, 'ch3Chair', v3(x, h * along, z), v3(x, h * along + 0.95, z), 0.018, 4));
+      }
+    });
+    return flight;
   }
 }
