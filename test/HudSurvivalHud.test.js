@@ -36,8 +36,8 @@ function setup() {
   const session = { state: 'playing', wave: 2, canMove: true,
     context: { time: 0, enemies: [{ id: 'z1', position: { x: 4, y: 0, z: 0 } }], players: [player] } };
   const hud = SurvivalHud.standard(root, events, 'me');
-  const [damage, health, ammo, line, crosshair, prompt] = hud.widgets;
-  return { elements, doc, events, weapon, player, session, hud, damage, health, ammo, line, crosshair, prompt };
+  const [damage, health, ammo, line, crosshair, prompt, card] = hud.widgets;
+  return { elements, doc, events, weapon, player, session, hud, damage, health, ammo, line, crosshair, prompt, card };
 }
 
 test('SurvivalHud keeps the viewer error display and draws health, ammunition and the status line', () => {
@@ -146,7 +146,7 @@ test('StatusLine describes every game state in one line', () => {
   assert.equal(StatusLine.describe({ ...base, state: 'lobby' }), 'CLICK TO START');
   assert.equal(StatusLine.describe({ ...base, state: 'playing' }), 'WAVE 3   $125   4 LEFT');
   assert.equal(StatusLine.describe({ ...base, state: 'wave-break' }), 'WAVE 3   $125   NEXT WAVE IN 6   E AT SHOP: AMMO $25');
-  assert.equal(StatusLine.describe({ ...base, state: 'game-over' }), 'YOU DIED   REFRESH TO RETRY');
+  assert.equal(StatusLine.describe({ ...base, state: 'game-over' }), 'REFRESH TO RETRY');
 });
 
 test('CrosshairWidget kicks on a shot, marks hits and keeps a kill mark over a later hit', () => {
@@ -240,5 +240,34 @@ test('PromptWidget shows, updates and hides a prompt sent as an event', () => {
   events.emit(EVENTS.PROMPT_CHANGED, { id: 'shop', text: 'E   BUY AMMO' });
   assert.equal(has('is-on'), true);
   assert.equal(has('has-line'), false, 'no progress, no line');
+  hud.dispose();
+});
+
+test('EventCard announces waves one after another and keeps the game-over card up', () => {
+  const { events, session, hud, card } = setup();
+  const has = name => card.el.classList.contains(name);
+  hud.updateGame(0, session);
+  assert.equal(has('is-on'), false);
+
+  events.emit(EVENTS.WAVE_STARTED, { wave: 3, count: 4 });
+  events.emit(EVENTS.ANNOUNCED, { text: 'FUEL FULL' });
+  hud.updateGame(0, session);
+  assert.equal(card.text.textContent, 'WAVE 3');
+  assert.equal(has('is-on'), true);
+
+  for (let step = 0; step < 42; step++) hud.updateGame(0.05, session);
+  assert.equal(has('is-on'), false);
+  assert.equal(has('is-fading'), true, 'after two seconds it fades');
+  assert.equal(card.text.textContent, 'WAVE 3', 'the words stay while fading');
+
+  for (let step = 0; step < 20; step++) hud.updateGame(0.05, session);
+  assert.equal(card.text.textContent, 'FUEL FULL', 'the next card takes its turn');
+  assert.equal(has('is-on'), true);
+
+  events.emit(EVENTS.GAME_OVER, { wave: 3, kills: 9 });
+  hud.updateGame(0, session);
+  assert.equal(card.text.textContent, 'YOU DIED');
+  for (let step = 0; step < 200; step++) hud.updateGame(0.05, session);
+  assert.equal(has('is-on'), true, 'game over does not fade');
   hud.dispose();
 });

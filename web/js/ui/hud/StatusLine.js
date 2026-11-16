@@ -20,7 +20,7 @@ export class StatusLine extends HudWidget {
 
   /** The line for a status, as plain text. */
   static describe(status) {
-    if (status.state === 'game-over') return 'YOU DIED   REFRESH TO RETRY';
+    if (status.state === 'game-over') return 'REFRESH TO RETRY';
     if (status.state === 'lobby') return 'CLICK TO START';
     const head = 'WAVE ' + status.wave + '   $' + status.money + '   ';
     if (status.state === 'wave-break') return head + 'NEXT WAVE IN ' + status.breakSeconds + '   E AT SHOP: AMMO $25';
