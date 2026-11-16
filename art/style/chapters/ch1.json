@@ -33,6 +33,7 @@
     "roughness": 0.92,
     "groundRoughness": 0.85,
 
+    "ch1RoadLine": "#8a8672",
     "ch1Rail": "#555b5b",
     "ch1Rust": "#3f2c20",
 

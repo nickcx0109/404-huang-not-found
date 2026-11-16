@@ -33,6 +33,7 @@ export class Ch1Props extends PropSet {
     escape_car: Ch1Props.escapeCar,
     guardrail: Ch1Props.guardrail,
     guardrail_broken: Ch1Props.guardrailBroken,
+    ch1_lane_mark: Ch1Props.laneMark,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -128,5 +129,12 @@ export class Ch1Props extends PropSet {
     const group = new THREE.Group();
     group.add(rail);
     return group;
+  }
+
+  /** Worn paint on the road: a flat strip the size the level gives. */
+  static laneMark(ctx) {
+    const mark = ctx.factory.box(ctx.size, 'ch1RoadLine');
+    mark.castShadow = false;
+    return mark;
   }
 }
