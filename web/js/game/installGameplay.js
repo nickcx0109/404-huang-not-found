@@ -12,7 +12,7 @@ import { Pistol } from '../weapons/Pistol.js';
 import { Wallet } from '../economy/Wallet.js';
 import { Economy } from '../economy/Economy.js';
 import { AmmoRefillItem } from '../economy/AmmoRefillItem.js';
-import { GameplayHud } from '../ui/GameplayHud.js';
+import { SurvivalHud } from '../ui/hud/SurvivalHud.js';
 
 export function installGameplay(app) {
   const ctx = new GameContext({ scene: app.scene, collision: app.built.collision,
@@ -35,7 +35,7 @@ export function installGameplay(app) {
   app.game = new GameSession(ctx, { factory, director: new ExampleWaveDirector(), economy: new Economy(),
     items: [ammo], breakSeconds: EXAMPLE_WAVES.breakSeconds });
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id);
-  app.hud = new GameplayHud(document.body);
+  app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);
   const unsubscribe = ctx.events.on(EVENTS.GAME_OVER, () => {
     app.player.enabled = false;
