@@ -29,6 +29,62 @@ export class PathFinder {
     this.cols = Math.max(1, Math.floor((b.maxX - b.minX) / this.cell));
     this.rows = Math.max(1, Math.floor((b.maxZ - b.minZ) / this.cell));
     this._state = new Uint8Array(this.cols * this.rows);
+    this._routeQueue = null;
+    this._routeFrom = null;
+  }
+
+  createRoute() {
+    const count = this.cols * this.rows;
+    this._routeQueue ??= new Int32Array(count);
+    this._routeFrom ??= new Int32Array(count);
+    return { points: new Float64Array(count * 2), length: 0 };
+  }
+
+  findPathInto(x0, z0, x1, z1, route) {
+    route.length = 0;
+    const start = this._nearestFree(x0, z0);
+    const goal = this._nearestFree(x1, z1);
+    if (start < 0 || goal < 0) return false;
+    const from = this._routeFrom;
+    const queue = this._routeQueue;
+    from.fill(-1);
+    from[start] = start;
+    queue[0] = start;
+    let head = 0;
+    let tail = 1;
+    while (head < tail && from[goal] === -1) {
+      const current = queue[head++];
+      const col = current % this.cols;
+      const row = (current - col) / this.cols;
+      for (const step of STEPS) {
+        const dc = step[0];
+        const dr = step[1];
+        if (!this._free(col + dc, row + dr)) continue;
+        if (dc && dr && (!this._free(col + dc, row) || !this._free(col, row + dr))) continue;
+        const next = (row + dr) * this.cols + col + dc;
+        if (from[next] !== -1) continue;
+        from[next] = current;
+        queue[tail++] = next;
+      }
+    }
+    if (from[goal] === -1) return false;
+    for (let current = goal; ; current = from[current]) {
+      const col = current % this.cols;
+      const row = (current - col) / this.cols;
+      const offset = route.length++ * 2;
+      route.points[offset] = this.minX + (col + 0.5) * this.cell;
+      route.points[offset + 1] = this.minZ + (row + 0.5) * this.cell;
+      if (current === start) break;
+    }
+    for (let index = 0; index < Math.floor(route.length / 2); index++) {
+      const other = route.length - index - 1;
+      for (let axis = 0; axis < 2; axis++) {
+        const value = route.points[index * 2 + axis];
+        route.points[index * 2 + axis] = route.points[other * 2 + axis];
+        route.points[other * 2 + axis] = value;
+      }
+    }
+    return true;
   }
 
   /**
@@ -116,12 +172,13 @@ export class PathFinder {
     if (col < 0 || row < 0 || col >= this.cols || row >= this.rows) return false;
     const index = row * this.cols + col;
     if (this._state[index] === UNKNOWN) {
-      const c = this._centre(index);
+      const x = this.minX + (col + 0.5) * this.cell;
+      const z = this.minZ + (row + 0.5) * this.cell;
       const b = this.collision.bounds;
       const inside =
-        c.x - this.radius >= b.minX && c.x + this.radius <= b.maxX &&
-        c.z - this.radius >= b.minZ && c.z + this.radius <= b.maxZ;
-      const hit = !inside || this.collision.hit(c.x, c.z, this.radius, 0, this.height);
+        x - this.radius >= b.minX && x + this.radius <= b.maxX &&
+        z - this.radius >= b.minZ && z + this.radius <= b.maxZ;
+      const hit = !inside || this.collision.hit(x, z, this.radius, 0, this.height);
       this._state[index] = hit ? BLOCKED : FREE;
     }
     return this._state[index] === FREE;
@@ -136,8 +193,9 @@ export class PathFinder {
     for (let dr = -reach; dr <= reach; dr++) {
       for (let dc = -reach; dc <= reach; dc++) {
         if (!this._free(col + dc, row + dr)) continue;
-        const c = this._centre((row + dr) * this.cols + col + dc);
-        const distance = Math.hypot(c.x - x, c.z - z);
+        const centreX = this.minX + (col + dc + 0.5) * this.cell;
+        const centreZ = this.minZ + (row + dr + 0.5) * this.cell;
+        const distance = Math.hypot(centreX - x, centreZ - z);
         if (distance < bestDistance) {
           bestDistance = distance;
           best = (row + dr) * this.cols + col + dc;

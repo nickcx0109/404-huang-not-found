@@ -97,7 +97,7 @@ export class CollisionWorld {
    * Axes are resolved one at a time, and long moves are split so thin walls cannot be skipped.
    * @returns {{x:number, z:number, hitX:boolean, hitZ:boolean}}
    */
-  move(x, z, dx, dz, r, y0, y1) {
+  move(x, z, dx, dz, r, y0, y1, result = {}) {
     const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dz)) / r));
     const sx = dx / steps;
     const sz = dz / steps;
@@ -156,6 +156,10 @@ export class CollisionWorld {
       x = cx;
       z = cz;
     }
-    return { x, z, hitX, hitZ };
+    result.x = x;
+    result.z = z;
+    result.hitX = hitX;
+    result.hitZ = hitZ;
+    return result;
   }
 }

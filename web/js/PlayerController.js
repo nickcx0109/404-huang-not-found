@@ -42,6 +42,7 @@ export class PlayerController {
     /** Keys only move the player while enabled (pointer locked). */
     this.enabled = false;
     this.onLockChange = null;
+    this._movement = { x: 0, z: 0, hitX: false, hitZ: false };
 
     this._keys = { forward: false, back: false, left: false, right: false, sprint: false };
     this.camera.rotation.order = 'YXZ';
@@ -111,7 +112,7 @@ export class PlayerController {
       const moved = this.collision.move(
         this.x, this.z,
         this.velocityX * dt, this.velocityZ * dt,
-        o.radius, 0, o.height
+        o.radius, 0, o.height, this._movement
       );
       this.x = moved.x;
       this.z = moved.z;
