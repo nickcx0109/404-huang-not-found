@@ -1,6 +1,7 @@
 // CollisionWorld: axis-aligned boxes built from LevelData.colliders.
 // Knows nothing about meshes, so visuals can change without touching collision.
 const SKIN = 0.001; // keeps a resolved body from touching the face it was pushed out of
+const RAY_AXES = [['x', 'minX', 'maxX'], ['y', 'minY', 'maxY'], ['z', 'minZ', 'maxZ']];
 
 export class Aabb {
   constructor(minX, minY, minZ, maxX, maxY, maxZ, id) {
@@ -29,6 +30,27 @@ export class Aabb {
       z + r > this.minZ && z - r < this.maxZ &&
       y1 > this.minY && y0 < this.maxY
     );
+  }
+
+  rayDistance(origin, direction, maxDistance) {
+    let near = 0;
+    let far = maxDistance;
+    for (const axis of RAY_AXES) {
+      const start = origin[axis[0]];
+      const delta = direction[axis[0]];
+      const minimum = this[axis[1]];
+      const maximum = this[axis[2]];
+      if (Math.abs(delta) < 1e-10) {
+        if (start < minimum || start > maximum) return Infinity;
+      } else {
+        const entry = (minimum - start) / delta;
+        const exit = (maximum - start) / delta;
+        near = Math.max(near, Math.min(entry, exit));
+        far = Math.min(far, Math.max(entry, exit));
+        if (near > far) return Infinity;
+      }
+    }
+    return near;
   }
 }
 
@@ -62,6 +84,12 @@ export class CollisionWorld {
       if (this.boxes[i].overlapsColumn(x, z, r, y0, y1)) return this.boxes[i];
     }
     return null;
+  }
+
+  raycast(origin, direction, maxDistance) {
+    let distance = Infinity;
+    for (const box of this.boxes) distance = Math.min(distance, box.rayDistance(origin, direction, maxDistance));
+    return distance;
   }
 
   /**
