@@ -3,7 +3,8 @@
     "Chapter 1, find the car. This file is the palette block \"ch1\" (levels pick it with \"palette\": \"ch1\").",
     "Look: a realistic, dark night on a mountain road. It starts from the chosen mood (heavy) and changes what that look needs; every difference is explained in the PR description.",
     "Fog is brighter than the things standing in it, so trees, wrecks and zombies read as dark silhouettes; the only warm colours are three small lights (camp fire, cabin window, a string of bulbs).",
-    "greybox.ch1Fire / ch1Window / ch1Bulb are the warm emitters built by web/js/props/Ch1Props.js: color and intensity of the glowing surface (above 1 feeds the bloom), light = the point light that reaches a few metres around it, flicker = how much the fire wavers."
+    "greybox.ch1Fire / ch1Window / ch1Bulb are the warm emitters built by web/js/props/Ch1Props.js: color and intensity of the glowing surface (above 1 feeds the bloom), light = the point light that reaches a few metres around it, flicker = how much the fire wavers.",
+    "Dynamic lights: flashlight + these three = 4, the limit. That is why the moon and the tail-light glow are switched off here."
   ],
   "extends": "mood/heavy",
 
@@ -18,6 +19,11 @@
     "grain": 0.075,
     "chromaticAberration": 0.0025,
     "bloom": { "enabled": true, "threshold": 0.85, "knee": 0.5, "strength": 0.8, "levels": 3 }
+  },
+  "accent": {
+    "color": "#ff3b2f",
+    "intensity": 5,
+    "light": { "intensity": 0 }
   },
 
   "greybox": {
@@ -61,6 +67,11 @@
       "color": "#ff9a3c",
       "intensity": 3.4,
       "light": { "intensity": 1.8, "distance": 9, "decay": 2 }
+    },
+    "ch1Bulb": {
+      "color": "#ffc478",
+      "intensity": 5,
+      "light": { "intensity": 1.7, "distance": 10, "decay": 2 }
     },
 
     "surfaces": {

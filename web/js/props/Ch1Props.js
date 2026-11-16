@@ -127,6 +127,7 @@ export class Ch1Props extends PropSet {
     ch1_tent: Ch1Props.tent,
     ch1_campfire: Ch1Props.campfire,
     ch1_cabin: Ch1Props.cabin,
+    ch1_bulb_string: Ch1Props.bulbString,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -470,5 +471,48 @@ export class Ch1Props extends PropSet {
       cabin.add(light);
     }
     return cabin;
+  }
+
+  /**
+   * A string of bulbs sagging between two poles, across the width (X) of `size`; some bulbs
+   * are dead. Warm light 3 of 3: one light under the middle of the string stands for all.
+   */
+  static bulbString(ctx) {
+    const { factory, size, prop } = ctx;
+    const { w, h } = size;
+    const string = new THREE.Group();
+    [-1, 1].forEach((side) => {
+      const lean = side * 0.12;
+      string.add(stick(
+        factory, 'ch1Pole', new THREE.Vector3(side * w * 0.5, 0, 0), new THREE.Vector3(side * w * 0.5 + lean, h, 0), 0.06
+      ));
+    });
+
+    const bulbs = Math.max(5, Math.round(w / 0.9));
+    const sag = Math.min(1.1, w * 0.1);
+    const pointAt = (t) => new THREE.Vector3((t - 0.5) * w, h - 0.15 - sag * 4 * t * (1 - t), 0);
+    const glow = warmMaterial(factory, 'ch1Bulb');
+    const bulb = new THREE.SphereGeometry(0.07, 6, 5);
+    for (let i = 0; i <= bulbs; i++) {
+      const from = pointAt(i / (bulbs + 1));
+      const to = pointAt((i + 1) / (bulbs + 1));
+      const wire = stick(factory, 'ch1Pole', from, to, 0.012, 3);
+      wire.castShadow = false;
+      string.add(wire);
+      if (i === bulbs) break;
+      const dead = i % 4 === 2 || hash01(prop, 10 + i) < 0.12;
+      const lamp = dead
+        ? new THREE.Mesh(bulb, factory.material('ch1Pole'))
+        : glowing(bulb, glow);
+      lamp.position.copy(to).y -= 0.1;
+      string.add(lamp);
+    }
+
+    const light = warmLight(factory, 'ch1Bulb');
+    if (light) {
+      light.position.set(0, h - sag - 0.6, 0);
+      string.add(light);
+    }
+    return string;
   }
 }
