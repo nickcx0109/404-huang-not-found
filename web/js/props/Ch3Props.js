@@ -62,6 +62,7 @@ export class Ch3Props extends PropSet {
     ch3_chair: Ch3Props.chair,
     ch3_partition: Ch3Props.partition,
     ch3_cabinet: Ch3Props.cabinet,
+    ch3_papers: Ch3Props.papers,
   };
 
   /**
@@ -185,5 +186,22 @@ export class Ch3Props extends PropSet {
       }
     }
     return cabinet;
+  }
+
+  /** Loose paper all over the floor of the footprint the level gives. */
+  static papers(ctx) {
+    const { factory, size, prop } = ctx;
+    const mess = new THREE.Group();
+    const count = 10 + Math.floor(hash01(prop, 1) * 10);
+    for (let i = 0; i < count; i++) {
+      const sheet = part(
+        factory, 'ch3Paper', 0.21, 0.004, 0.3,
+        (hash01(prop, 10 + i) - 0.5) * size.w, 0.002 + i * 0.0004, (hash01(prop, 40 + i) - 0.5) * size.d
+      );
+      sheet.rotation.y = hash01(prop, 70 + i) * Math.PI;
+      sheet.castShadow = false;
+      mess.add(sheet);
+    }
+    return mess;
   }
 }
