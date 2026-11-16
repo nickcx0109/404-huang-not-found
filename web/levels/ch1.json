@@ -1293,6 +1293,7 @@
     {"name": "bend", "pos": [0.5,1.7,-88], "yaw": -32, "pitch": -3},
     {"name": "mid", "pos": [34,1.7,-99.4], "yaw": -72, "pitch": -3},
     {"name": "cabin", "pos": [45.5,1.7,-96.4], "yaw": 10, "pitch": -1},
+    {"name": "bend_2", "pos": [84,1.7,-100], "yaw": -90, "pitch": -1},
     {"name": "last_leg", "pos": [90.6,1.7,-163], "yaw": 2, "pitch": -2},
     {"name": "end", "pos": [89.4,1.7,-179.5], "yaw": -2, "pitch": -1}
   ]
