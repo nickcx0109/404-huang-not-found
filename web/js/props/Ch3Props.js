@@ -131,6 +131,7 @@ export class Ch3Props extends PropSet {
     ch3_fire_bin: Ch3Props.fireBin,
     ch3_emergency_light: Ch3Props.emergencyLight,
     ch3_work_lamp: Ch3Props.workLamp,
+    ch3_vent: Ch3Props.vent,
   };
 
   /**
@@ -513,5 +514,21 @@ export class Ch3Props extends PropSet {
       lamp.add(light);
     }
     return lamp;
+  }
+
+  /** Rooftop air handler: a big box with a dark fan opening on top. */
+  static vent(ctx) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const unit = new THREE.Group();
+    unit.add(factory.box(size, 'ch3Vent'));
+    const fan = new THREE.Mesh(
+      new THREE.CylinderGeometry(Math.min(w, d) * 0.36, Math.min(w, d) * 0.36, 0.06, 12),
+      factory.material('ch3LiftDark')
+    );
+    fan.position.y = h + 0.03;
+    unit.add(fan);
+    unit.add(part(factory, 'ch3LiftDark', w * 0.8, h * 0.3, 0.03, 0, h * 0.35, -d / 2 - 0.015));
+    return unit;
   }
 }
