@@ -69,7 +69,7 @@
 - [ ] **S3 第一章擺模型和打光**（等 S1、S2）：霧的流動、遠景剪影；重拍所有機位，和灰盒截圖比較。
 - [ ] **S4 第二章剩下的資產**（`art/manifest/ch2.json`）：`mvidia_sign`（標誌自己設計，不要仿真實公司的 logo）、`sandbags`、`hq_wall`。
 - [ ] **S5 第二章擺模型和打光**：招牌閃爍、警示燈、霧的流動；重拍所有機位存到 `art/style/refs/ch2/`，和 `ch2-greybox/` 比較。碰撞不要動。順便改善「20 m 外的殭屍只剩很淡的剪影」。
-- [ ] **S6 第三章灰盒** `web/levels/ch3.json`
+- [~] **S6 第三章灰盒** `web/levels/ch3.json`（進行中：@kyle614，分支 feat/scene-ch3）
   - 內容：一樓燃料桶區（約 20 個放置點，寫成 `markers`）、貨梯、頂樓發射台三個區塊；室內以 2 m 格子拼。停電的黑、紅色應急燈，燃料桶的橘黃 `#ffb020` 一定要醒目。3 個玩家出生點、出怪區、6～8 個機位。氣氛寫在 `art/style/chapters/ch3.json`。
   - 完成：PathFinder 驗證走得到每個燃料桶。
 - [ ] **S7 第三章資產**（`art/manifest/ch3.json`）：`office_kit`（牆、門、窗、走廊、轉角、樓梯）、`server_rack`（LED 自發光）、`freight_elevator`、`fuel_barrel` 三種狀態（一般、冒煙、毀損）、`rocket`、`launch_pad`、`cage`。可以拆成幾項分別認領。
