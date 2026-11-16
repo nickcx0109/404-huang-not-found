@@ -74,7 +74,19 @@
     {"name": "ch3_debris", "x": -3, "y": 0, "z": -4, "size": [2.6,0.12,2]},
     {"name": "ch3_debris", "x": 6, "y": 0, "z": -1.6, "size": [2.6,0.12,2]},
     {"name": "ch3_debris", "x": -13, "y": 0, "z": -34.6, "size": [2.6,0.12,2]},
-    {"name": "ch3_papers", "x": -11, "y": 0, "z": -38.4, "size": [4,0.02,2.4]}
+    {"name": "ch3_papers", "x": -11, "y": 0, "z": -38.4, "size": [4,0.02,2.4]},
+    {"name": "ch3_blood_pool", "x": -11.4, "y": 0, "z": -37.6, "rotY": 282, "size": [1.6,0.01,1.6]},
+    {"name": "ch3_blood_pool", "x": 6.4, "y": 0, "z": -42, "rotY": 272, "size": [1.41,0.01,1.41]},
+    {"name": "ch3_blood_pool", "x": 1.6, "y": 0, "z": -8.6, "rotY": 206, "size": [1.12,0.01,1.12]},
+    {"name": "ch3_blood_pool", "x": -7.6, "y": 0, "z": -24.6, "rotY": 194, "size": [1.03,0.01,1.03]},
+    {"name": "ch3_blood_pool", "x": 11.4, "y": 0, "z": -30.6, "rotY": 207, "size": [1.72,0.01,1.72]},
+    {"name": "ch3_blood_pool", "x": -1, "y": 0, "z": -36.6, "rotY": 207, "size": [1.26,0.01,1.26]},
+    {"name": "ch3_blood_trail", "x": 8.2, "y": 0, "z": -43.6, "size": [5,0.01,0.5]},
+    {"name": "ch3_blood_trail", "x": -10.4, "y": 0, "z": -33, "size": [0.5,0.01,9]},
+    {"name": "ch3_blood_trail", "x": 4, "y": 0, "z": -30, "size": [0.5,0.01,7]},
+    {"name": "ch3_blood_smear", "x": -11, "y": 0.67, "z": -39.83, "rotY": 180, "size": [1.27,1.35,0.01]},
+    {"name": "ch3_blood_smear", "x": 9.83, "y": 0.39, "z": -40.9, "rotY": 90, "size": [1.57,1.6,0.01]},
+    {"name": "ch3_blood_smear", "x": 12, "y": 0.68, "z": -39.83, "rotY": 180, "size": [1.02,1.17,0.01]}
   ],
 
   "spawns": {
