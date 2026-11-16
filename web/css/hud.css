@@ -143,6 +143,119 @@
   background: var(--dried);
 }
 
+/* ---- ammunition, bottom right ------------------------------------------- */
+
+.hud-ammo {
+  right: 2.8em;
+  bottom: 2.4em;
+  text-align: right;
+}
+
+.hud-ammo.is-unarmed {
+  visibility: hidden;
+}
+
+.hud-ammo__count {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.55em;
+}
+
+.hud-ammo__mag {
+  transform-origin: right bottom;
+  transition: transform 0.22s ease-out;
+}
+
+.hud-ammo.is-firing .hud-ammo__mag {
+  transform: translateY(0.04em);
+  transition-duration: 0.03s;
+}
+
+.hud-ammo.is-empty .hud-ammo__mag {
+  color: var(--fresh);
+}
+
+.hud-ammo__reserve {
+  font-family: var(--type);
+  font-size: 1.3em;
+  color: var(--ash);
+  -webkit-text-stroke: 0.04em rgba(8, 6, 5, 0.6);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+}
+
+.hud-ammo__reserve::before {
+  content: "/ ";
+}
+
+.hud-ammo__rounds {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.14em;
+  height: 1.3em;
+  max-width: 19em;
+  margin: 0.5em 0 0 auto;
+  filter: var(--mark-shadow);
+  transition: opacity 0.3s ease-out;
+}
+
+.hud-ammo.is-reloading .hud-ammo__rounds {
+  opacity: 0.45;
+}
+
+.hud-ammo__rounds i {
+  flex: 0 1 0.46em;
+  min-width: 1px;
+  background: var(--bone);
+  -webkit-mask: var(--round) center / 100% 100% no-repeat;
+  mask: var(--round) center / 100% 100% no-repeat;
+  transform: translateY(var(--lift, 0)) rotate(var(--tilt, 0deg));
+  transition: opacity 0.2s ease-out, transform 0.09s ease-in, background-color 0.2s;
+}
+
+.hud-ammo__rounds i.is-spent {
+  background: var(--ash);
+  opacity: 0.34;
+  transform: translateY(calc(var(--lift, 0em) + 0.16em)) rotate(var(--tilt, 0deg));
+}
+
+.hud-ammo.is-refilling .hud-ammo__rounds i {
+  transition-delay: calc(var(--i, 0) * 16ms);
+}
+
+.hud-ammo__notice {
+  height: 1.4em;
+  margin-top: 0.55em;
+  font-family: var(--type);
+  font-size: 1.1em;
+  letter-spacing: 0.16em;
+  white-space: pre;
+  -webkit-text-stroke: 0.04em rgba(8, 6, 5, 0.6);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+}
+
+.hud-ammo__notice.is-on {
+  opacity: 1;
+}
+
+.hud-ammo__notice.is-urgent {
+  color: var(--fresh);
+  animation: hud-blink 1s steps(1, end) infinite;
+}
+
+.hud-ammo__notice.is-quiet {
+  color: var(--ash);
+}
+
+.hud-ammo__notice.is-dry {
+  color: var(--dried);
+  -webkit-text-stroke-color: rgba(216, 210, 196, 0.16);
+}
+
 /* ---- motion ------------------------------------------------------------- */
 
 @keyframes hud-throb {
