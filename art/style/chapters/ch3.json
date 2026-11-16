@@ -33,6 +33,7 @@
     "screen": { "color": "#9fb4bd", "intensity": 0.9 },
 
     "ch3Ceiling": "#1b1d1d",
+    "ch3Chair": "#1c1e20",
 
     "surfaces": {
       "ground": { "texture": "concrete", "metres": [4, 4], "roughness": 0.7 },
