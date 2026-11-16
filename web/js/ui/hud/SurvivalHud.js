@@ -5,6 +5,7 @@ import { HealthWidget } from './HealthWidget.js';
 import { AmmoWidget } from './AmmoWidget.js';
 import { StatusLine } from './StatusLine.js';
 import { CrosshairWidget } from './CrosshairWidget.js';
+import { DamageOverlay } from './DamageOverlay.js';
 
 /**
  * The in-game HUD: a composite of HudWidget objects on one layer above the 3D view.
@@ -37,7 +38,9 @@ export class SurvivalHud extends Hud {
   /** The HUD with every finished widget. */
   static standard(root, events, playerId) {
     const doc = root.ownerDocument;
+    // The overlay goes first so every other widget is drawn on top of it.
     return new SurvivalHud(root, events, playerId)
+      .add(new DamageOverlay(doc))
       .add(new HealthWidget(doc))
       .add(new AmmoWidget(doc))
       .add(new StatusLine(doc))

@@ -36,8 +36,8 @@ function setup() {
   const session = { state: 'playing', wave: 2, canMove: true,
     context: { time: 0, enemies: [{ id: 'z1', position: { x: 4, y: 0, z: 0 } }], players: [player] } };
   const hud = SurvivalHud.standard(root, events, 'me');
-  const [health, ammo, line, crosshair] = hud.widgets;
-  return { elements, doc, events, weapon, player, session, hud, health, ammo, line, crosshair };
+  const [damage, health, ammo, line, crosshair] = hud.widgets;
+  return { elements, doc, events, weapon, player, session, hud, damage, health, ammo, line, crosshair };
 }
 
 test('SurvivalHud keeps the viewer error display and draws health, ammunition and the status line', () => {
@@ -59,11 +59,11 @@ test('SurvivalHud keeps the viewer error display and draws health, ammunition an
 test('HealthWidget reacts to the damage event of its own player only', () => {
   const { events, player, session, hud, health } = setup();
   hud.updateGame(0, session);
-  events.emit(EVENTS.ENTITY_DAMAGED, { entity: { id: 'zombie-1' }, health: 10 });
+  events.emit(EVENTS.ENTITY_DAMAGED, { entity: { id: 'zombie-1' }, info: { sourceId: 'me' }, amount: 34, health: 10 });
   assert.equal(health.number.textContent, '100');
 
   player.damageable.health = 66;
-  events.emit(EVENTS.ENTITY_DAMAGED, { entity: player, health: 66 });
+  events.emit(EVENTS.ENTITY_DAMAGED, { entity: player, info: { sourceId: 'z1' }, amount: 34, health: 66 });
   assert.equal(health.number.textContent, '66');
   assert.equal(health.fill.style.transform, 'scaleX(0.6600)');
   assert.equal(health.el.classList.contains('is-hit'), true);
@@ -179,5 +179,41 @@ test('CrosshairWidget kicks on a shot, marks hits and keeps a kill mark over a l
   session.canMove = false;
   hud.updateGame(0, session);
   assert.equal(has('is-off'), true);
+  hud.dispose();
+});
+
+test('DamageOverlay shows the side a hit came from, fades, and marks low health', () => {
+  const { events, player, session, hud, damage } = setup();
+  hud.updateGame(0, session);
+  assert.equal(damage.hit.style.opacity, undefined, 'nothing is drawn before the first hit');
+
+  // z1 stands at x = 4 while the player looks toward -Z: the hit comes from the right.
+  player.damageable.health = 80;
+  events.emit(EVENTS.ENTITY_DAMAGED, { entity: player, info: { sourceId: 'z1' }, amount: 20, health: 80 });
+  hud.updateGame(0, session);
+  assert.equal(damage.hit.style.values['--hit-x'], '108.0%');
+  assert.equal(damage.hit.style.values['--hit-y'], '50.0%');
+  const first = Number(damage.hit.style.opacity);
+  assert.ok(first > 0.5 && first <= 1);
+
+  hud.updateGame(0.05, session);
+  hud.updateGame(0.05, session);
+  assert.ok(Number(damage.hit.style.opacity) < first, 'it fades');
+  for (let step = 0; step < 60; step++) hud.updateGame(0.05, session);
+  assert.equal(Number(damage.hit.style.opacity), 0);
+
+  // An attacker the HUD cannot find comes from below.
+  player.damageable.health = 20;
+  events.emit(EVENTS.ENTITY_DAMAGED, { entity: player, info: { sourceId: 'gone' }, amount: 60, health: 20 });
+  hud.updateGame(0, session);
+  assert.equal(damage.hit.style.values['--hit-x'], '50.0%');
+  assert.equal(damage.hit.style.values['--hit-y'], '108.0%');
+  assert.equal(damage.el.classList.contains('is-low'), true);
+  assert.equal(damage.el.classList.contains('is-dead'), false);
+
+  player.damageable.health = 0;
+  hud.updateGame(0, session);
+  assert.equal(damage.el.classList.contains('is-low'), false);
+  assert.equal(damage.el.classList.contains('is-dead'), true);
   hud.dispose();
 });
