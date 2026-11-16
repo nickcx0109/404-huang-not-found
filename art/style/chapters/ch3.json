@@ -7,6 +7,8 @@
   "extends": "mood/heavy",
 
   "fog": { "color": "#0c0f0e", "density": 0.07 },
+  "hemisphere": { "sky": "#384446", "ground": "#040605", "intensity": 0.055 },
+  "moon": { "intensity": 0 },
   "accent": {
     "color": "#ffb020"
   }
