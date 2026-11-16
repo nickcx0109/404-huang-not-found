@@ -27,12 +27,15 @@ test('DamageInfo and damage rules reject invalid amounts and duplicate chain nod
   assert.throws(() => new HeadshotRule(-1));
   const rule = new HeadshotRule();
   assert.throws(() => new DamagePipeline([rule, rule]));
+  new DamagePipeline([rule]);
+  assert.throws(() => new DamagePipeline([rule]));
 });
 
 test('Damageable clamps overkill, ignores wrong targets and emits death once per life', () => {
   const events = new EventBus();
   const entity = new Entity('enemy');
   const body = new Damageable(entity, 20, events);
+  assert.throws(() => body.takeDamage({ amount: -1, targetId: 'enemy' }), /DamageInfo/);
   const deaths = [];
   events.on(EVENTS.ENTITY_DIED, detail => deaths.push(detail));
   assert.equal(body.takeDamage(new DamageInfo({ amount: 5, targetId: 'other' })), 0);

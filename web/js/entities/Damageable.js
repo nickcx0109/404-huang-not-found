@@ -1,4 +1,5 @@
 import { EVENTS } from '../game/events.js';
+import { DamageInfo } from './DamageInfo.js';
 
 export class Damageable {
   constructor(owner, maxHealth, events) {
@@ -18,6 +19,7 @@ export class Damageable {
   }
 
   takeDamage(info) {
+    if (!(info instanceof DamageInfo)) throw new TypeError('Expected DamageInfo');
     if (!this.alive || info.targetId !== this.owner.id || info.amount === 0) return 0;
     const amount = Math.min(this.health, info.amount);
     this.health -= amount;

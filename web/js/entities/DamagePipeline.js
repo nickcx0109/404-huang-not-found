@@ -1,6 +1,7 @@
 export class DamageRule {
   constructor() {
     this.next = null;
+    this.pipeline = null;
   }
 
   modify(info) {
@@ -27,11 +28,14 @@ export class HeadshotRule extends DamageRule {
 
 export class DamagePipeline {
   constructor(rules = []) {
-    if (new Set(rules).size !== rules.length || rules.some(rule => !(rule instanceof DamageRule))) {
+    if (new Set(rules).size !== rules.length || rules.some(rule => !(rule instanceof DamageRule) || rule.pipeline)) {
       throw new TypeError('Damage rules must be distinct DamageRule instances owned by this pipeline');
     }
     this.first = rules[0] ?? null;
-    for (let index = 0; index < rules.length; index++) rules[index].next = rules[index + 1] ?? null;
+    for (let index = 0; index < rules.length; index++) {
+      rules[index].pipeline = this;
+      rules[index].next = rules[index + 1] ?? null;
+    }
   }
 
   apply(info) {
