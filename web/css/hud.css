@@ -272,6 +272,97 @@
   text-shadow: var(--edge);
 }
 
+/* ---- crosshair, centre --------------------------------------------------- */
+
+.hud-crosshair {
+  --line: max(1px, 0.07em);
+  --gap: 0.34em;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  opacity: 0.8;
+  transition: opacity 0.25s ease-out;
+}
+
+.hud-crosshair.is-off {
+  opacity: 0;
+}
+
+.hud-crosshair__tick {
+  position: absolute;
+  background: var(--bone);
+  box-shadow: 0 0 0 1px rgba(8, 6, 5, 0.5);
+  transition: transform 0.22s ease-out;
+}
+
+.hud-crosshair__tick.is-top,
+.hud-crosshair__tick.is-bottom {
+  left: calc(var(--line) / -2);
+  width: var(--line);
+  height: 0.5em;
+}
+
+.hud-crosshair__tick.is-left,
+.hud-crosshair__tick.is-right {
+  top: calc(var(--line) / -2);
+  width: 0.5em;
+  height: var(--line);
+}
+
+.hud-crosshair__tick.is-top { bottom: var(--gap); }
+.hud-crosshair__tick.is-bottom { top: var(--gap); }
+.hud-crosshair__tick.is-left { right: var(--gap); }
+.hud-crosshair__tick.is-right { left: var(--gap); }
+
+/* The shot pushes the ticks apart at once; they settle back slowly. */
+.hud-crosshair.is-firing .hud-crosshair__tick {
+  transition-duration: 0.02s;
+}
+
+.hud-crosshair.is-firing .is-top { transform: translateY(-0.36em); }
+.hud-crosshair.is-firing .is-bottom { transform: translateY(0.36em); }
+.hud-crosshair.is-firing .is-left { transform: translateX(-0.36em); }
+.hud-crosshair.is-firing .is-right { transform: translateX(0.36em); }
+
+/* Hit: a small cross with an open centre. Kill: the same cross, larger and red. */
+.hud-crosshair__mark {
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+
+.hud-crosshair__mark::before,
+.hud-crosshair__mark::after {
+  content: "";
+  position: absolute;
+  left: -0.62em;
+  top: calc(max(1.5px, 0.1em) / -2);
+  width: 1.24em;
+  height: max(1.5px, 0.1em);
+  background: linear-gradient(90deg, var(--bone) 0 30%, transparent 30% 70%, var(--bone) 70%);
+  filter: drop-shadow(0 0 1px rgba(8, 6, 5, 0.9));
+  transform: rotate(45deg);
+}
+
+.hud-crosshair__mark::after {
+  transform: rotate(-45deg);
+}
+
+.hud-crosshair.is-hit .hud-crosshair__mark {
+  opacity: 1;
+  transition: none;
+}
+
+.hud-crosshair.is-kill .hud-crosshair__mark {
+  transform: scale(1.3);
+}
+
+.hud-crosshair.is-kill .hud-crosshair__mark::before,
+.hud-crosshair.is-kill .hud-crosshair__mark::after {
+  background: linear-gradient(90deg, var(--fresh) 0 30%, transparent 30% 70%, var(--fresh) 70%);
+}
+
 /* ---- motion ------------------------------------------------------------- */
 
 @keyframes hud-throb {

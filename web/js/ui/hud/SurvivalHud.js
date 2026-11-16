@@ -4,6 +4,7 @@ import { PlayerStatus } from './PlayerStatus.js';
 import { HealthWidget } from './HealthWidget.js';
 import { AmmoWidget } from './AmmoWidget.js';
 import { StatusLine } from './StatusLine.js';
+import { CrosshairWidget } from './CrosshairWidget.js';
 
 /**
  * The in-game HUD: a composite of HudWidget objects on one layer above the 3D view.
@@ -27,13 +28,8 @@ export class SurvivalHud extends Hud {
     this.layer = doc.createElement('div');
     this.layer.className = 'hud';
     this.assets = new HudAssets(doc).install(this.layer);
-    // Old crosshair, kept until the crosshair widget replaces it.
-    this.crosshair = doc.createElement('div');
-    this.crosshair.id = 'gameplay-crosshair';
-    this.crosshair.textContent = '+';
-    this.crosshair.setAttribute('aria-hidden', 'true');
+    this.layer.setAttribute('aria-hidden', 'true');
     root.appendChild(this.layer);
-    root.appendChild(this.crosshair);
     const instructions = this.start.querySelector('p');
     if (instructions) instructions.textContent = '滑鼠：視角／左鍵開火　WASD：移動　R：換彈　1–9：換武器';
   }
@@ -44,7 +40,8 @@ export class SurvivalHud extends Hud {
     return new SurvivalHud(root, events, playerId)
       .add(new HealthWidget(doc))
       .add(new AmmoWidget(doc))
-      .add(new StatusLine(doc));
+      .add(new StatusLine(doc))
+      .add(new CrosshairWidget(doc));
   }
 
   add(widget) {
@@ -60,7 +57,6 @@ export class SurvivalHud extends Hud {
       widget.sync(status);
       widget.tick(dt);
     }
-    this.crosshair.hidden = !status.canMove;
   }
 
   dispose() {
@@ -68,6 +64,5 @@ export class SurvivalHud extends Hud {
     this.widgets.length = 0;
     this.assets.dispose();
     this.layer.remove();
-    this.crosshair.remove();
   }
 }

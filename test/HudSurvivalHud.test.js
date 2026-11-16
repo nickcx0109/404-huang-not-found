@@ -34,8 +34,8 @@ function setup() {
   const player = { id: 'me', damageable: { health: 100, maxHealth: 100 }, wallet: { balance: 50 }, weapons: { current: weapon } };
   const session = { state: 'playing', wave: 2, canMove: true, context: { time: 0, enemies: [{}], players: [player] } };
   const hud = SurvivalHud.standard(root, events, 'me');
-  const [health, ammo, line] = hud.widgets;
-  return { elements, doc, events, weapon, player, session, hud, health, ammo, line };
+  const [health, ammo, line, crosshair] = hud.widgets;
+  return { elements, doc, events, weapon, player, session, hud, health, ammo, line, crosshair };
 }
 
 test('SurvivalHud keeps the viewer error display and draws health, ammunition and the status line', () => {
@@ -46,7 +46,6 @@ test('SurvivalHud keeps the viewer error display and draws health, ammunition an
   assert.equal(ammo.reserve.textContent, '60');
   assert.equal(ammo.rounds.length, 12);
   assert.equal(line.el.textContent, 'WAVE 2   $50   1 LEFT');
-  assert.equal(hud.crosshair.hidden, false);
   assert.equal(doc.head.children.length, 2, 'fonts and hud.css are added with the HUD, not by index.html');
 
   hud.showError('failure', ['detail']);
@@ -146,4 +145,37 @@ test('StatusLine describes every game state in one line', () => {
   assert.equal(StatusLine.describe({ ...base, state: 'playing' }), 'WAVE 3   $125   4 LEFT');
   assert.equal(StatusLine.describe({ ...base, state: 'wave-break' }), 'WAVE 3   $125   NEXT WAVE IN 6   E AT SHOP: AMMO $25');
   assert.equal(StatusLine.describe({ ...base, state: 'game-over' }), 'YOU DIED   REFRESH TO RETRY');
+});
+
+test('CrosshairWidget kicks on a shot, marks hits and keeps a kill mark over a later hit', () => {
+  const { events, session, hud, crosshair } = setup();
+  hud.updateGame(0, session);
+  const has = name => crosshair.el.classList.contains(name);
+  assert.equal(has('is-off'), false);
+
+  events.emit(EVENTS.WEAPON_FIRED, { ownerId: 'someone-else', hit: { targetId: 'z1' } });
+  hud.updateGame(0, session);
+  assert.equal(has('is-firing'), false);
+  assert.equal(has('is-hit'), false);
+
+  events.emit(EVENTS.WEAPON_FIRED, { ownerId: 'me', hit: null });
+  hud.updateGame(0, session);
+  assert.equal(has('is-firing'), true);
+  assert.equal(has('is-hit'), false, 'a miss shows no mark');
+
+  events.emit(EVENTS.ENTITY_DIED, { entity: { id: 'z1' }, info: { sourceId: 'me' } });
+  events.emit(EVENTS.WEAPON_FIRED, { ownerId: 'me', hit: { targetId: 'z1' } });
+  hud.updateGame(0, session);
+  assert.equal(has('is-hit'), true);
+  assert.equal(has('is-kill'), true);
+
+  for (let step = 0; step < 12; step++) hud.updateGame(0.05, session);
+  assert.equal(has('is-hit'), false);
+  assert.equal(has('is-kill'), false);
+  assert.equal(has('is-firing'), false);
+
+  session.canMove = false;
+  hud.updateGame(0, session);
+  assert.equal(has('is-off'), true);
+  hud.dispose();
 });
