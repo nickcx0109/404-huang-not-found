@@ -2,6 +2,8 @@
 // Used to check a greybox ("can the players reach every cover? can the zombies reach the
 // players?") and to stand dummies on the zombies' routes. It is a level-checking aid, not the
 // in-game zombie navigation (that is the enemy module's flow field).
+import { PLAYER_BODY } from './player/PlayerBody.js';
+
 const UNKNOWN = 0;
 const FREE = 1;
 const BLOCKED = 2;
@@ -21,8 +23,9 @@ export class PathFinder {
     const o = options || {};
     this.collision = collision;
     this.cell = o.cell || 0.5;
-    this.radius = o.radius || 0.35;
-    this.height = o.height || 1.8;
+    this.radius = o.radius || PLAYER_BODY.radius;
+    this.height = o.height || PLAYER_BODY.height;
+    this.clearanceRadius = this.radius + (o.clearance ?? 0);
     const b = collision.bounds;
     this.minX = b.minX;
     this.minZ = b.minZ;
@@ -176,9 +179,9 @@ export class PathFinder {
       const z = this.minZ + (row + 0.5) * this.cell;
       const b = this.collision.bounds;
       const inside =
-        x - this.radius >= b.minX && x + this.radius <= b.maxX &&
-        z - this.radius >= b.minZ && z + this.radius <= b.maxZ;
-      const hit = !inside || this.collision.hit(x, z, this.radius, 0, this.height);
+        x - this.clearanceRadius >= b.minX && x + this.clearanceRadius <= b.maxX &&
+        z - this.clearanceRadius >= b.minZ && z + this.clearanceRadius <= b.maxZ;
+      const hit = !inside || this.collision.hit(x, z, this.clearanceRadius, 0, this.height);
       this._state[index] = hit ? BLOCKED : FREE;
     }
     return this._state[index] === FREE;

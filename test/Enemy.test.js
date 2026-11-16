@@ -13,7 +13,7 @@ import { DamageInfo } from '../web/js/entities/DamageInfo.js';
 function context() {
   const collision = new CollisionWorld();
   collision.bounds = { minX: -5, maxX: 5, minZ: -5, maxZ: 5 };
-  return new GameContext({ collision, pathFinder: new PathFinder(collision), events: new EventBus() });
+  return new GameContext({ collision, pathFinder: new PathFinder(collision, { clearance: 0.002 }), events: new EventBus() });
 }
 
 test('Behaviour tree nodes propagate success, failure, running and short-circuit reactively', () => {
@@ -75,4 +75,19 @@ test('Walker follows buffered routes and melee cannot pass through cover', () =>
   assert.equal(walker.canAttack(target, ctx), true);
   ctx.collision.add(new Aabb(1.4, 0, -1, 1.5, 3, 1));
   assert.equal(walker.canAttack(target, ctx), false);
+});
+
+test('Walker clears a tangent low-wall corner without floating-point navigation stalls', () => {
+  const ctx = context();
+  ctx.collision.bounds = { minX: -10, maxX: 10, minZ: 0, maxZ: 20 };
+  ctx.collision.add(new Aabb(5, 0, 8.2, 5.6, 0.9, 11.4));
+  ctx.pathFinder = new PathFinder(ctx.collision, { clearance: 0.002 });
+  const target = { position: { x: 0, z: 15.2 }, body: { radius: 0.35 }, damageable: { alive: true } };
+  ctx.players.push(target);
+  const walker = new EnemyFactory(ctx).register('walker', Walker).create('walker', { x: 6.25, z: 10 });
+  for (let frame = 0; frame < 500; frame++) {
+    ctx.time += 0.05;
+    walker.moveToward(target, 0.05, ctx);
+  }
+  assert.ok(Math.hypot(walker.position.x, walker.position.z - 15.2) < 0.2);
 });
