@@ -34,7 +34,7 @@ export class PropFactory {
     /** Prop names that had no builder and were replaced by a fallback box. */
     this.unknownNames = new Set();
 
-    // Every prop set that announced itself (web/js/props/*.js) registers its builders.
+    // The entry module announces each prop set before factories are created.
     PropFactory.sets.forEach((set) => {
       this._registering = set.name;
       set.register(this);
@@ -43,8 +43,8 @@ export class PropFactory {
   }
 
   /**
-   * Called once by each file in web/js/props/: adds its builders to every PropFactory.
-   * This is what lets a chapter add props without touching App.js or this file.
+   * Called by PropSet.registerWith at startup: adds its builders to every PropFactory.
+   * Chapters extend their own prop set without touching App.js or this file.
    * @param {string} name      who owns these props, e.g. 'common', 'ch1'
    * @param {(factory: PropFactory) => void} register
    */
@@ -315,5 +315,5 @@ export class PropFactory {
   }
 }
 
-/** Prop sets announced by web/js/props/*.js, in load order. */
+/** Prop sets announced by the entry module, in registration order. */
 PropFactory.sets = [];

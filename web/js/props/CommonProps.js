@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PropFactory } from '../PropFactory.js';
+import { PropSet } from './PropSet.js';
 
 // CommonProps: greybox stand-ins shared by several chapters (cars, trucks, street lamps,
 // fences, plain walls). Chapter-specific ones live in Ch1Props.js / Ch2Props.js / Ch3Props.js.
@@ -15,7 +15,6 @@ import { PropFactory } from '../PropFactory.js';
 function block(colorKey) {
   return (ctx) => ctx.factory.box(ctx.size, colorKey);
 }
-
 /** Box part of a larger prop, placed by its bottom centre. */
 function part(factory, colorKey, w, h, d, x, y, z) {
   const mesh = factory.box({ w, h, d }, colorKey);
@@ -23,22 +22,22 @@ function part(factory, colorKey, w, h, d, x, y, z) {
   return mesh;
 }
 
-export class CommonProps {
-  /** @param {PropFactory} factory */
-  static registerAll(factory) {
-    factory
-      .register('crate', block('crate'))
-      .register('pillar', (ctx) => ctx.factory.cylinder(ctx.size, 'pillar'))
-      .register('building', block('building'))
-      .register('low_wall', block('lowWall'))
-      .register('fence', block('fence'))
-      .register('road', CommonProps.road)
-      .register('car_wreck', CommonProps.carWreck)
-      .register('car_parked', CommonProps.carBody)
-      .register('truck_wreck', CommonProps.truckWreck)
-      .register('van_wreck', CommonProps.vanWreck)
-      .register('street_lamp', CommonProps.streetLamp);
-  }
+export class CommonProps extends PropSet {
+  static id = 'common';
+
+  static builders = {
+    crate: block('crate'),
+    pillar: (ctx) => ctx.factory.cylinder(ctx.size, 'pillar'),
+    building: block('building'),
+    low_wall: block('lowWall'),
+    fence: block('fence'),
+    road: CommonProps.road,
+    car_wreck: CommonProps.carWreck,
+    car_parked: CommonProps.carBody,
+    truck_wreck: CommonProps.truckWreck,
+    van_wreck: CommonProps.vanWreck,
+    street_lamp: CommonProps.streetLamp,
+  };
 
   /** Flat slab of road surface; give it a "size" in the level. */
   static road(ctx) {
@@ -116,5 +115,3 @@ export class CommonProps {
     return van;
   }
 }
-
-PropFactory.registerSet('common', CommonProps.registerAll);

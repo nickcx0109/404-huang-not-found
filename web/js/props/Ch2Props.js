@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PropFactory } from '../PropFactory.js';
+import { PropSet } from './PropSet.js';
 
 // Ch2Props: greybox stand-ins for chapter 2 (the plaza in front of the MVIDIA gate).
 // Same contract as CommonProps.js: each builder gets { prop, size, factory } and returns an
@@ -43,22 +43,23 @@ function alongLongSide(size, build) {
   return outer;
 }
 
-export class Ch2Props {
-  /** @param {PropFactory} factory */
-  static registerAll(factory) {
-    factory
-      .register('hq_wall', block('hqWall'))
-      .register('mvidia_gate', Ch2Props.gate)
-      .register('mvidia_sign', Ch2Props.sign)
-      .register('gate_panel', Ch2Props.gatePanel)
-      .register('guard_booth', Ch2Props.guardBooth)
-      .register('shop_terminal', Ch2Props.shopTerminal)
-      .register('sandbags', Ch2Props.sandbags)
-      .register('barricade', Ch2Props.barricade)
-      .register('warning_light', Ch2Props.warningLight)
-      .register('warning_beacon', Ch2Props.warningLight); // same, without a pole (on a roof)
+export class Ch2Props extends PropSet {
+  static id = 'ch2';
 
-    // The models carry the glowing lens; the moving red light is added here, at the lens.
+  static builders = {
+    hq_wall: block('hqWall'),
+    mvidia_gate: Ch2Props.gate,
+    mvidia_sign: Ch2Props.sign,
+    gate_panel: Ch2Props.gatePanel,
+    guard_booth: Ch2Props.guardBooth,
+    shop_terminal: Ch2Props.shopTerminal,
+    sandbags: Ch2Props.sandbags,
+    barricade: Ch2Props.barricade,
+    warning_light: Ch2Props.warningLight,
+    warning_beacon: Ch2Props.warningLight,
+  };
+
+  static get extras() {
     const beaconLight = (lensHeight) => (ctx) => {
       const rig = ctx.factory.emitters.alarmLight();
       if (rig) {
@@ -66,9 +67,10 @@ export class Ch2Props {
         ctx.object.add(rig);
       }
     };
-    factory
-      .registerExtras('warning_light', beaconLight(2.6))
-      .registerExtras('warning_beacon', beaconLight(0.2));
+    return {
+      warning_light: beaconLight(2.6),
+      warning_beacon: beaconLight(0.2),
+    };
   }
 
   /** Locked double gate: two posts, a lintel and two leaves with cross bars. */
@@ -238,5 +240,3 @@ export class Ch2Props {
   }
 
 }
-
-PropFactory.registerSet('ch2', Ch2Props.registerAll);

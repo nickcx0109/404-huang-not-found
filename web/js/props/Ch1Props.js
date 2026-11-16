@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CommonProps } from './CommonProps.js';
-import { PropFactory } from '../PropFactory.js';
+import { PropSet } from './PropSet.js';
 
 // Ch1Props: greybox stand-ins for chapter 1 (the foggy mountain road).
 // Same contract as CommonProps.js: each builder gets { prop, size, factory } and returns an
@@ -14,14 +14,13 @@ function hash01(prop, salt) {
   const s = Math.sin(prop.x * 127.1 + prop.z * 311.7 + salt * 74.7) * 43758.5453;
   return s - Math.floor(s);
 }
+export class Ch1Props extends PropSet {
+  static id = 'ch1';
 
-export class Ch1Props {
-  /** @param {PropFactory} factory */
-  static registerAll(factory) {
-    factory
-      .register('tree', Ch1Props.tree)
-      .register('escape_car', Ch1Props.escapeCar);
-  }
+  static builders = {
+    tree: Ch1Props.tree,
+    escape_car: Ch1Props.escapeCar,
+  };
 
   /** Bare dead tree: a tapered trunk with a few leafless branches. */
   static tree(ctx) {
@@ -69,5 +68,3 @@ export class Ch1Props {
     return car;
   }
 }
-
-PropFactory.registerSet('ch1', Ch1Props.registerAll);
