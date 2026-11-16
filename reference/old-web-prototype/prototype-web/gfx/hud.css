@@ -1,0 +1,173 @@
+/* gfx/hud.css — HUD restyle for v0.5 (rainy neon night).
+   Loaded right after the inline <style>, so equal-specificity rules here win.
+   Rules: CSS only, no [hidden] overrides, never touch the transforms/widths JS writes
+   on fill bars (#hpFill, #armorFill, #bossFill, #comboFill, #adrenFill, #reloadFill)
+   or on #storeArrow.
+   Layout intent: keep the lower-right quarter (x 55-90%, y 55-100%) clear for the
+   first-person gun. Weapon list is a slim vertical strip hugging the right edge
+   above the gun; the combo meter floats right-of-centre above the gun; ammo, gear
+   and reload stay in a narrow column on the far right edge. */
+
+:root{
+  /* one responsive scale, driven by the short side of the viewport */
+  --hud-edge:clamp(10px,2.2vmin,30px);
+  --hud-gap:clamp(3px,.8vmin,8px);
+  --hud-xs:clamp(11px,1.45vmin,17px);   /* labels, chips */
+  --hud-s:clamp(11px,1.7vmin,19px);     /* secondary text */
+  --hud-panel:rgba(10,14,20,.42);
+  --hud-panel-strong:rgba(10,14,20,.62);
+  --hud-hair:rgba(236,231,219,.12);
+  --hud-track:rgba(236,231,219,.13);
+  --hud-shadow:0 1px 2px rgba(0,0,0,.75),0 0 10px rgba(0,0,0,.35);
+  --hud-radius:clamp(3px,.5vmin,6px);
+}
+
+/* ---------- base ---------- */
+#hud{text-shadow:var(--hud-shadow)}
+.corner{gap:var(--hud-gap)}
+.tl{top:calc(var(--hud-edge) + env(safe-area-inset-top,0px));left:var(--hud-edge)}
+.tc{top:calc(var(--hud-edge) * .8 + env(safe-area-inset-top,0px))}
+.tr{top:calc(var(--hud-edge) + env(safe-area-inset-top,0px));right:var(--hud-edge)}
+.bl{bottom:calc(var(--hud-edge) + env(safe-area-inset-bottom,0px));left:var(--hud-edge)}
+.br{bottom:calc(var(--hud-edge) + env(safe-area-inset-bottom,0px));right:var(--hud-edge)}
+.lbl{font:400 var(--hud-xs)/1 var(--f-mono);letter-spacing:.16em;color:rgba(200,206,214,.72)}
+.num{font-weight:600;line-height:.9}
+.sub{font-size:var(--hud-s);color:rgba(200,206,214,.8)}
+.sub b{font-weight:500}
+
+/* ---------- top-left: score / wallet / minimap ---------- */
+#score{font-size:clamp(20px,4.2vmin,48px);letter-spacing:.01em}
+.wallet{gap:calc(var(--hud-gap) * 1.4);margin-top:2px}
+#money{font-size:clamp(18px,3.6vmin,40px);text-shadow:var(--hud-shadow),0 0 14px rgba(240,162,59,.35)}
+#tokens{font:500 var(--hud-xs)/1 var(--f-body);padding:.32em .7em;border:1px solid rgba(240,162,59,.55);border-radius:999px;background:var(--hud-panel);gap:.45em}
+#tokens i{width:.75em;height:.75em}
+#mini{
+  width:clamp(96px,20vmin,220px);height:clamp(96px,20vmin,220px);
+  margin-top:calc(var(--hud-gap) * 1.2);
+  border:1px solid var(--hud-hair);border-radius:clamp(6px,1.4vmin,14px);
+  background:var(--hud-panel);opacity:.9;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35),0 4px 18px rgba(0,0,0,.35);
+}
+
+/* ---------- top-centre: wave ---------- */
+#waveNo{font-size:clamp(26px,5.6vmin,64px);text-shadow:var(--hud-shadow),0 0 18px rgba(0,0,0,.3)}
+#waveType{font:500 var(--hud-xs)/1 var(--f-body);letter-spacing:.1em;padding:.32em .8em;border:1px solid var(--hud-hair);border-radius:999px;background:var(--hud-panel)}
+#waveType.special{border-color:rgba(240,162,59,.6)}
+#waveType.boss{border-color:rgba(220,74,61,.65)}
+#waveType.trade{border-color:rgba(95,227,208,.55)}
+#storeDir{font:500 var(--hud-s)/1 var(--f-body);gap:.5em;padding:.4em .8em;border:1px solid rgba(95,227,208,.35);border-radius:999px;background:var(--hud-panel);text-shadow:0 0 8px rgba(95,227,208,.35),var(--hud-shadow)}
+#storeArrow{width:1em;height:1em}
+#bossbar{width:min(360px,46vw,52vmin);gap:4px;margin-top:2px}
+
+/* ---------- bars (fills are scaled by JS; only colour/size here) ---------- */
+.bar{height:6px;background:var(--hud-track);border-radius:999px;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.bar i{border-radius:inherit}
+#bossbar .bar{height:clamp(4px,.8vmin,8px)}
+#bossbar .bar i{box-shadow:0 0 8px rgba(220,74,61,.6)}
+
+/* ---------- bottom-left: health / armour / upgrades ---------- */
+.hprow{gap:calc(var(--hud-gap) * 1.6);align-items:center}
+.hprow .bar{width:clamp(100px,26vmin,280px);height:clamp(4px,.75vmin,8px)}
+.hprow .bar i{background:var(--ink);box-shadow:0 0 8px rgba(236,231,219,.35)}
+.hprow.low .bar i{box-shadow:0 0 10px rgba(220,74,61,.7)}
+#hpNum{font-size:clamp(22px,4.6vmin,52px)}
+.armorrow{gap:calc(var(--hud-gap) * 1.4)}
+.armorrow .bar{width:clamp(100px,26vmin,280px);height:3px}
+.armorrow .bar i{box-shadow:0 0 6px rgba(130,181,220,.55)}
+#ups{gap:3px;max-width:min(320px,40vw,48vmin)}
+.upchip{font:400 var(--hud-xs)/1 var(--f-body);padding:.3em .55em;background:var(--hud-panel);border-left-width:2px;border-radius:0 var(--hud-radius) var(--hud-radius) 0}
+
+/* ---------- bottom-right: ammo / gear / reload (narrow column on the edge) ---------- */
+.br{gap:calc(var(--hud-gap) * .9)}
+.ammo{gap:.25em}
+#mag{font-size:clamp(30px,6.4vmin,72px);text-shadow:var(--hud-shadow),0 0 16px rgba(0,0,0,.35)}
+#res{font-size:clamp(14px,2.6vmin,30px);color:rgba(200,206,214,.7)}
+.ammo .sep{font:600 clamp(14px,2.6vmin,30px) var(--f-display);color:rgba(200,206,214,.45)}
+#mag.empty{text-shadow:var(--hud-shadow),0 0 14px rgba(220,74,61,.55)}
+#reload{width:clamp(60px,13vmin,150px);height:2px;border-radius:999px;background:var(--hud-track)}
+#reload i{border-radius:inherit;box-shadow:0 0 6px rgba(240,162,59,.7)}
+
+#gear{flex-direction:column;flex-wrap:nowrap;align-items:flex-end;gap:3px}
+.gear{font:400 var(--hud-xs)/1 var(--f-body);padding:.32em .6em;gap:.45em;border:1px solid transparent;border-radius:var(--hud-radius);background:var(--hud-panel);color:rgba(236,231,219,.85);white-space:nowrap}
+.gear kbd{font:400 .9em/1 var(--f-mono);padding:0;border:0;background:none;color:rgba(200,206,214,.6)}
+.gear.sel{border-color:rgba(240,162,59,.55)}
+.gear.sel kbd{color:var(--hazard)}
+.gear.zero{opacity:.32}
+.gear b{font-weight:500;color:var(--ink)}
+
+#adrenBar{width:clamp(80px,18vmin,170px);gap:3px;justify-items:end}
+#adrenBar .bar{height:3px;width:100%}
+#adrenBar .bar i{box-shadow:0 0 6px rgba(162,196,109,.6)}
+
+/* ---------- weapon strip: vertical, far right edge, above the gun ---------- */
+#slots{
+  position:fixed;
+  right:calc(var(--hud-edge) + env(safe-area-inset-right,0px));
+  top:clamp(84px,24vh,360px);
+  flex-direction:column;flex-wrap:nowrap;align-items:flex-end;
+  gap:2px;max-width:none;
+}
+.slot{
+  font:400 var(--hud-xs)/1 var(--f-body);
+  padding:.3em .6em .3em .5em;
+  border:0;border-right:2px solid transparent;border-radius:var(--hud-radius) 0 0 var(--hud-radius);
+  color:rgba(236,231,219,.6);background:rgba(10,14,20,.3);
+  white-space:nowrap;
+}
+.slot kbd{font:400 .88em/1 var(--f-mono);padding:0;border:0;background:none;margin-right:.55em;color:rgba(200,206,214,.5)}
+.slot.on{color:var(--hazard);background:linear-gradient(to left,rgba(240,162,59,.22),rgba(240,162,59,.04));border-color:var(--hazard);text-shadow:0 0 8px rgba(240,162,59,.45),var(--hud-shadow)}
+.slot.on kbd{color:var(--hazard)}
+/* "其他武器在商店買" hint: the only trace of unowned weapons, kept very faint */
+.slot.locked{opacity:.38;background:none;white-space:normal;max-width:7em;text-align:right;line-height:1.3;padding-top:.15em}
+
+/* ---------- combo: floats right of centre, above the gun ---------- */
+#combo{
+  position:fixed;
+  right:clamp(110px,18vmin,250px);
+  top:clamp(84px,24vh,360px);
+  margin:0;gap:3px;
+}
+#comboNum{font-size:clamp(40px,9vmin,104px);font-weight:700}
+#comboTier{font:700 clamp(14px,2.6vmin,30px)/1 var(--f-body);min-height:1em;text-shadow:0 0 12px rgba(0,0,0,.4),var(--hud-shadow)}
+#comboBonus{font:400 var(--hud-xs)/1 var(--f-mono);color:rgba(200,206,214,.8)}
+#comboBar{width:clamp(90px,19vmin,190px);height:clamp(4px,.8vmin,7px);border-radius:999px;background:var(--hud-track)}
+#comboBar i{border-radius:inherit;box-shadow:0 0 6px var(--cc)}
+
+/* ---------- top-right: EventBus debug log (quiet) ---------- */
+#log{
+  width:min(260px,24vw);padding:6px 8px;gap:4px;
+  background:rgba(10,14,20,.28);border:1px solid rgba(236,231,219,.06);border-radius:var(--hud-radius);
+  opacity:.5;
+}
+#log .lbl{font-size:10px;letter-spacing:.12em}
+#logLines{font:400 10px/1.45 var(--f-mono);min-height:5.8em;max-height:10.2em}
+
+/* ---------- centre: crosshair, banner, prompt, toast ---------- */
+#cross i{box-shadow:0 0 0 1px rgba(0,0,0,.45),0 0 4px rgba(0,0,0,.4)}
+#banner{top:31%;gap:calc(var(--hud-gap) * 1.2);width:min(640px,48vw)}
+#bTitle{font:700 clamp(22px,5vmin,56px)/1.1 var(--f-body);letter-spacing:.04em;text-shadow:0 2px 4px rgba(0,0,0,.7),0 0 24px rgba(0,0,0,.45)}
+#bSub{font-size:clamp(12px,1.9vmin,18px)}
+#prompt{top:calc(50% + clamp(30px,6vmin,56px));font-size:var(--hud-s);padding:.5em .9em;background:var(--hud-panel-strong);border:1px solid var(--hud-hair);border-radius:var(--hud-radius)}
+#toast{
+  bottom:calc(clamp(90px,22vh,260px) + env(safe-area-inset-bottom,0px));
+  max-width:min(540px,62vw);font-size:var(--hud-s);padding:.6em 1em;
+  background:var(--hud-panel-strong);border:1px solid rgba(240,162,59,.45);border-radius:var(--hud-radius);
+}
+#achPop{
+  left:var(--hud-edge);top:calc(max(46vh,clamp(200px,40vmin,420px)) + env(safe-area-inset-top,0px));
+  padding:.6em .9em;background:var(--hud-panel-strong);border:1px solid rgba(240,162,59,.4);border-left:3px solid var(--hazard);
+  border-radius:0 var(--hud-radius) var(--hud-radius) 0;max-width:min(300px,40vw);
+}
+#achPop b{font:700 clamp(14px,2.2vmin,18px)/1.25 var(--f-body)}
+#achPop span{font-size:var(--hud-xs)}
+
+/* ---------- overlay screens: light polish only (layout untouched) ---------- */
+.plate{background:rgba(16,21,28,.9);border-color:rgba(236,231,219,.1);border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.3)}
+/* no overflow:hidden on .plate: it changes the grid item's min size and breaks .screen scrolling */
+.stripe{height:4px;border-radius:7px 7px 0 0;background:linear-gradient(90deg,var(--hazard),rgba(240,162,59,.35))}
+.stripe.guide{background:linear-gradient(90deg,var(--guide),rgba(95,227,208,.35))}
+.btn{border-radius:4px}
+.btn:hover{box-shadow:0 0 16px rgba(240,162,59,.35)}
+.btn.ghost:hover{box-shadow:none;border-color:rgba(236,231,219,.35)}
+.card,.item,.setting,.ach{border-radius:6px}
+kbd{border-radius:3px}
