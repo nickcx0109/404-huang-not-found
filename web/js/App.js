@@ -11,6 +11,7 @@ import { PlayerController } from './PlayerController.js';
 import { PathFinder } from './PathFinder.js';
 import { Hud } from './Hud.js';
 import { EventBus } from './core/EventBus.js';
+import { WeaponRig } from './weapons/index.js';
 
 // App: wires the modules together.
 //   LevelData -> SceneBuilder (-> PropFactory) -> scene + collision
@@ -23,6 +24,8 @@ const CONFIG = Object.freeze({
   manifestUrl: '../art/manifest/',
   modelsUrl: 'assets/models/',
   texturesUrl: 'assets/textures/',
+  weaponStyleUrl: '../art/style/chapters/weapons.json',
+  defaultWeapon: 'pistol',
   defaultLevel: 'test',
   maxPixelRatio: 1.5, // PERFORMANCE_PLAN 3.2-5
   minPixelRatio: 0.5,
@@ -49,6 +52,14 @@ export class AppOptions {
     // Seconds on the animation clock for ?shot= (flicker and beacons are functions of time).
     this.time = parseFloat(params.get('t')) || 0;
     this.spawn = Math.max(0, parseInt(params.get('spawn') || '0', 10) || 0);
+    // ?weapon=<id> puts that weapon in the player's hands, ?weapon=0 none. Walking starts
+    // with the default weapon; a ?shot= still has none unless asked, so that scene
+    // screenshots stay as they were. ?wclip=reload&wt=0.6 freezes a still at that moment
+    // of a weapon animation.
+    const weapon = params.get('weapon');
+    this.weapon = weapon === '0' ? null : weapon || (this.shot ? null : CONFIG.defaultWeapon);
+    this.weaponClip = params.get('wclip') || null;
+    this.weaponTime = parseFloat(params.get('wt')) || 0;
     const scale = parseFloat(params.get('scale'));
     this.scale = Number.isFinite(scale) ? scale : null;
   }
@@ -126,6 +137,18 @@ export class App {
     );
     this.player.spawnAt(level.spawns.players[Math.min(options.spawn, level.spawns.players.length - 1)]);
 
+    // The weapon in the player's hands: looks only, driven through this.events.
+    this.weapons = null;
+    if (options.weapon) {
+      this.weapons = await WeaponRig.create({
+        styleUrl: CONFIG.weaponStyleUrl,
+        modelsUrl: CONFIG.modelsUrl,
+        levelStyle: this.style,
+        events: this.events,
+      });
+      await this.weapons.equip(options.weapon);
+    }
+
     this._resize();
     window.addEventListener('resize', () => this._resize());
 
@@ -167,6 +190,7 @@ export class App {
     this.postfx.resize();
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+    if (this.weapons) this.weapons.resize(width / height);
     if (this._still) this._render(this.options.time);
   }
 
@@ -205,6 +229,7 @@ export class App {
     this.hud.onStartClick(() => this.player.requestLock());
     canvas.addEventListener('click', () => this.player.requestLock());
     this.player.onLockChange = (locked) => this.hud.setStartVisible(!locked);
+    if (this.weapons) this.weapons.bindDemoInput(canvas, () => this.player.enabled);
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
@@ -240,6 +265,10 @@ export class App {
     this.hud.setStartVisible(false);
     this._still = true;
     this.built.update(this.options.time);
+    if (this.weapons) {
+      this.weapons.update(0, this.options.time, null, this.flashlight.on);
+      this.weapons.freeze(this.options.weaponClip, this.options.weaponTime);
+    }
     this._render(this.options.time); // fixed time: the same frame on every run
     this._updateInfo();
     // Ready once the frame has been presented; the timer covers tabs where rAF is paused.
@@ -261,6 +290,7 @@ export class App {
     this.player.update(dt);
     this.atmosphere.update(dt, now / 1000);
     this.built.update(now / 1000);
+    if (this.weapons) this.weapons.update(dt, now / 1000, this.player, this.flashlight.on);
     this._render(now / 1000);
 
     this._frameCount++;
@@ -280,7 +310,7 @@ export class App {
   _render(time) {
     const info = this.renderer.info;
     info.reset();
-    this.postfx.render(this.scene, this.camera, time);
+    this.postfx.render(this.scene, this.camera, time, this.weapons);
     this.stats.calls = info.render.calls;
     this.stats.triangles = info.render.triangles;
     this.stats.lights = this._countLights();
