@@ -36,10 +36,13 @@
     "ch1RoadLine": "#8a8672",
     "ch1Rail": "#555b5b",
     "ch1Rust": "#3f2c20",
+    "ch1Barrier": "#6f6a5c",
+    "ch1BarrierStripe": "#7a2f24",
 
     "surfaces": {
       "ground": { "texture": "stone", "metres": [5, 5], "roughness": 0.9 },
-      "road": { "texture": "asphalt", "metres": [6, 2.2], "roughness": 0.8 }
+      "road": { "texture": "asphalt", "metres": [6, 2.2], "roughness": 0.8 },
+      "ch1Barrier": { "texture": "concrete", "metres": [2, 1] }
     }
   }
 }

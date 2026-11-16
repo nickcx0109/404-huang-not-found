@@ -34,6 +34,8 @@ export class Ch1Props extends PropSet {
     guardrail: Ch1Props.guardrail,
     guardrail_broken: Ch1Props.guardrailBroken,
     ch1_lane_mark: Ch1Props.laneMark,
+    ch1_barrier: Ch1Props.barrier,
+    ch1_barrier_fallen: Ch1Props.barrierFallen,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -136,5 +138,27 @@ export class Ch1Props extends PropSet {
     const mark = ctx.factory.box(ctx.size, 'ch1RoadLine');
     mark.castShadow = false;
     return mark;
+  }
+
+  /** Concrete road barrier with a faded warning stripe. */
+  static barrier(ctx) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const barrier = new THREE.Group();
+    barrier.add(part(factory, 'ch1Barrier', w, h * 0.3, d, 0, 0, 0));
+    barrier.add(part(factory, 'ch1Barrier', w, h * 0.7, d * 0.5, 0, h * 0.3, 0));
+    barrier.add(part(factory, 'ch1BarrierStripe', w * 0.96, h * 0.16, d * 0.52, 0, h * 0.62, 0));
+    return barrier;
+  }
+
+  /** The same barrier, knocked onto its side. */
+  static barrierFallen(ctx) {
+    const { prop, size } = ctx;
+    const barrier = Ch1Props.barrier(ctx);
+    barrier.rotation.x = (88 + 6 * hash01(prop, 1)) * DEG;
+    barrier.position.y = size.d * 0.5;
+    const group = new THREE.Group();
+    group.add(barrier);
+    return group;
   }
 }
