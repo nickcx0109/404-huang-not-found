@@ -57,6 +57,8 @@
     "ch3Lift": "#2a2e30",
     "ch3LiftDark": "#0d0e0f",
     "ch3Hazard": "#7d6a25",
+    "ch3Rocket": "#5a5f5e",
+    "ch3RocketDark": "#22262a",
 
     "ch3Fire": {
       "color": "#ff8428",

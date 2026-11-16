@@ -117,6 +117,7 @@ export class Ch3Props extends PropSet {
     fuel_barrel: Ch3Props.fuelBarrel,
     server_rack: Ch3Props.serverRack,
     freight_elevator: Ch3Props.freightElevator,
+    rocket: Ch3Props.rocket,
     ch3_ceiling: Ch3Props.ceiling,
     ch3_ceiling_lamp: Ch3Props.ceilingLamp,
     ch3_desk: Ch3Props.desk,
@@ -210,6 +211,36 @@ export class Ch3Props extends PropSet {
     screen.position.set(w / 2 - 0.32, 1.44, -d / 2 - 0.07);
     lift.add(screen);
     return lift;
+  }
+
+  /** The rocket: a tall body with a nose cone, dark bands, four fins and an engine bell. */
+  static rocket(ctx) {
+    const { factory, size } = ctx;
+    const radius = Math.min(size.w, size.d) / 2;
+    const h = size.h;
+    const rocket = new THREE.Group();
+    const cylinder = (rTop, rBottom, height, key, y, sides) => {
+      const geometry = new THREE.CylinderGeometry(rTop, rBottom, height, sides || 14);
+      geometry.translate(0, height / 2, 0);
+      const mesh = new THREE.Mesh(geometry, factory.material(key));
+      mesh.position.y = y;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    };
+    rocket.add(cylinder(radius * 0.55, radius * 0.8, h * 0.07, 'ch3RocketDark', 0));
+    rocket.add(cylinder(radius, radius, h * 0.66, 'ch3Rocket', h * 0.07));
+    rocket.add(cylinder(radius * 1.06, radius * 1.06, h * 0.035, 'ch3RocketDark', h * 0.3));
+    rocket.add(cylinder(radius * 1.06, radius * 1.06, h * 0.035, 'ch3RocketDark', h * 0.56));
+    rocket.add(cylinder(0.02, radius, h * 0.27, 'ch3Rocket', h * 0.73));
+    for (let i = 0; i < 4; i++) {
+      const turn = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const fin = part(factory, 'ch3RocketDark', 0.1, h * 0.2, radius * 1.1, 0, 0, 0);
+      fin.position.set(Math.sin(turn) * radius * 1.35, h * 0.07, Math.cos(turn) * radius * 1.35);
+      fin.rotation.y = turn;
+      rocket.add(fin);
+    }
+    return rocket;
   }
 
   /** Ceiling slab; the level places it at ceiling height with a "size". */
