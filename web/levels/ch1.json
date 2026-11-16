@@ -47,7 +47,7 @@
     {"id": "truck_wreck_8", "x": 1.2, "z": -53, "w": 7.4, "d": 2.5, "h": 3.1},
     {"id": "rock_9", "x": -5.4, "z": -60.5, "w": 1.9, "d": 1.6, "h": 1.1},
     {"id": "car_flipped_10", "x": 2.4, "z": -69, "w": 1.9, "d": 4.3, "h": 1.4},
-    {"id": "log_11", "x": -3.2, "z": -80, "w": 5.4, "d": 0.6, "h": 0.5},
+    {"id": "log_11", "x": -4.6, "z": -80, "w": 8.3, "d": 0.6, "h": 0.5},
     {"id": "guardrail_12", "x": -4.2, "z": -90, "w": 0.25, "d": 10, "h": 0.75},
     {"id": "barrier_13", "x": 2.2, "z": -92.5, "w": 2.2, "d": 0.5, "h": 0.9},
     {"id": "barrier_fallen_14", "x": 4.9, "z": -96.2, "w": 2.2, "d": 0.9, "h": 0.5},
@@ -67,7 +67,7 @@
     {"id": "barrier_28", "x": 92.4, "z": -134.5, "w": 2.2, "d": 0.5, "h": 0.9},
     {"id": "barrier_fallen_29", "x": 87.5, "z": -136, "w": 2.2, "d": 0.9, "h": 0.5},
     {"id": "truck_wreck_30", "x": 91.2, "z": -147.5, "w": 7.4, "d": 2.5, "h": 3.1},
-    {"id": "log_31", "x": 93.4, "z": -160, "w": 5.6, "d": 0.6, "h": 0.5},
+    {"id": "log_31", "x": 94.7, "z": -160, "w": 8.1, "d": 0.6, "h": 0.5},
     {"id": "rock_32", "x": 84.4, "z": -163, "w": 1.8, "d": 1.6, "h": 1.1},
     {"id": "car_wreck_33", "x": 92.6, "z": -171.5, "w": 1.9, "d": 4.3, "h": 1.4},
     {"id": "guardrail_broken_34", "x": 85.8, "z": -180, "w": 0.25, "d": 9, "h": 0.75},
@@ -1171,7 +1171,7 @@
     {"name": "ch1_car_flipped", "collider": "car_flipped_10"},
     {"name": "ch1_trash", "x": 0.2, "y": 0, "z": -71.2, "rotY": 62, "size": [2.4,0.5,1.8]},
     {"name": "ch1_tire", "x": 4.4, "y": 0, "z": -66.4, "size": [0.66,0.22,0.66]},
-    {"name": "ch1_log", "collider": "log_11"},
+    {"name": "ch1_tree_fallen", "collider": "log_11"},
     {"name": "guardrail", "collider": "guardrail_12"},
     {"name": "ch1_barrier", "collider": "barrier_13"},
     {"name": "ch1_barrier_fallen", "collider": "barrier_fallen_14", "size": [2.2,0.9,0.5]},
@@ -1199,7 +1199,7 @@
     {"name": "truck_wreck", "collider": "truck_wreck_30", "size": [2.5,3.1,7.4], "rotY": 90},
     {"name": "ch1_tire", "x": 86.2, "y": 0, "z": -151.2, "size": [0.66,0.22,0.66]},
     {"name": "ch1_trash", "x": 85.6, "y": 0, "z": -145, "rotY": 118, "size": [2,0.5,1.6]},
-    {"name": "ch1_log", "collider": "log_31"},
+    {"name": "ch1_tree_fallen", "collider": "log_31", "rotY": 180},
     {"name": "ch1_rock", "collider": "rock_32"},
     {"name": "car_wreck", "collider": "car_wreck_33"},
     {"name": "ch1_trash", "x": 89.4, "y": 0, "z": -174, "rotY": 89, "size": [2.6,0.5,1.8]},
@@ -1215,7 +1215,9 @@
     {"name": "ch1_turn_sign_right", "x": 4.5, "y": 0, "z": -107.9, "rotY": 180, "size": [1.3,1.7,0.08]},
     {"name": "ch1_turn_sign_left", "x": 97.9, "y": 0, "z": -105, "rotY": 90, "size": [1.3,1.7,0.08]},
     {"name": "ch1_turn_sign_left", "x": 97.9, "y": 0, "z": -101.5, "rotY": 90, "size": [1.3,1.7,0.08]},
-    {"name": "ch1_turn_sign_left", "x": 97.9, "y": 0, "z": -98, "rotY": 90, "size": [1.3,1.7,0.08]}
+    {"name": "ch1_turn_sign_left", "x": 97.9, "y": 0, "z": -98, "rotY": 90, "size": [1.3,1.7,0.08]},
+    {"name": "ch1_tree_fallen", "x": 61, "y": 0, "z": -93.25, "rotY": 90, "size": [7.5,1.6,1]},
+    {"name": "ch1_tree_leaning", "x": 80.3, "y": 0, "z": -150, "rotY": 80}
   ],
 
   "spawns": {

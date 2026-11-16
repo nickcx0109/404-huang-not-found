@@ -861,6 +861,673 @@ function stick(factory, colorKey, from, to, radius, sides) {
   return mesh;
 }
 
+// ================================================================================================
+// The forest. Trees are grown by a small program (trunk that flares into roots, bends and tapers;
+// branches that fork into twigs), a handful of shapes each, and every tree in the level is one
+// *copy* of a shape: turned, scaled and leaned differently, drawn with InstancedMesh.
+//
+// Detail follows the distance from the road, because the player cannot leave it:
+//   up to 11.5 m from the centre line   full trees
+//   up to 19 m                          simplified trees
+//   beyond                              flat silhouettes that always face the camera
+// ================================================================================================
+
+const NEAR_TREES = 11.5;
+const MID_TREES = 19;
+
+function newBuffers() {
+  return { positions: [], normals: [], uvs: [], colors: [], index: [] };
+}
+
+function toGeometry(buffers) {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(buffers.positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(buffers.normals, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(buffers.uvs, 2));
+  if (buffers.colors.length) geometry.setAttribute('color', new THREE.Float32BufferAttribute(buffers.colors, 3));
+  if (buffers.index.length) geometry.setIndex(buffers.index);
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+const _tangent = new THREE.Vector3();
+const _side = new THREE.Vector3();
+const _up = new THREE.Vector3();
+const _point = new THREE.Vector3();
+
+/**
+ * Adds a tube that follows `path` ([{ p: Vector3, r: radius }, ...]) to the buffers: the way a
+ * trunk, a root or a branch is built. Bark runs along it; `shade(y)` darkens it near the ground.
+ */
+function addTube(buffers, path, sides, shade) {
+  const first = buffers.positions.length / 3;
+  let along = 0;
+  for (let i = 0; i < path.length; i++) {
+    const here = path[i];
+    const before = path[Math.max(0, i - 1)].p;
+    const after = path[Math.min(path.length - 1, i + 1)].p;
+    _tangent.subVectors(after, before).normalize();
+    _side.set(1, 0, 0);
+    if (Math.abs(_tangent.x) > 0.9) _side.set(0, 0, 1);
+    _up.crossVectors(_tangent, _side).normalize();
+    _side.crossVectors(_up, _tangent).normalize();
+    if (i > 0) along += here.p.distanceTo(path[i - 1].p);
+    const tone = shade(here.p.y);
+    for (let j = 0; j <= sides; j++) {
+      const angle = (j / sides) * Math.PI * 2;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      _point.copy(_side).multiplyScalar(cos).addScaledVector(_up, sin);
+      buffers.normals.push(_point.x, _point.y, _point.z);
+      buffers.positions.push(here.p.x + _point.x * here.r, here.p.y + _point.y * here.r, here.p.z + _point.z * here.r);
+      buffers.uvs.push((j / sides) * Math.max(1, Math.round(here.r * 9)), along * 0.55);
+      buffers.colors.push(tone[0], tone[1], tone[2]);
+    }
+  }
+  const ring = sides + 1;
+  for (let i = 0; i < path.length - 1; i++) {
+    for (let j = 0; j < sides; j++) {
+      const a = first + i * ring + j;
+      const b = a + ring;
+      buffers.index.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+  }
+}
+
+/** Adds a flat card showing one cell (2 x 2) of the foliage image: leaves, grass, fern, hanging moss. */
+function addCard(buffers, cell, centre, right, up, width, height) {
+  const first = buffers.positions.length / 3;
+  const u0 = (cell % 2) / 2;
+  const v0 = 1 - (Math.floor(cell / 2) + 1) / 2;
+  [[-0.5, 0, u0, v0], [0.5, 0, u0 + 0.5, v0], [0.5, 1, u0 + 0.5, v0 + 0.5], [-0.5, 1, u0, v0 + 0.5]].forEach(([sx, sy, u, v]) => {
+    buffers.positions.push(
+      centre.x + right.x * sx * width + up.x * sy * height,
+      centre.y + right.y * sx * width + up.y * sy * height,
+      centre.z + right.z * sx * width + up.z * sy * height
+    );
+    buffers.normals.push(0, 1, 0); // lit from above like the ground: foliage has no "side"
+    buffers.uvs.push(u, v);
+  });
+  buffers.index.push(first, first + 1, first + 2, first, first + 2, first + 3);
+}
+
+const FOLIAGE = Object.freeze({ leaves: 0, grass: 1, fern: 2, moss: 3 });
+
+/**
+ * Grows one tree shape. kind: 'leafy' (tall, in leaf), 'dead' (bare) or 'sapling' (thin);
+ * detail 2 = full (roots, twigs), 1 = simplified.
+ * @returns {{wood: BufferGeometry, foliage: BufferGeometry|null, proxy: BufferGeometry}}
+ */
+function growTree(seed, kind, detail) {
+  const rnd = seeded(seed);
+  const wood = newBuffers();
+  const cards = newBuffers();
+  const proxy = newBuffers();
+  const height = kind === 'sapling' ? 4.2 + rnd() * 1.6 : 8.5 + rnd() * 3;
+  const base = kind === 'sapling' ? 0.06 + rnd() * 0.03 : 0.2 + rnd() * 0.08;
+  // bark is darker and green with moss toward the ground
+  const shade = (y) => {
+    const t = smoothstep(0.2, 2.6, y);
+    return [0.5 + 0.5 * t, 0.62 + 0.38 * t, 0.46 + 0.54 * t];
+  };
+  const bendX = (rnd() - 0.5) * 0.9;
+  const bendZ = (rnd() - 0.5) * 0.9;
+  const phase = rnd() * 6;
+  const centre = (t) => new THREE.Vector3(
+    bendX * Math.sin(t * 2.4 + phase) * height * 0.035 + bendX * t * t * height * 0.05,
+    t * height,
+    bendZ * Math.cos(t * 2.1 + phase) * height * 0.035 + bendZ * t * t * height * 0.05
+  );
+  const radius = (t) => base * (1 - 0.8 * t) * (t < 0.1 ? 1 + (0.1 - t) * 9 : 1);
+  const rings = detail === 2 ? 6 : 3;
+  const trunk = [];
+  for (let i = 0; i <= rings; i++) trunk.push({ p: centre(i / rings), r: radius(i / rings) });
+  addTube(wood, trunk, detail === 2 ? 6 : 4, shade);
+  addTube(proxy, [trunk[0], trunk[Math.floor(rings / 2)], trunk[rings]], 4, shade);
+
+  if (detail === 2 && kind !== 'sapling') { // roots breaking out of the ground
+    const roots = 4 + Math.floor(rnd() * 2);
+    for (let i = 0; i < roots; i++) {
+      const angle = (i / roots) * Math.PI * 2 + rnd() * 0.8;
+      const reach = base * (2.6 + rnd() * 2.2);
+      addTube(wood, [
+        { p: new THREE.Vector3(Math.cos(angle) * base * 0.5, 0.32, Math.sin(angle) * base * 0.5), r: base * 0.5 },
+        { p: new THREE.Vector3(Math.cos(angle) * reach * 0.55, 0.1, Math.sin(angle) * reach * 0.55), r: base * 0.3 },
+        { p: new THREE.Vector3(Math.cos(angle + 0.2) * reach, -0.06, Math.sin(angle + 0.2) * reach), r: base * 0.08 },
+      ], 4, shade);
+    }
+  }
+
+  const tips = [];
+  const limbs = detail === 2 ? (kind === 'sapling' ? 4 : 5 + Math.floor(rnd() * 3)) : 3;
+  for (let i = 0; i < limbs; i++) {
+    const t0 = (kind === 'dead' ? 0.3 : 0.42) + rnd() * 0.55;
+    const origin = centre(t0);
+    const r0 = radius(t0) * (0.45 + rnd() * 0.2);
+    const azimuth = rnd() * Math.PI * 2;
+    const rise = (kind === 'dead' ? -8 + rnd() * 50 : 15 + rnd() * 45) * DEG;
+    const length = height * (0.2 + 0.24 * rnd()) * (1.15 - t0 * 0.6);
+    const direction = new THREE.Vector3(Math.cos(azimuth) * Math.cos(rise), Math.sin(rise), Math.sin(azimuth) * Math.cos(rise));
+    const limb = [];
+    const kink = new THREE.Vector3((rnd() - 0.5) * 0.5, 0.25 + rnd() * 0.4, (rnd() - 0.5) * 0.5);
+    for (let s = 0; s <= 3; s++) {
+      const f = s / 3;
+      const p = origin.clone().addScaledVector(direction, length * f).addScaledVector(kink, length * 0.25 * f * f);
+      limb.push({ p, r: r0 * (1 - 0.85 * f) + 0.006 });
+    }
+    addTube(wood, limb, detail === 2 ? 4 : 3, shade);
+    if (i < 3) addTube(proxy, [limb[0], limb[3]], 3, shade);
+    tips.push(limb[3].p, limb[2].p);
+    if (detail === 2) {
+      const twigs = 1 + Math.floor(rnd() * 2);
+      for (let k = 0; k < twigs; k++) {
+        const from = limb[1 + Math.floor(rnd() * 2)];
+        const turn = new THREE.Vector3(direction.x + (rnd() - 0.5) * 1.4, direction.y + rnd() * 0.7, direction.z + (rnd() - 0.5) * 1.4).normalize();
+        const reach = length * (0.3 + rnd() * 0.3);
+        const end = from.p.clone().addScaledVector(turn, reach);
+        addTube(wood, [{ p: from.p, r: from.r * 0.55 }, { p: from.p.clone().addScaledVector(turn, reach * 0.5).add(new THREE.Vector3(0, reach * 0.06, 0)), r: from.r * 0.3 }, { p: end, r: 0.005 }], 3, shade);
+        tips.push(end);
+      }
+    }
+    // moss or a vine hanging from the limb
+    if (kind !== 'sapling' && rnd() < (detail === 2 ? 0.45 : 0.2)) {
+      const hang = limb[1 + Math.floor(rnd() * 2)].p;
+      const drop = 0.8 + rnd() * 1.6;
+      const across = new THREE.Vector3(Math.cos(azimuth + 1.57), 0, Math.sin(azimuth + 1.57));
+      addCard(cards, FOLIAGE.moss, new THREE.Vector3(hang.x, hang.y - drop, hang.z), across, new THREE.Vector3(0, 1, 0), 0.5 + rnd() * 0.5, drop);
+    }
+  }
+  if (kind !== 'dead') { // leaves in loose sprays at the ends of the branches: no cones, no balls
+    tips.push(centre(1), centre(0.9));
+    tips.forEach((tip) => {
+      const sprays = detail === 2 ? 2 : 1;
+      for (let k = 0; k < sprays; k++) {
+        const angle = rnd() * Math.PI;
+        const right = new THREE.Vector3(Math.cos(angle), (rnd() - 0.5) * 0.5, Math.sin(angle)).normalize();
+        const up = new THREE.Vector3((rnd() - 0.5) * 0.6, 1, (rnd() - 0.5) * 0.6).normalize();
+        const spread = (kind === 'sapling' ? 0.9 : 1.7) * (0.7 + rnd() * 0.7);
+        addCard(cards, FOLIAGE.leaves, new THREE.Vector3(tip.x, tip.y - spread * 0.5, tip.z), right, up, spread, spread);
+      }
+    });
+  }
+  return { wood: toGeometry(wood), foliage: cards.positions.length ? toGeometry(cards) : null, proxy: toGeometry(proxy) };
+}
+
+/** Bark: long vertical furrows, dark and wet. Tiles in both directions. */
+function barkTexture() {
+  return paintedOnce('bark', () => {
+    const S = 256;
+    const canvas = makeCanvas(S, S);
+    const g = canvas.getContext('2d');
+    const broad = cloud(S, S, 8, 2, 3, 301);
+    const fine = cloud(S, S, 48, 6, 2, 302);
+    const data = g.createImageData(S, S);
+    for (let i = 0; i < S * S; i++) {
+      const ridge = Math.pow(broad[i], 1.6);
+      const tone = 0.35 + 0.9 * ridge + 0.35 * (fine[i] - 0.5);
+      data.data[i * 4] = 62 * tone;
+      data.data[i * 4 + 1] = 54 * tone;
+      data.data[i * 4 + 2] = 44 * tone;
+      data.data[i * 4 + 3] = 255;
+    }
+    g.putImageData(data, 0, 0);
+    const rnd = seeded(303);
+    g.strokeStyle = 'rgba(6, 5, 4, 0.75)';
+    for (let i = 0; i < 46; i++) { // deep cracks
+      let x = rnd() * S;
+      g.lineWidth = 1 + rnd() * 2.2;
+      for (const shift of [-S, 0, S]) {
+        const local = seeded(3000 + i);
+        let cx = x + shift;
+        g.beginPath();
+        g.moveTo(cx, -4);
+        for (let y = 12; y <= S + 8; y += 14) {
+          cx += (local() - 0.5) * 7;
+          g.lineTo(cx, y);
+        }
+        g.stroke();
+      }
+    }
+    return colourTexture(canvas);
+  });
+}
+
+/** Leaves, grass, fern and hanging moss as cut-out pictures, 2 x 2 cells. */
+function foliageTexture() {
+  return paintedOnce('foliage', () => {
+    const canvas = makeCanvas(512, 512);
+    const g = canvas.getContext('2d');
+    const cell = (index, paint) => {
+      g.save();
+      g.beginPath();
+      g.rect((index % 2) * 256 + 2, Math.floor(index / 2) * 256 + 2, 252, 252);
+      g.clip();
+      g.translate((index % 2) * 256, Math.floor(index / 2) * 256);
+      paint(seeded(977 * (index + 3)));
+      g.restore();
+    };
+    const greens = ['#1f2a18', '#263220', '#1a2214', '#2b3320', '#22281a', '#2f3222'];
+    cell(FOLIAGE.leaves, (rnd) => { // twigs with small leaves, thinning toward the rim
+      g.lineCap = 'round';
+      for (let i = 0; i < 26; i++) {
+        const angle = rnd() * 6.28;
+        const reach = 40 + rnd() * 78;
+        g.strokeStyle = '#120f0b';
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.moveTo(128, 128);
+        g.lineTo(128 + Math.cos(angle) * reach, 128 + Math.sin(angle) * reach);
+        g.stroke();
+        for (let k = 0; k < 16; k++) {
+          const along = 0.25 + rnd() * 0.8;
+          g.save();
+          g.translate(128 + Math.cos(angle) * reach * along + (rnd() - 0.5) * 18, 128 + Math.sin(angle) * reach * along + (rnd() - 0.5) * 18);
+          g.rotate(rnd() * 6.28);
+          g.fillStyle = greens[Math.floor(rnd() * greens.length)];
+          g.beginPath();
+          g.ellipse(0, 0, 4 + rnd() * 5, 2 + rnd() * 2, 0, 0, 6.28);
+          g.fill();
+          g.restore();
+        }
+      }
+    });
+    cell(FOLIAGE.grass, (rnd) => { // blades from the bottom edge, bending outward
+      g.lineCap = 'round';
+      for (let i = 0; i < 46; i++) {
+        const x = 128 + (rnd() - 0.5) * 120;
+        const lean = (x - 128) * 0.9 + (rnd() - 0.5) * 70;
+        const tall = 90 + rnd() * 150;
+        g.strokeStyle = greens[Math.floor(rnd() * greens.length)];
+        g.lineWidth = 2 + rnd() * 3;
+        g.beginPath();
+        g.moveTo(x, 256);
+        g.quadraticCurveTo(x + lean * 0.3, 256 - tall * 0.6, x + lean, 256 - tall);
+        g.stroke();
+      }
+    });
+    cell(FOLIAGE.fern, (rnd) => { // one frond: a rib from the bottom with leaflets both sides
+      g.strokeStyle = '#141a10';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.moveTo(128, 256);
+      g.quadraticCurveTo(120, 130, 150, 12);
+      g.stroke();
+      for (let i = 0; i < 34; i++) {
+        const t = i / 34;
+        const x = 128 - 8 * Math.sin(t * 3) + 22 * t * t;
+        const y = 250 - t * 236;
+        const span = (1 - t * 0.85) * (70 + rnd() * 20);
+        [-1, 1].forEach((side) => {
+          g.fillStyle = greens[Math.floor(rnd() * greens.length)];
+          g.beginPath();
+          g.moveTo(x, y);
+          g.quadraticCurveTo(x + side * span * 0.5, y - 14, x + side * span, y - 4 + rnd() * 10);
+          g.quadraticCurveTo(x + side * span * 0.5, y + 6, x, y + 5);
+          g.fill();
+        });
+      }
+    });
+    cell(FOLIAGE.moss, (rnd) => { // strands hanging from the top edge, different lengths
+      g.lineCap = 'round';
+      for (let i = 0; i < 38; i++) {
+        let x = 20 + rnd() * 216;
+        const drop = 60 + Math.pow(rnd(), 0.7) * 190;
+        g.strokeStyle = rnd() < 0.5 ? '#232a1c' : '#2b2f22';
+        g.lineWidth = 1 + rnd() * 2.5;
+        g.beginPath();
+        g.moveTo(x, 0);
+        for (let y = 16; y <= drop; y += 16) {
+          x += (rnd() - 0.5) * 7;
+          g.lineTo(x, y);
+        }
+        g.stroke();
+      }
+    });
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.encoding = THREE.sRGBEncoding;
+    texture.anisotropy = 4;
+    return texture;
+  });
+}
+
+/** Four tree outlines for the far layers, drawn branch by branch, 2 x 2 cells. */
+function silhouetteTexture() {
+  return paintedOnce('silhouettes', () => {
+    const canvas = makeCanvas(512, 512);
+    const g = canvas.getContext('2d');
+    g.strokeStyle = '#000';
+    g.fillStyle = '#000';
+    g.lineCap = 'round';
+    for (let index = 0; index < 4; index++) {
+      const rnd = seeded(5000 + index * 31);
+      g.save();
+      g.beginPath();
+      g.rect((index % 2) * 256 + 2, Math.floor(index / 2) * 256 + 2, 252, 252);
+      g.clip();
+      g.translate((index % 2) * 256, Math.floor(index / 2) * 256);
+      const leafy = index < 2;
+      const branch = (x, y, angle, length, width, depth) => {
+        const ex = x + Math.cos(angle) * length;
+        const ey = y - Math.sin(angle) * length;
+        g.lineWidth = width;
+        g.beginPath();
+        g.moveTo(x, y);
+        g.lineTo(ex, ey);
+        g.stroke();
+        if (depth === 0) {
+          if (leafy) {
+            g.globalAlpha = 0.9;
+            for (let k = 0; k < 5; k++) {
+              g.beginPath();
+              g.ellipse(ex + (rnd() - 0.5) * 22, ey + (rnd() - 0.5) * 18, 6 + rnd() * 9, 4 + rnd() * 6, rnd() * 3, 0, 6.28);
+              g.fill();
+            }
+            g.globalAlpha = 1;
+          }
+          return;
+        }
+        const forks = 2 + (rnd() < 0.4 ? 1 : 0);
+        for (let k = 0; k < forks; k++) {
+          branch(ex, ey, angle + (rnd() - 0.5) * 1.5, length * (0.55 + rnd() * 0.25), Math.max(1, width * 0.6), depth - 1);
+        }
+      };
+      let x = 128 + (rnd() - 0.5) * 20;
+      let y = 256;
+      let angle = Math.PI / 2 + (rnd() - 0.5) * 0.15;
+      for (let step = 0; step < 6; step++) { // the trunk, with a limb at every step
+        const length = 34 + rnd() * 10;
+        const width = 13 - step * 1.9;
+        const ex = x + Math.cos(angle) * length;
+        const ey = y - Math.sin(angle) * length;
+        g.lineWidth = width;
+        g.beginPath();
+        g.moveTo(x, y);
+        g.lineTo(ex, ey);
+        g.stroke();
+        if (step > 0) {
+          const side = step % 2 ? 1 : -1;
+          branch(ex, ey, angle + side * (0.6 + rnd() * 0.7), 46 - step * 4 + rnd() * 20, Math.max(1.5, width * 0.5), 2);
+        }
+        x = ex;
+        y = ey;
+        angle += (rnd() - 0.5) * 0.25;
+      }
+      branch(x, y, angle, 30, 3, 2);
+      g.restore();
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.encoding = THREE.sRGBEncoding;
+    return texture;
+  });
+}
+
+/** The forest of one level: every tree, plant and far outline as copies in a few InstancedMesh. */
+class Forest {
+  constructor(factory) {
+    this.factory = factory;
+    /** Road legs registered by the road builder: { x1, z1, x2, z2 } centre lines in level space. */
+    this.roads = [];
+    this.holder = null;
+    this.meshes = new Map();
+    this.shapes = null;
+    this.dummy = new THREE.Object3D();
+    this.populated = false;
+    this.counts = { full: 0, simple: 0, flat: 0, plants: 0 };
+  }
+
+  /**
+   * Returns what a builder hands back to the engine. The first caller gets the group that holds
+   * the whole forest (moved back so the copies stay in level space); everyone else an empty group.
+   */
+  anchor(prop) {
+    const group = new THREE.Group();
+    if (!this.holder) {
+      this.holder = new THREE.Group();
+      const placed = new THREE.Matrix4().compose(
+        new THREE.Vector3(prop.x, prop.y, prop.z),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, prop.rotY * DEG, 0)),
+        new THREE.Vector3(prop.scale, prop.scale, prop.scale)
+      );
+      this.holder.matrix.copy(placed).invert();
+      this.holder.matrixAutoUpdate = false;
+      group.add(this.holder);
+    }
+    return group;
+  }
+
+  /** Distance from the nearest road centre line, which leg it is, and the direction away from it. */
+  nearest(x, z) {
+    let best = null;
+    this.roads.forEach((road, leg) => {
+      const dx = road.x2 - road.x1;
+      const dz = road.z2 - road.z1;
+      const t = clamp01(((x - road.x1) * dx + (z - road.z1) * dz) / (dx * dx + dz * dz));
+      const px = road.x1 + dx * t;
+      const pz = road.z1 + dz * t;
+      const dist = Math.hypot(x - px, z - pz);
+      if (!best || dist < best.dist) best = { dist, leg, t, along: t * Math.hypot(dx, dz), outX: (x - px) / (dist || 1), outZ: (z - pz) / (dist || 1) };
+    });
+    return best;
+  }
+
+  /** Every 45 m or so the trees on one side leave a gap a few metres wide: fog and deeper dark, nothing else. */
+  inGap(near, x, z) {
+    const road = this.roads[near.leg];
+    const sideSign = (x - road.x1) * (road.z2 - road.z1) - (z - road.z1) * (road.x2 - road.x1) > 0 ? 1 : 0;
+    const slot = (near.along + sideSign * 22 + near.leg * 9) % 45;
+    return slot > 20 && slot < 25.5;
+  }
+
+  shapesOnce() {
+    if (this.shapes) return this.shapes;
+    const kinds = ['leafy', 'leafy', 'leafy', 'dead', 'dead', 'sapling'];
+    this.shapes = {
+      full: kinds.map((kind, i) => growTree(811 + i * 53, kind, 2)),
+      simple: kinds.map((kind, i) => growTree(811 + i * 53, kind, 1)),
+    };
+    return this.shapes;
+  }
+
+  materials() {
+    const factory = this.factory;
+    return {
+      bark: wetMaterial(factory, 'bark', () => ({ map: barkTexture(), vertexColors: true, roughness: 0.72, color: tint(factory, 'ch1BarkTint'), envMapIntensity: 0.2 })),
+      foliage: wetMaterial(factory, 'foliage', () => ({ map: foliageTexture(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.6, color: tint(factory, 'ch1FoliageTint'), envMapIntensity: 0.25 })),
+      shadow: wetMaterial(factory, 'shadow-only', () => ({ colorWrite: false, depthWrite: false, envMap: null })),
+      flat: this.flatMaterial(),
+    };
+  }
+
+  /** Unlit outline for the far layers; its cards are turned to the camera in the vertex shader. */
+  flatMaterial() {
+    const set = wetSet(this.factory);
+    if (!set.has('flat')) {
+      const material = new THREE.MeshBasicMaterial({
+        map: silhouetteTexture(), alphaTest: 0.5,
+        color: Palette.color(typeof this.factory.greybox.ch1Silhouette === 'string' ? this.factory.greybox.ch1Silhouette : '#050706'),
+      });
+      material.name = 'ch1:far-trees';
+      material.onBeforeCompile = (shader) => {
+        shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', [
+          'vec4 mvPosition = vec4( 0.0, transformed.y, 0.0, 1.0 );',
+          '#ifdef USE_INSTANCING',
+          '  mvPosition = instanceMatrix * mvPosition;',
+          '  float cardScale = length( instanceMatrix[ 0 ].xyz );',
+          '#else',
+          '  float cardScale = 1.0;',
+          '#endif',
+          'mvPosition = modelViewMatrix * mvPosition;',
+          'mvPosition.x += transformed.x * cardScale;',
+          'gl_Position = projectionMatrix * mvPosition;',
+        ].join('\n'));
+      };
+      set.set('flat', material);
+    }
+    return set.get('flat');
+  }
+
+  /** Adds one copy of `geometry` to the InstancedMesh called `key` of a road leg. */
+  plant(key, leg, geometry, material, options) {
+    const id = key + ':' + leg;
+    let mesh = this.meshes.get(id);
+    if (!mesh) {
+      // each leg gets its own view of the geometry with bounds that cover the whole leg,
+      // so a leg that is out of sight or beyond the fog is not drawn at all
+      const view = new THREE.BufferGeometry();
+      view.attributes = geometry.attributes;
+      view.index = geometry.index;
+      const road = this.roads[leg] || { x1: 0, z1: 0, x2: 0, z2: 0 };
+      view.boundingSphere = new THREE.Sphere(
+        new THREE.Vector3((road.x1 + road.x2) / 2, 4, (road.z1 + road.z2) / 2),
+        Math.hypot(road.x2 - road.x1, road.z2 - road.z1) / 2 + 42
+      );
+      mesh = new THREE.InstancedMesh(view, material, options.capacity);
+      mesh.frustumCulled = this.roads.length > 0;
+      mesh.count = 0;
+      mesh.castShadow = Boolean(options.castShadow);
+      mesh.receiveShadow = Boolean(options.receiveShadow);
+      mesh.name = 'forest:' + id;
+      this.meshes.set(id, mesh);
+      this.holder.add(mesh);
+    }
+    if (mesh.count >= mesh.instanceMatrix.count) return;
+    this.dummy.updateMatrix();
+    mesh.setMatrixAt(mesh.count++, this.dummy.matrix);
+    mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  /**
+   * Plants a tree at (x, z). `pick`, `turn`, `scale`, `lean` are 0..1 numbers that decide shape,
+   * rotation, size (0.7 to 1.4) and tilt (0 to 8 degrees); `toward` leans it over the road instead.
+   */
+  tree(x, z, near, pick, turn, scale, lean, toward) {
+    const shapes = this.shapesOnce();
+    const materials = this.materials();
+    const variant = pick < 0.5 ? Math.floor(pick * 6) : pick < 0.8 ? 3 + Math.floor((pick - 0.5) / 0.15) : 5;
+    const size = 0.7 + 0.7 * scale;
+    const dist = near ? near.dist : 0;
+    const leg = near ? near.leg : 0;
+    const d = this.dummy;
+    d.position.set(x, 0, z);
+    if (dist > MID_TREES) {
+      d.rotation.set(0, 0, 0);
+      d.scale.set(size * 6.5, size * 11.5, 1);
+      this.plant('flat' + (variant % 4), leg, this.cardGeometry(variant % 4), materials.flat, { capacity: 700 });
+      this.counts.flat++;
+      return;
+    }
+    const tilt = (toward ? 5 + 9 * lean : 8 * lean) * DEG;
+    const fall = toward && near ? Math.atan2(-near.outX, -near.outZ) : turn * 17;
+    d.rotation.set(0, 0, 0);
+    d.quaternion.setFromAxisAngle(_side.set(Math.cos(fall), 0, -Math.sin(fall)), tilt)
+      .multiply(new THREE.Quaternion().setFromAxisAngle(_up.set(0, 1, 0), turn * Math.PI * 2));
+    d.scale.setScalar(size);
+    const full = dist <= NEAR_TREES;
+    // the simplified tier makes do with three shapes: one in leaf, one bare, one thin
+    const use = full ? variant : [0, 0, 0, 3, 3, 5][variant];
+    const shape = (full ? shapes.full : shapes.simple)[use];
+    const tag = (full ? 'full' : 'simple') + use;
+    this.plant(tag, leg, shape.wood, materials.bark, { capacity: 600, receiveShadow: true });
+    if (shape.foliage) this.plant(tag + '-leaves', leg, shape.foliage, materials.foliage, { capacity: 600 });
+    // shadows come from one very plain stand-in shape, not from every twig
+    if (full) this.plant('proxy', leg, shapes.full[3].proxy, materials.shadow, { capacity: 900, castShadow: true });
+    this.counts[full ? 'full' : 'simple']++;
+  }
+
+  cardGeometry(cell) {
+    return paintedOnce('card' + cell, () => {
+      const geometry = new THREE.PlaneGeometry(1, 1);
+      geometry.translate(0, 0.5, 0);
+      const uv = geometry.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, ((cell % 2) + uv.getX(i)) / 2, 1 - (Math.floor(cell / 2) + 1 - uv.getY(i)) / 2);
+      return geometry;
+    });
+  }
+
+  /** Low plants: a tuft of grass, a fern or a low bush, each a few crossed cards. */
+  plantGeometry(kind) {
+    return paintedOnce('plant' + kind, () => {
+      const cards = newBuffers();
+      const rnd = seeded(600 + kind * 7);
+      const up = new THREE.Vector3(0, 1, 0);
+      if (kind === 0) { // grass
+        for (let i = 0; i < 3; i++) {
+          const angle = (i / 3) * Math.PI + rnd() * 0.4;
+          addCard(cards, FOLIAGE.grass, new THREE.Vector3((rnd() - 0.5) * 0.15, 0, (rnd() - 0.5) * 0.15), new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)), up, 0.9, 0.75);
+        }
+      } else if (kind === 1) { // fern: fronds arching out from one point
+        for (let i = 0; i < 6; i++) {
+          const angle = (i / 6) * Math.PI * 2 + rnd() * 0.5;
+          const out = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
+          addCard(cards, FOLIAGE.fern, new THREE.Vector3(0, 0.02, 0), new THREE.Vector3(-out.z, 0, out.x), new THREE.Vector3(out.x * 0.75, 0.66, out.z * 0.75), 0.45, 0.95);
+        }
+      } else { // bush
+        for (let i = 0; i < 5; i++) {
+          const angle = rnd() * Math.PI;
+          addCard(cards, FOLIAGE.leaves, new THREE.Vector3((rnd() - 0.5) * 0.7, rnd() * 0.25, (rnd() - 0.5) * 0.7),
+            new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)), new THREE.Vector3((rnd() - 0.5) * 0.5, 1, (rnd() - 0.5) * 0.5).normalize(), 1.3, 1.2);
+        }
+      }
+      return toGeometry(cards);
+    });
+  }
+
+  plantAt(x, z, near, pick, turn, scale) {
+    const kind = pick < 0.55 ? 0 : pick < 0.85 ? 1 : 2;
+    const d = this.dummy;
+    d.position.set(x, 0, z);
+    d.rotation.set(0, turn * Math.PI * 2, 0);
+    d.scale.setScalar(scale);
+    this.plant('plant' + kind, near ? near.leg : 0, this.plantGeometry(kind), this.materials().foliage, { capacity: 2600, receiveShadow: true });
+    this.counts.plants++;
+  }
+
+  /**
+   * What the level file does not list: a wall of trees right behind the edge the player cannot
+   * cross, layers of outlines behind that, undergrowth that thickens toward the wood, and grass
+   * growing into the broken edge of the tarmac. Runs once, when the first tree is planted.
+   */
+  populate() {
+    if (this.populated || this.roads.length === 0) return;
+    this.populated = true;
+    this.roads.forEach((road, leg) => {
+      const rnd = seeded(9001 + leg * 131);
+      const length = Math.hypot(road.x2 - road.x1, road.z2 - road.z1);
+      const ax = (road.x2 - road.x1) / length;
+      const az = (road.z2 - road.z1) / length;
+      const row = (offset, spacing, jitter, add) => {
+        [-1, 1].forEach((side) => {
+          for (let s = -6; s < length + 6; s += spacing * (0.7 + rnd() * 0.6)) {
+            const out = offset + (rnd() - 0.5) * jitter;
+            const x = road.x1 + ax * s + -az * side * out;
+            const z = road.z1 + az * s + ax * side * out;
+            const near = this.nearest(x, z);
+            if (near.leg !== leg && near.dist < out - 0.4) continue; // belongs to another leg's side
+            if (near.dist < Math.min(out - 0.5, 8.9)) continue;       // would stand on another leg's road
+            add(x, z, near);
+          }
+        });
+      };
+      // the wall: two tight rows just outside the edge of the walkable strip, leaning in over the road
+      row(9.4, 3.0, 0.7, (x, z, near) => { if (!this.inGap(near, x, z)) this.tree(x, z, near, rnd(), rnd(), 0.35 + rnd() * 0.65, rnd(), rnd() < 0.45); });
+      row(10.9, 3.9, 1.0, (x, z, near) => { if (!this.inGap(near, x, z)) this.tree(x, z, near, rnd(), rnd(), rnd(), rnd(), false); });
+      // far layers: outlines only
+      [21, 25.5, 30.5].forEach((offset) => row(offset, 3.1, 2.4, (x, z, near) => this.tree(x, z, near, rnd(), rnd(), 0.3 + rnd() * 0.7, 0, false)));
+      // undergrowth: sparse on the shoulder, thick at the wall
+      row(4.2, 1.5, 1.0, (x, z, near) => this.plantAt(x, z, near, rnd() * 0.5, rnd(), 0.35 + rnd() * 0.4));  // grass in the broken edge
+      row(6.2, 2.4, 2.2, (x, z, near) => this.plantAt(x, z, near, rnd(), rnd(), 0.6 + rnd() * 0.6));
+      row(8.6, 1.3, 1.4, (x, z, near) => this.plantAt(x, z, near, 0.3 + rnd() * 0.7, rnd(), 0.8 + rnd() * 0.8));
+      row(10.2, 1.5, 1.6, (x, z, near) => this.plantAt(x, z, near, 0.4 + rnd() * 0.6, rnd(), 0.9 + rnd() * 0.9));
+    });
+  }
+}
+
+const forests = new WeakMap();
+function forestOf(factory) {
+  if (!forests.has(factory)) forests.set(factory, new Forest(factory));
+  return forests.get(factory);
+}
+
 export class Ch1Props extends PropSet {
   static id = 'ch1';
 
@@ -886,10 +1553,12 @@ export class Ch1Props extends PropSet {
     ch1_turn_sign_left: Ch1Props.turnSignLeft,
     ch1_road: Ch1Props.road,
     ch1_ground: Ch1Props.ground,
+    ch1_tree_fallen: Ch1Props.treeFallen,
+    ch1_tree_leaning: Ch1Props.treeLeaning,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
-  static tree(ctx) {
+  static treeLegacy(ctx) {
     const { factory, size, prop } = ctx;
     const tree = new THREE.Group();
     const trunk = factory.cylinder(size, 'tree', 6, 0.2);
@@ -1047,7 +1716,7 @@ export class Ch1Props extends PropSet {
   }
 
   /** Clump of tall dry weeds: thin blades leaning away from the middle. */
-  static weeds(ctx) {
+  static weedsLegacy(ctx) {
     const { factory, size, prop } = ctx;
     const clump = new THREE.Group();
     const blades = 9 + Math.floor(hash01(prop, 1) * 7);
@@ -1326,6 +1995,10 @@ export class Ch1Props extends PropSet {
     const half = width / 2;
     const rnd = seeded(Math.floor(hash01(prop, 1) * 1e6) + 17);
     const leg = new THREE.Group();
+    // tell the forest where the road runs: trees, plants and far outlines are placed around it
+    forestOf(factory).roads.push(alongX
+      ? { x1: prop.x - size.w / 2, z1: prop.z, x2: prop.x + size.w / 2, z2: prop.z }
+      : { x1: prop.x, z1: prop.z + size.d / 2, x2: prop.x, z2: prop.z - size.d / 2 });
 
     const textures = roadTextures();
     const asphalt = wetMaterial(factory, 'road', () => ({
@@ -1440,5 +2113,111 @@ export class Ch1Props extends PropSet {
     floor.receiveShadow = true;
     floor.userData.dynamic = true;
     return floor;
+  }
+
+  /**
+   * A tree. In a level with a chapter 1 road it becomes one copy in the forest's InstancedMesh:
+   * its shape, turn, size and lean come from its position, its detail from the distance to the
+   * road. A few trunks right beside the road carry claw marks or a bloody hand at chest height.
+   * In a level without such a road (the mood board, tests) it is built the old, simple way.
+   */
+  static tree(ctx) {
+    const { factory, size, prop } = ctx;
+    const forest = forestOf(factory);
+    if (forest.roads.length === 0) return Ch1Props.treeLegacy(ctx);
+    const group = forest.anchor(prop);
+    forest.populate();
+    const near = forest.nearest(prop.x, prop.z);
+    // a trunk somebody can bump into keeps its place; the others leave the gaps into the wood open
+    if (!prop.collider && forest.inGap(near, prop.x, prop.z)) return group;
+    const scale = clamp01((Math.min(size.w, size.d) / 0.6 - 0.7) / 0.7);
+    forest.tree(prop.x, prop.z, near, hash01(prop, 1), hash01(prop, 2), scale, hash01(prop, 3), false);
+    if (prop.collider && hash01(prop, 4) < 0.45) {
+      const out = (0.7 + 0.7 * scale) * 0.27 + 0.03;
+      const dx = -near.outX;
+      const dz = -near.outZ;
+      const sheet = new QuadSheet();
+      const claw = hash01(prop, 5) < 0.65;
+      const w = claw ? 0.22 : 0.15;
+      const h = claw ? 0.34 : 0.2;
+      const y = 1 + 0.5 * hash01(prop, 6);
+      const at = (sx, sy) => [dx * out + dz * sx * w, y + sy * h, dz * out - dx * sx * w];
+      sheet.add(claw ? MARK.claw : MARK.hand, at(-1, -1), at(1, -1), at(1, 1), at(-1, 1), [dx, 0, dz]);
+      group.add(sheet.mesh(markMaterial(factory)));
+    }
+    return group;
+  }
+
+  /** Low plants; in a level with a chapter 1 road they are copies in the forest's InstancedMesh. */
+  static weeds(ctx) {
+    const { factory, size, prop } = ctx;
+    const forest = forestOf(factory);
+    if (forest.roads.length === 0) return Ch1Props.weedsLegacy(ctx);
+    const group = forest.anchor(prop);
+    forest.populate();
+    forest.plantAt(prop.x, prop.z, forest.nearest(prop.x, prop.z), hash01(prop, 1), hash01(prop, 2), Math.max(0.5, size.h * 1.2));
+    return group;
+  }
+
+  /**
+   * A tree that came down, lying along X with its torn-out roots toward -X and its top toward +X.
+   * `size.w` is how much of it lies in the open (bind it to a collider of that width when it
+   * blocks the way; the roots reach two metres further back into the wood); `size.h` lifts the
+   * top when it rests on something.
+   */
+  static treeFallen(ctx) {
+    const { factory, size, prop } = ctx;
+    const forest = forestOf(factory);
+    const shapes = forest.shapesOnce();
+    const materials = forest.materials();
+    const shape = shapes.full[hash01(prop, 1) < 0.5 ? 3 : 0];
+    shape.wood.computeBoundingBox();
+    const tall = shape.wood.boundingBox.max.y;
+    const scale = (size.w + 2.3) / tall;
+    const lifted = Math.atan2(size.h * 0.5, size.w + 2);
+    const fallen = new THREE.Group();
+    const trunk = new THREE.Group();
+    const wood = new THREE.Mesh(shape.wood, materials.bark);
+    wood.castShadow = true;
+    wood.receiveShadow = true;
+    wood.userData.dynamic = true;
+    trunk.add(wood);
+    if (shape.foliage) {
+      const leaves = new THREE.Mesh(shape.foliage, materials.foliage);
+      leaves.userData.dynamic = true;
+      trunk.add(leaves);
+    }
+    trunk.rotation.set(hash01(prop, 2) * 6.28, 0, -Math.PI / 2 + lifted, 'ZYX');
+    trunk.position.set(-size.w / 2 - 2, 0.26 * scale, 0);
+    trunk.scale.setScalar(scale);
+    fallen.add(trunk);
+    // what broke off when it hit the ground
+    for (let i = 0; i < 9; i++) {
+      const piece = stick(
+        factory, 'ch1Log',
+        new THREE.Vector3((hash01(prop, 10 + i) - 0.5) * size.w, 0.05, (hash01(prop, 20 + i) - 0.5) * 2.4),
+        new THREE.Vector3((hash01(prop, 30 + i) - 0.5) * size.w, 0.05 + hash01(prop, 40 + i) * 0.15, (hash01(prop, 50 + i) - 0.5) * 2.4),
+        0.012 + hash01(prop, 60 + i) * 0.03, 4
+      );
+      fallen.add(piece);
+    }
+    return fallen;
+  }
+
+  /** A tree that started to fall and was caught by its neighbours: it hangs at an angle along X. */
+  static treeLeaning(ctx) {
+    const { factory, prop } = ctx;
+    const forest = forestOf(factory);
+    const shape = forest.shapesOnce().full[4];
+    const materials = forest.materials();
+    const wood = new THREE.Mesh(shape.wood, materials.bark);
+    wood.castShadow = true;
+    wood.receiveShadow = true;
+    wood.userData.dynamic = true;
+    wood.rotation.set(0, hash01(prop, 1) * 6.28, -(42 + 14 * hash01(prop, 2)) * DEG, 'ZYX');
+    wood.scale.setScalar(1.2);
+    const leaning = new THREE.Group();
+    leaning.add(wood);
+    return leaning;
   }
 }
