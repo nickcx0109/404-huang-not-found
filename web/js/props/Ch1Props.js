@@ -3119,6 +3119,7 @@ export class Ch1Props extends PropSet {
 
   /** Rolled into the ditch and came to rest on its roof: only the underside and the wheels show. */
   static carFlipped(ctx) {
+    if (forestOf(ctx.factory).roads.length === 0) return Ch1Props.carFlippedLegacy(ctx);
     const { factory, size, prop } = ctx;
     const built = buildCar(factory, { w: size.w, d: size.d, color: carColor(factory, 5), flat: -1, brokenGlass: 'left', seed: 77 + Math.floor(hash01(prop, 9) * 1000) });
     built.car.add(part(factory, 'ch1Rust', 0.08, 0.08, size.d * 0.7, 0.32, 0.2, 0.1));
@@ -3142,6 +3143,7 @@ export class Ch1Props extends PropSet {
    * start: clean paint, four good tyres, whole glass, red tail lights glowing toward the road (+Z).
    */
   static escapeCar(ctx) {
+    if (forestOf(ctx.factory).roads.length === 0) return Ch1Props.escapeCarLegacy(ctx);
     const { factory, size } = ctx;
     const colour = Palette.color(typeof factory.greybox.ch1EscapeCar === 'string' ? factory.greybox.ch1EscapeCar : '#7a8386');
     const { group, built } = Ch1Props.carOf(ctx, { color: colour, clean: true, taillamps: factory.emitters.accentMaterial() });
@@ -3220,5 +3222,35 @@ export class Ch1Props extends PropSet {
     light.renderOrder = 7;
     beacon.add(light);
     return beacon;
+  }
+
+  /** The escape car as it was before the road was rebuilt; levels without a chapter 1 road still get it. */
+  static escapeCarLegacy(ctx) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const car = CommonProps.carBody(ctx);
+    [-1, 1].forEach((side) => {
+      const geometry = new THREE.BoxGeometry(w * 0.28, h * 0.11, 0.05);
+      const lamp = new THREE.Mesh(geometry, factory.emitters.accentMaterial());
+      lamp.position.set(side * w * 0.33, h * 0.5, d / 2 + 0.02);
+      car.add(lamp);
+    });
+    const glow = factory.emitters.accentLight();
+    if (glow) {
+      glow.position.set(0, h * 0.5, d / 2 + 0.7);
+      car.add(glow);
+    }
+    return car;
+  }
+
+  /** The overturned car as it was before; levels without a chapter 1 road still get it. */
+  static carFlippedLegacy(ctx) {
+    const { prop, size } = ctx;
+    const car = CommonProps.carBody(ctx);
+    car.rotation.z = Math.PI + (hash01(prop, 1) - 0.5) * 10 * DEG;
+    car.position.y = size.h * 0.98;
+    const group = new THREE.Group();
+    group.add(car);
+    return group;
   }
 }
