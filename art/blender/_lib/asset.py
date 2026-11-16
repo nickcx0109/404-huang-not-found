@@ -43,6 +43,36 @@ class Asset:
         self.palette = AssetPalette(chapter)
         self._parts = []
         self._finished = False
+        # Named moving parts (see part()): shape -> part name, and each part's pivot.
+        self._part_of = {}
+        self._pivots = {}
+        self._current_part = None
+        self._markers = {}
+
+    # ---- moving parts ----------------------------------------------------------------
+
+    def part(self, name, pivot=(0, 0, 0)):
+        """Shapes made inside `with asset.part("slide", pivot=(x, y, z)):` stay a separate
+        piece of the model, so that the game can move it (a pistol's slide, its magazine).
+
+        pivot: the point the game turns or slides the piece about, in the script's own axes.
+        Everything outside a part() block is joined into the fixed body, as before.
+        """
+        if not isinstance(name, str) or not name.replace("_", "").isalnum() or name != name.lower():
+            raise AssetError("%s: part name %r must be lower case letters, digits and _" % (self.id, name))
+        if name in self._pivots:
+            raise AssetError("%s: part %r is defined twice" % (self.id, name))
+        self._pivots[name] = Vector(pivot)
+        return _PartScope(self, name)
+
+    def marker(self, name, at):
+        """A named point with no shape, e.g. asset.marker("muzzle", at=(0, -0.1, 0.12)): the
+        game reads where it is (a muzzle flash, where a light belongs)."""
+        if not isinstance(name, str) or not name.replace("_", "").isalnum() or name != name.lower():
+            raise AssetError("%s: marker name %r must be lower case letters, digits and _" % (self.id, name))
+        if name in self._markers:
+            raise AssetError("%s: marker %r is defined twice" % (self.id, name))
+        self._markers[name] = Vector(at)
 
     # ---- colours ---------------------------------------------------------------------
 
@@ -87,6 +117,43 @@ class Asset:
         return self.mesh(name, verts, faces, at=at, color=color, glow=glow, rot=rot,
                          surface=surface, metres=metres)
 
+    def extrude(self, name, profile, axis="x", span=(-0.5, 0.5), at=(0, 0, 0), color=None,
+                glow=None, rot=(0, 0, 0), surface=None, metres=2.0):
+        """A flat outline pushed through a thickness: a side silhouette (a pistol frame, a
+        guardrail section) with straight sides.
+
+        profile: the outline as 2D points, in order around it (either direction). For
+            axis="x" they are (y, z) and the shape runs along X; for axis="y" they are
+            (x, z); for axis="z" they are (x, y).
+        span: where the shape starts and ends along the axis.
+        Keep outlines convex, or nearly so; build an L or a U from several pieces.
+        """
+        if axis not in ("x", "y", "z"):
+            raise AssetError('%s: part %r: axis must be "x", "y" or "z"' % (self.id, name))
+        if len(profile) < 3:
+            raise AssetError("%s: part %r: an outline needs at least 3 points" % (self.id, name))
+        points = [tuple(p) for p in profile]
+        area = sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(points, points[1:] + points[:1]))
+        # Outlines are stored so that they run counter-clockwise seen from the far end of
+        # the axis. For "y" the two given coordinates (x, z) are a left-handed pair, so the
+        # test is the other way round.
+        if (area < 0) != (axis == "y"):
+            points.reverse()
+        lo, hi = min(span), max(span)
+        place = {
+            "x": lambda a, b, t: (t, a, b),
+            "y": lambda a, b, t: (a, t, b),
+            "z": lambda a, b, t: (a, b, t),
+        }[axis]
+        n = len(points)
+        verts = [place(a, b, lo) for a, b in points] + [place(a, b, hi) for a, b in points]
+        faces = [tuple(reversed(range(n))), tuple(range(n, n * 2))]
+        for i in range(n):
+            j = (i + 1) % n
+            faces.append((i, j, n + j, n + i))
+        return self.mesh(name, verts, faces, at=at, color=color, glow=glow, rot=rot,
+                         surface=surface, metres=metres)
+
     def mesh(self, name, verts, faces, at=(0, 0, 0), color=None, glow=None, rot=(0, 0, 0),
              surface=None, metres=2.0):
         """Any shape: vertices around the origin, faces counter-clockwise seen from outside.
@@ -124,6 +191,8 @@ class Asset:
         part = bpy.data.objects.new(data.name, data)
         bpy.context.scene.collection.objects.link(part)
         self._parts.append(part)
+        if self._current_part is not None:
+            self._part_of[part] = self._current_part
         return part
 
     def import_model(self, path, at=(0, 0, 0), rot=(0, 0, 0), length=None, scale=1.0, wear=1.0,
@@ -205,6 +274,9 @@ class Asset:
         shift = Matrix.Translation(Vector((-(low.x + high.x) / 2.0, -(low.y + high.y) / 2.0, -low.z)))
         for part in self._parts:
             part.data.transform(shift)
+        for points in (self._pivots, self._markers):
+            for name in points:
+                points[name] = shift @ points[name]
 
     # ---- used by the build tool ------------------------------------------------------------
 
@@ -218,15 +290,32 @@ class Asset:
             raise AssetError("%s: build() created no shapes" % self.id)
         self._finished = True
 
+        # One mesh per material for the fixed body, and one per material for each moving part.
         groups = {}
         for part in self._parts:
-            groups.setdefault(part.data.materials[0].name, []).append(part)
+            key = (self._part_of.get(part, ""), part.data.materials[0].name)
+            groups.setdefault(key, []).append(part)
 
         joined = []
-        for material_name, parts in sorted(groups.items()):
+        for (part_name, material_name), parts in sorted(groups.items()):
             suffix = "" if material_name == BASE_MATERIAL else "__" + material_name
-            joined.append(self._join(self.id + suffix, parts))
+            prefix = self.id + ("." + part_name if part_name else "")
+            obj = self._join(prefix + suffix, parts)
+            if part_name:
+                # Read by the game from the node's extras; the pivot is in game axes
+                # (+Y up, front toward -Z). The vertices stay where they are, so the model
+                # still measures and previews as one piece.
+                obj["part"] = part_name
+                obj["pivot"] = self._game_point(self._pivots[part_name])
+            joined.append(obj)
         self._parts = joined
+        self._part_of = {}
+        # Markers travel as empty nodes that carry only their name and position.
+        for name, point in sorted(self._markers.items()):
+            empty = bpy.data.objects.new("%s.%s" % (self.id, name), None)
+            empty["marker"] = name
+            empty["pivot"] = self._game_point(point)
+            bpy.context.scene.collection.objects.link(empty)
 
         for obj in joined:
             if obj.data.materials[0].name == BASE_MATERIAL:
@@ -242,7 +331,9 @@ class Asset:
             "triangles": triangles,
             "size": [round(high.x - low.x, 4), round(high.z - low.z, 4), round(high.y - low.y, 4)],
             "bottom": round(low.z, 4),
-            "glow": sorted(n[len(GLOW_PREFIX):] for n in groups if n.startswith(GLOW_PREFIX)),
+            "glow": sorted({m[len(GLOW_PREFIX):] for _, m in groups if m.startswith(GLOW_PREFIX)}),
+            "parts": sorted({p for p, _ in groups if p}),
+            "markers": sorted(self._markers),
         }
 
         # Written into the GLB (scene extras), so check_assets can tell the file came through
@@ -480,6 +571,11 @@ class Asset:
                 layer.data[index].color = (r * factor, g * factor, b * factor, 1.0)
 
     @staticmethod
+    def _game_point(point):
+        """A point of the script's axes in the game's (+Y up, front toward -Z)."""
+        return [round(-point.x, 5), round(point.z, 5), round(point.y, 5)]
+
+    @staticmethod
     def _bounds(objects):
         low = Vector((math.inf, math.inf, math.inf))
         high = Vector((-math.inf, -math.inf, -math.inf))
@@ -489,6 +585,25 @@ class Asset:
                     low[axis] = min(low[axis], vertex.co[axis])
                     high[axis] = max(high[axis], vertex.co[axis])
         return low, high
+
+
+class _PartScope:
+    """`with asset.part(...)`: marks the shapes made inside as one moving part."""
+
+    def __init__(self, asset, name):
+        self._asset = asset
+        self._name = name
+
+    def __enter__(self):
+        if self._asset._current_part is not None:
+            raise AssetError("%s: part %r cannot be inside part %r"
+                             % (self._asset.id, self._name, self._asset._current_part))
+        self._asset._current_part = self._name
+        return self
+
+    def __exit__(self, *exc):
+        self._asset._current_part = None
+        return False
 
 
 def reset_scene():
