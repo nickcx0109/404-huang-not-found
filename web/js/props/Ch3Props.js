@@ -11,5 +11,15 @@ import { PropSet } from './PropSet.js';
 export class Ch3Props extends PropSet {
   static id = 'ch3';
 
+  // Example (see Ch1Props.js for a full one):
+  //   static builders = {
+  //     fuel_barrel: Ch3Props.fuelBarrel,
+  //   };
+  //
+  //   static fuelBarrel(ctx) {
+  //     const barrel = ctx.factory.cylinder(ctx.size, 'fuelBarrel');
+  //     ...
+  //     return barrel;
+  //   }
   static builders = {};
 }
