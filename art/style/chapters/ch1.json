@@ -1,4 +1,10 @@
 {
-  "_about": "Chapter 1, find the car. This file is the palette block \"ch1\" (levels pick it with \"palette\": \"ch1\"). It starts from the chosen mood (heavy), which was tuned on a foggy mountain road with red tail lights as the guide colour, so nothing is changed yet. Add only what chapter 1 needs to differ.",
-  "extends": "mood/heavy"
+  "_about": [
+    "Chapter 1, find the car. This file is the palette block \"ch1\" (levels pick it with \"palette\": \"ch1\").",
+    "Look: a realistic, dark night on a mountain road. It starts from the chosen mood (heavy) and changes what that look needs; every difference is explained in the PR description.",
+    "Fog is brighter than the things standing in it, so trees, wrecks and zombies read as dark silhouettes; the only warm colours are three small lights (camp fire, cabin window, a string of bulbs)."
+  ],
+  "extends": "mood/heavy",
+
+  "fog": { "color": "#2f3936", "density": 0.056 }
 }
