@@ -50,7 +50,7 @@ T1～T3 不需要 Blender，可以先做。T4 之前先裝 [Blender 4.2 LTS](htt
 ```
 任務 T1：在 web/ 建立場景骨架。
 
-- 純 HTML + 一般 <script>，Three.js r128：https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js。不用打包工具。
+- 純 HTML + 原生 ES modules，不用打包工具。`index.html` 的 import map 固定 Three.js **0.128.0**（`build/three.module.js`）與同版本的 `three/examples/jsm/`，唯一入口是 `js/main.js`，不要升級 Three.js。
 - tools/serve.mjs：不需要任何套件的靜態 server，port 8080。用 node tools/serve.mjs 啟動。
 - web/index.html?level=<名稱> 讀 web/levels/<名稱>.json 並建出場景。
 - 走動模式：pointer lock 滑鼠視角 + WASD，眼睛高度 1.7 m，和關卡碰撞盒做 AABB 碰撞。玩家手電筒（SpotLight）預設開啟。
@@ -140,7 +140,7 @@ T1～T3 不需要 Blender，可以先做。T4 之前先裝 [Blender 4.2 LTS](htt
 ```
 任務 T7：把第二章灰盒換成模型並打光。
 
-- PropFactory 改成用 GLTFLoader（https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js）載入 web/assets/models/ 的 GLB；同一種道具重複出現時用 InstancedMesh 或共用 geometry。
+- ModelLibrary 透過 ES module 匯入 `three/examples/jsm/loaders/GLTFLoader.js`（固定 0.128.0），供 PropFactory 載入 web/assets/models/ 的 GLB；同一種道具重複出現時用 InstancedMesh 或共用 geometry。
 - 不動 ch2.json 的 colliders，只改 props 的名稱、旋轉和小幅位置。
 - 打光：套 palette.json 的 ch2 數值；加招牌閃爍、警示燈旋轉、霧的緩慢流動。同時開的動態燈不超過 4 盞（含手電筒）。
 - 重拍所有機位，存到 art/style/refs/ch2/，並和 ch2-greybox 的截圖並排比較。

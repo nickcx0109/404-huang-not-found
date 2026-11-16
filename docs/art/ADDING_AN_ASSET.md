@@ -132,19 +132,27 @@ git commit -m "feat(art): add fuel_barrel"
 
 ### 模型上要有燈
 
-GLB 帶不了燈。發光的部分用 `glow=`（上面第 2 步），真的會照亮周圍的燈，在**自己那一章的** `web/js/props/Ch?Props.js` 裡用 `registerExtras` 加：
+GLB 帶不了燈。發光的部分用 `glow=`（上面第 2 步），真的會照亮周圍的燈，在**自己那一章的** `web/js/props/Ch?Props.js` 類別裡的 `static extras`（或 getter）加。保留同一張表原有的項目；`PropSet.registerAll` 會統一呼叫 `factory.registerExtras`：
 
 ```js
-factory.registerExtras('warning_light', (ctx) => {
-  const rig = ctx.factory.emitters.alarmLight();   // palette 決定有沒有、有幾盞
-  if (rig) {
-    rig.position.y = 0.3;                          // 相對於模型的原點（底部中心）
-    ctx.object.add(rig);
-  }
-});
+static extras = {
+  warning_light: (ctx) => {
+    const rig = ctx.factory.emitters.alarmLight();
+    if (rig) {
+      rig.position.y = 0.3;
+      ctx.object.add(rig);
+    }
+  },
+};
 ```
 
-它只在這個名字用**模型**顯示時才會被呼叫；灰盒替身自己已經有燈。每一盞真的燈都算進「同時 4 盞動態燈（含手電筒）」的上限。
+它只在這個名字用**模型**顯示時才會被呼叫；灰盒替身自己已經有燈。palette 決定燈的數量；位置相對於模型底部中心。每一盞真的燈都算進「同時 4 盞動態燈（含手電筒）」的上限。
+
+### 還沒有模型時的灰盒替身
+
+四個道具類別都是 ES module，繼承共用的 `PropSet`。在自己類別現有的 `static builders` 加一筆，例如 `fuel_barrel: Ch3Props.fuelBarrel`，再實作 `static fuelBarrel({ prop, size, factory })`，回傳 `Object3D`。`size` 是 `{ w, h, d }`，單位公尺、+Y 朝上、正面朝 -Z、原點在底部中心。顏色仍透過 `factory.material(...)` 取得。
+
+既有章節都已在 `web/js/main.js` 匯入並呼叫 `registerWith(PropFactory)`，不用新增 script tag，也不用手寫 `registerAll`。需要 Three.js 時用 `import * as THREE from 'three'`；要用別的類別就明確 `import`，不要依賴全域變數。完整模組分工見 [ARCHITECTURE.md](../tech/ARCHITECTURE.md)。
 
 ## 用現成素材包的模型
 

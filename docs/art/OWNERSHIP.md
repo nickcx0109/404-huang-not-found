@@ -13,7 +13,7 @@
 | 用途 | 檔案 | 說明 |
 |---|---|---|
 | 關卡 | `web/levels/chN.json`（以及 `chN_*.json`） | 碰撞、道具、出生點、出怪區、markers、機位。格式見 [web/levels/README.md](../../web/levels/README.md) |
-| 灰盒替身 | `web/js/props/ChNProps.js` | 還沒有模型時的替身，還有模型上要加的燈（`registerExtras`）。檔案已經建好並掛進 `index.html`，在裡面 `factory.register(...)` 就會生效 |
+| 灰盒替身 | `web/js/props/ChNProps.js` | 繼承 `PropSet`，在 `static builders` 列替身，在 `static extras`（或 getter）列模型上要加的燈。三章都由 `main.js` 匯入並註冊，不必改 HTML |
 | 氣氛 | `art/style/chapters/chN.json` | 這一章的 palette 區塊（霧、光、後製、重點色、灰盒顏色），以及這一章的資產顏色（`_assets.colors`） |
 | 資產清單 | `art/manifest/chN.json` | 這一章的規格卡 |
 | 資產腳本 | `art/blender/<id>.py` | `<id>` 是自己清單裡的資產 |
@@ -34,9 +34,10 @@
 
 | 檔案 | 為什麼是共用的 |
 |---|---|
-| `web/index.html` | 載入順序；三章的 props 檔都已經掛好，平常不需要動 |
+| `web/index.html`、`web/js/main.js` | import map 固定 Three.js 0.128.0；唯一模組入口負責註冊三章的 props，平常不需要動 |
 | `web/js/*.js`（`App`、`LevelData`、`SceneBuilder`、`PropFactory`、`ModelLibrary`、`ModelInstancer`、`StaticBatcher`、`Emitters`、`Palette`、`Atmosphere`、`PostFX`、`Flashlight`、`CollisionWorld`、`PathFinder`、`PlayerController`、`Hud`） | 引擎，三章都在用 |
 | `web/js/props/CommonProps.js` | 跨章共用的替身：車、卡車、路燈、圍欄、矮牆、大樓、路面 |
+| `web/js/props/PropSet.js`、`web/js/core/`、`test/` | 共用的道具契約、事件／物件池／狀態機，以及不需瀏覽器的單元測試 |
 | `art/style/palette.json` | `default`、`mood`、`blockout` 三個共用區塊，還有共用的資產顏色與髒污設定（`_assets`） |
 | `art/manifest/common.json` 和它列的資產 | 跨章共用的模型（廢車、卡車、路燈、圍欄、油桶、垃圾）。誰做哪一個，先分配好 |
 | `art/manifest/test.json`、`test_crate` | 流程測試用 |
@@ -50,11 +51,11 @@
 
 | 想做的事 | 做法 |
 |---|---|
-| 加一種灰盒替身 | 在自己的 `ChNProps.js` 裡 `factory.register('名字', builder)` |
+| 加一種灰盒替身 | 在自己的 `ChNProps.js` 的 `static builders` 加 `名字: ChNProps.builder`；共用基底統一呼叫 `factory.register` |
 | 替身要一個新顏色 | 在自己的 `chapters/chN.json` 的 `greybox` 裡加一個鍵，替身用 `factory.material('鍵')` 取 |
 | 模型要一個新顏色 | 在自己的 `chapters/chN.json` 加 `"_assets": { "colors": { "名字": "#rrggbb" } }` |
 | 調整這一章的霧、光、手電筒 | 改自己的 `chapters/chN.json`。不要改 `mood` |
-| 模型上要有燈 | 在自己的 `ChNProps.js` 用 `factory.registerExtras('名字', ...)`，見 [ADDING_AN_ASSET.md](ADDING_AN_ASSET.md) |
+| 模型上要有燈 | 在自己的 `ChNProps.js` 的 `static extras`（或 getter）加 `名字: callback`，基底統一呼叫 `factory.registerExtras`，見 [ADDING_AN_ASSET.md](ADDING_AN_ASSET.md) |
 | 關卡要記一種新的位置（補給點、檢查點、燃料桶放置點） | 用關卡的 `markers`，自己取 `type` |
 | 只建、只檢查自己的模型 | 工具都加 `--chapter chN` |
 
@@ -62,13 +63,14 @@
 
 ## 名字不能撞
 
-- **道具名稱**（`factory.register` 的名字）和**資產 id** 全專案唯一。兩個檔案註冊同一個名字時，瀏覽器 console 會警告；兩份清單有同一個 id 時，`check_assets` 會失敗。
+- **道具名稱**（`static builders` 的鍵）和**資產 id** 全專案唯一。兩個檔案註冊同一個名字時，瀏覽器 console 會警告；兩份清單有同一個 id 時，`check_assets` 會失敗。
 - 通用的名字（`car_wreck`、`fence`、`street_lamp`…）留給共用的。自己章節的東西用認得出來的名字（`mvidia_gate`、`fuel_barrel`、`guardrail`），有疑慮就加章節字首（`ch3_door`）。
 - palette 的灰盒顏色鍵、資產顏色名字，自己章節加的建議也帶字首，避免之後和共用的撞名。
 
 ## 交回來之前自己檢查
 
 ```
+npm test
 node tools/art/assets.mjs check --chapter chN
 node tools/art/shots.mjs --level chN --out art/style/refs/chN
 ```
