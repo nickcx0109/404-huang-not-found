@@ -144,6 +144,7 @@ export class Ch3Props extends PropSet {
     ch3_cables: Ch3Props.cables,
     ch3_rubble: Ch3Props.rubble,
     ch3_glass: Ch3Props.glass,
+    ch3_boards: Ch3Props.boards,
   };
 
   /**
@@ -786,5 +787,20 @@ export class Ch3Props extends PropSet {
       shards.add(shard);
     }
     return shards;
+  }
+
+  /** Planks nailed across an opening or a wall, every one at its own angle. Front toward -Z. */
+  static boards(ctx) {
+    const { factory, size, prop } = ctx;
+    const { w, h } = size;
+    const group = new THREE.Group();
+    const planks = Math.max(3, Math.round(h / 0.45));
+    for (let i = 0; i < planks; i++) {
+      const plank = part(factory, 'ch3Board', w * (0.9 + 0.2 * hash01(prop, 10 + i)), 0.16, 0.03, 0, 0, 0);
+      plank.position.set((hash01(prop, 20 + i) - 0.5) * 0.2, h * ((i + 0.5) / planks) - 0.08, -0.02 - 0.012 * (i % 2));
+      plank.rotation.z = (hash01(prop, 30 + i) - 0.5) * 0.35;
+      group.add(plank);
+    }
+    return group;
   }
 }
