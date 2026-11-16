@@ -15,6 +15,7 @@
     "saturation": 0.68,
     "vignette": { "strength": 0.8, "start": 0.26, "end": 1.0 },
     "grain": 0.075,
-    "chromaticAberration": 0.0025
+    "chromaticAberration": 0.0025,
+    "bloom": { "enabled": true, "threshold": 0.85, "knee": 0.5, "strength": 0.8, "levels": 3 }
   }
 }
