@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>GFX 模型檢視器</title>
+<style>
+  html,body{margin:0;height:100%;background:#14181e;color:#cfd6df;font:13px/1.5 system-ui,sans-serif;overflow:hidden}
+  canvas{display:block;width:100%;height:100%}
+  #bar{position:fixed;left:0;top:0;right:0;padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px;background:rgba(10,12,16,.7)}
+  #bar a{color:#f0a23b;text-decoration:none;padding:2px 8px;border:1px solid #3a4049}
+  #bar a.on{background:#f0a23b;color:#14181e}
+  #info{position:fixed;left:12px;bottom:10px;color:#8d97a3}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="bar"></div>
+<div id="info"></div>
+<!--
+  用法（伺服器跑起來之後）：
+    /gfx/viewer.html?set=props            列出 GFX.props 的全部項目，排成格子
+    /gfx/viewer.html?set=props&n=car      只看一個
+    /gfx/viewer.html?set=guns&n=rifle     武器（GFX.buildGunModel / GFX.buildThrowModel）
+    加 &spin=0 停止旋轉，&yaw=1.2&pitch=0.3&dist=4 固定視角，&day=1 用明亮的檢查光
+    武器動畫（GFX.weaponAnim）：
+      &anim=reload          換彈進度 0→1 循環播放（&k=0.4 固定在某個進度，方便截圖）
+      &anim=fire            每隔 rate 秒開一槍（&t=0.03 固定在開火後幾秒）
+      &slow=0.25            放慢播放速度
+    命中與拋殼（feel.js）：/gfx/viewer.html?set=feel   牆（stone）、鐵板（metal）、木箱（wood）、玻璃（glass）輪流被打，三種彈殼輪流拋出
+-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="kit.js"></script>
+<script src="props.js" onerror="void 0"></script>
+<script src="weapons.js" onerror="void 0"></script>
+<script src="zombie.js" onerror="void 0"></script>
+<script src="feel.js" onerror="void 0"></script>
+<script>
+'use strict';
+const q = new URLSearchParams(location.search);
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(q.get('day') ? 0x8d99a8 : 0x1a2029);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 400);
+scene.add(new THREE.HemisphereLight(0xbfd0ea, 0x4a4036, q.get('day') ? 1.1 : 0.55));
+const key = new THREE.DirectionalLight(0xfff0dc, q.get('day') ? 2.2 : 1.6); key.position.set(6, 10, 7); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 0.5, far: 80 }); key.shadow.bias = -0.0004; scene.add(key);
+const rim = new THREE.DirectionalLight(0x6f9cff, 0.7); rim.position.set(-8, 5, -9); scene.add(rim);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x3a3f47, roughness: 0.95 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+
+const SETS = {
+  props: () => { const o = {}; if (GFX.props) for (const k in GFX.props) if (typeof GFX.props[k] === 'function') o[k] = () => GFX.props[k](); return o; },
+  guns: () => { const o = {}; if (GFX.buildGunModel) ['pistol', 'rifle', 'shotgun', 'katana', 'chainsaw', 'flamer', 'tesla', 'grenade'].forEach(k => { o[k] = () => GFX.buildGunModel(k); }); if (GFX.buildThrowModel) ['molotov', 'frag'].forEach(k => { o[k] = () => GFX.buildThrowModel(k); }); return o; },
+  zombies: () => { const o = {}; if (GFX.zombiePreview) ['walker', 'runner', 'tank', 'exploder'].forEach(k => { o[k] = () => GFX.zombiePreview(k); }); return o; },
+  feel: () => ({ demo: feelDemo })
+};
+GFX.tick = GFX.tick || [];
+// 命中測試場：四種材質的靶，回傳 group（靶的 userData.kind 給 impact 用）
+const feelTargets = [];
+function feelDemo() {
+  const g = new THREE.Group();
+  const add = (geo, hex, kind, x, y, z, ry = 0, o = {}) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial(Object.assign({ color: hex, roughness: 0.85 }, o))); m.position.set(x, y, z); m.rotation.y = ry; m.userData.kind = kind; m.castShadow = m.receiveShadow = true; g.add(m); feelTargets.push(m); return m; };
+  add(new THREE.BoxGeometry(2.2, 2.2, 0.3), 0x8c8279, 'stone', -0.6, 1.1, -1.2);
+  add(new THREE.BoxGeometry(1.2, 1.2, 0.05), 0x5a636d, 'metal', 1.2, 0.8, -0.7, -0.5, { metalness: 0.85, roughness: 0.4 });
+  add(new THREE.BoxGeometry(0.8, 0.8, 0.8), 0x8a5b30, 'wood', -0.1, 0.4, 0.4, 0.3);
+  add(new THREE.BoxGeometry(0.9, 1.2, 0.02), 0xa9c8dc, 'glass', 1.3, 0.6, 0.6, -1.0, { transparent: true, opacity: 0.35, roughness: 0.05 });
+  return g;
+}
+const setName = q.get('set') || 'props', items = (SETS[setName] || SETS.props)(), names = Object.keys(items), only = q.get('n');
+const bar = document.getElementById('bar');
+Object.keys(SETS).forEach(s => { const a = document.createElement('a'); a.textContent = s; a.href = '?set=' + s; if (s === setName) a.className = 'on'; bar.appendChild(a); });
+names.forEach(n => { const a = document.createElement('a'); a.textContent = n; a.href = `?set=${setName}&n=${n}`; if (n === only) a.className = 'on'; bar.appendChild(a); });
+
+const root = new THREE.Group(); scene.add(root);
+const box = new THREE.Box3(); let tris = 0, errs = [];
+const show = only ? [only] : names, isGun = setName === 'guns';
+const cols = Math.ceil(Math.sqrt(show.length)); let cellW = 0;
+const built = [];
+show.forEach(n => { try { const g = items[n](); if (!g) throw new Error('回傳空值'); const b = new THREE.Box3().setFromObject(g); built.push([n, g, b]); const s = b.getSize(new THREE.Vector3()); cellW = Math.max(cellW, s.x, s.z); } catch (e) { errs.push(n + ': ' + e.message); console.error(n, e); } });
+cellW = cellW * 1.25 + (isGun ? 0.1 : 0.6);
+built.forEach(([n, g, b], i) => {
+  const holder = new THREE.Group(); holder.position.set((i % cols - (cols - 1) / 2) * cellW, isGun ? 0.6 : 0, (Math.floor(i / cols) - (Math.ceil(built.length / cols) - 1) / 2) * cellW);
+  holder.add(g); root.add(holder);
+  g.traverse(m => { if (m.isMesh && m.geometry.attributes.position) tris += m.geometry.attributes.position.count / 3; });
+});
+box.setFromObject(root);
+const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+if (isGun) floor.visible = false;
+let yaw = +(q.get('yaw') || 0.7), pitch = +(q.get('pitch') || 0.35), dist = +(q.get('dist') || Math.max(size.x, size.y, size.z, 0.3) * 1.7), spin = q.get('spin') !== '0';
+document.getElementById('info').textContent = `${setName}${only ? ' / ' + only : ''} · ${built.length} 個 · ${Math.round(tris)} 個三角形 · 尺寸 ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)}` + (errs.length ? ' · 錯誤：' + errs.join('; ') : '');
+window.__viewer = { errs, tris, size: size.toArray(), names };
+let drag = null;
+addEventListener('mousedown', e => { drag = [e.clientX, e.clientY]; spin = false; });
+addEventListener('mouseup', () => { drag = null; });
+addEventListener('mousemove', e => { if (!drag) return; yaw -= (e.clientX - drag[0]) * 0.008; pitch = Math.max(-1.4, Math.min(1.5, pitch + (e.clientY - drag[1]) * 0.008)); drag = [e.clientX, e.clientY]; });
+addEventListener('wheel', e => { dist *= e.deltaY > 0 ? 1.1 : 0.9; });
+function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+// 武器動畫的驅動：模擬遊戲每幀傳給 GFX.weaponAnim 的 s
+const RT = { pistol: [1.1, 0.16], rifle: [1.7, 0.095], shotgun: [2.1, 0.85], flamer: [2.0, 0.06], grenade: [2.4, 0.75], katana: [0, 0.4], chainsaw: [0, 0.07], tesla: [0, 0.09] };
+const anim = q.get('anim'), fixK = q.get('k'), fixT = q.get('t'), slow = +(q.get('slow') || 1);
+let animT = 0, ejects = 0;
+function driveGuns(dt) {
+  if (!isGun || !GFX.weaponAnim) return;
+  animT += dt;
+  built.forEach(([n, g]) => {
+    const [rel, rate] = RT[n] || [1, 0.2];
+    const s = { reloadK: 0, sinceFire: 9, firing: false, rate };
+    if (anim === 'reload' && rel > 0) { const cyc = rel + 0.6, u = animT % cyc; s.reloadK = fixK !== null ? +fixK : (u < rel ? u / rel : 0); }
+    if (anim === 'fire') { const per = Math.max(rate, 0.12) * (n === 'shotgun' || n === 'grenade' ? 1.3 : 1.6); s.sinceFire = fixT !== null ? +fixT : animT % per; s.firing = true; }
+    if (GFX.weaponAnim(g, n, s, dt)) ejects++;
+  });
+}
+// 命中測試：每 0.15 秒對某個靶隨機打一發，每 0.4 秒拋一顆彈殼
+const ray = new THREE.Raycaster(); let shotT = 0, shellT = 0, shellK = 0;
+if (setName === 'feel' && GFX.feelInit) GFX.feelInit(scene, camera);
+function driveFeel(dt) {
+  if (setName !== 'feel' || !GFX.impact) return;
+  shotT -= dt; shellT -= dt;
+  if (shotT <= 0) {
+    shotT = 0.15;
+    const o = camera.position.clone(), tgt = feelTargets[Math.floor(Math.random() * feelTargets.length)];
+    const p = tgt.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3((Math.random() - 0.5) * 0.7, (Math.random() - 0.5) * 0.7, (Math.random() - 0.5) * 0.7));
+    ray.set(o, p.sub(o).normalize()); const h = ray.intersectObjects(feelTargets, false)[0];
+    if (h) GFX.impactHit(h, h.object.userData.kind, ray.ray.direction);
+    else { const t = -o.y / ray.ray.direction.y; if (t > 0) GFX.impact(o.addScaledVector(ray.ray.direction, t), null, 'stone', ray.ray.direction); }
+  }
+  if (shellT <= 0) { shellT = 0.4; const k = ['pistol', 'rifle', 'shotgun'][shellK++ % 3]; GFX.shell(new THREE.Vector3(0.6, 1.3, 1.2), new THREE.Vector3(1, 0, 0.2), new THREE.Vector3(0, 1, 0), k); }
+}
+window.__viewer.anim = () => ({ ejects, animT });
+let last = performance.now();
+(function loop(now) {
+  requestAnimationFrame(loop); const dt = Math.min((now - last) / 1000, 0.05) * slow; last = now;
+  if (spin) yaw += dt * 0.5;
+  if (GFX.zombieTick) GFX.zombieTick(dt);
+  driveGuns(dt); driveFeel(dt);
+  for (const fn of GFX.tick) fn(dt, now / 1000);
+  camera.position.set(center.x + Math.sin(yaw) * Math.cos(pitch) * dist, center.y + Math.sin(pitch) * dist, center.z + Math.cos(yaw) * Math.cos(pitch) * dist);
+  camera.lookAt(center); renderer.render(scene, camera);
+})(last);
+</script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>殭屍叫聲試聽</title>
+<style>
+:root{--bg:#0d1117;--card:#161c25;--line:#2a3340;--ink:#ece7db;--dim:#8d97a5;--hazard:#f0a23b;--guide:#5fe3d0;--moss:#a2c46d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,"Noto Sans TC","Microsoft JhengHei",sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 80px;display:grid;gap:22px}
+h1{font-size:26px;margin:0}
+p{margin:0;color:var(--dim)}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px}
+h2{font-size:18px;margin:0;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+h2 small{font-size:13px;font-weight:400;color:var(--dim)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.cand{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.02)}
+.cand.on{border-color:var(--moss);background:rgba(162,196,109,.08)}
+.cand button{all:unset;cursor:pointer;width:38px;height:38px;border-radius:50%;background:var(--hazard);color:#111;display:grid;place-items:center;font-size:15px;grid-row:span 2}
+.cand button:hover{filter:brightness(1.15)}
+.cand button:focus-visible,.bar button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.cand b{font:600 14px ui-monospace,Consolas,monospace}
+.cand label{font-size:12.5px;color:var(--dim);display:flex;gap:5px;align-items:center;cursor:pointer}
+.cand.on label{color:var(--moss)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bar button{all:unset;cursor:pointer;padding:7px 14px;border:1px solid var(--line);border-radius:6px;font-size:13.5px}
+.bar button:hover{border-color:var(--guide);color:var(--guide)}
+textarea{width:100%;height:170px;background:#0a0e13;color:var(--guide);border:1px solid var(--line);border-radius:8px;padding:10px;font:13px/1.5 ui-monospace,Consolas,monospace}
+select{background:#0a0e13;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:2px 4px;font-size:12.5px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>殭屍叫聲試聽</h1>
+    <p>按橘色鈕試聽（音高和遊戲裡一樣會隨機變一點）。<b>打勾的會進遊戲</b>，同一類勾多個就每次隨機挑一個。挑完按最下面的「複製」，把結果貼回給 Claude。</p>
+  </header>
+  <div id="groups"></div>
+  <section>
+    <h2>挑選結果 <small>貼回對話就會寫進 sfx/manifest.json</small></h2>
+    <textarea id="out" readonly></textarea>
+    <div class="bar"><button id="copy" type="button">複製</button><span id="copied" style="color:var(--moss)"></span></div>
+  </section>
+</main>
+<script>
+// 每一類：遊戲裡的 key、說明、播放速度範圍（跟 index-v0.5.html 的 Sfx 一致）、候選檔
+const GROUPS = [
+  { key: 'zombie_groan', name: '平常的低吼', hint: '殭屍在附近時每隔幾秒叫一聲，會聽到最多次', rate: [0.82, 1.0], files: ['z01', 'z02', 'z16', 'z17', 'z18', 'z20', 'z22', 'z23'] },
+  { key: 'zombie_death', name: '死掉的叫聲', hint: '被打死的瞬間（爆頭不會叫）', rate: [0.9, 1.1], files: ['z03', 'z04', 'z05', 'z06', 'z07', 'z10', 'z13'] },
+  { key: 'zombie_scream', name: '尖叫者的尖叫', hint: '尖叫殭屍召喚同伴時', rate: [0.95, 1.1], files: ['m01', 'm02', 'm03', 'm11', 'z09', 'z12', 'z19'] },
+  { key: 'zombie_hiss', name: '自爆者靠近的嘶聲', hint: '自爆殭屍衝到你旁邊、快要爆的時候', rate: [0.9, 1.1], files: ['m04', 'm05', 'm06', 'm07', 'm18'] },
+  { key: 'zombie_windup', name: '坦克蓄力的低吼', hint: '大隻的要砸地板之前（放慢播，聲音比較低）', rate: [0.6, 0.7], files: ['z15', 'z16', 'z18', 'z21'] },
+  { key: '', name: '另一包素材（還沒分類）', hint: '覺得適合哪一類就用下拉選單指定', rate: [0.95, 1.05], files: ['s01', 's02', 's03', 's04', 's06', 's07'] },
+];
+const SRC = { z: 'Zombies Sound Pack · artisticdude · CC0', m: 'Monster Sound Pack Vol.1 · Ogrebane · CC0', s: 'Zomby sfx pack · saturn91 · CC0' };
+const ext = f => (f[0] === 's' ? '.mp3' : '.wav');
+const path = f => 'zombie/' + f + ext(f);
+let ctx = null; const bufs = {};
+async function play(f, rate) {
+  ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') await ctx.resume();
+  if (!bufs[f]) bufs[f] = await ctx.decodeAudioData(await (await fetch('sfx/' + path(f))).arrayBuffer());
+  const s = ctx.createBufferSource(), g = ctx.createGain();
+  s.buffer = bufs[f]; s.playbackRate.value = rate[0] + Math.random() * (rate[1] - rate[0]); g.gain.value = 0.8;
+  s.connect(g); g.connect(ctx.destination); s.start();
+}
+const picked = {};   // key -> Set(file)
+const root = document.getElementById('groups');
+function render(manifest) {
+  root.innerHTML = '';
+  for (const g of GROUPS) {
+    if (g.key) picked[g.key] = picked[g.key] || new Set([].concat(manifest[g.key] || []).map(p => p.replace(/^zombie\//, '').replace(/\.\w+$/, '')));
+    const sec = document.createElement('section');
+    sec.innerHTML = `<h2>${g.name} <small>${g.hint}</small></h2><div class="bar">${g.key ? '<button type="button" data-all="1">全選</button><button type="button" data-all="0">全不選</button>' : ''}<button type="button" data-seq="1">依序全部播一次</button></div><div class="grid"></div>`;
+    const grid = sec.querySelector('.grid');
+    for (const f of g.files) {
+      const d = document.createElement('div'); d.className = 'cand'; d.title = SRC[f[0]];
+      if (g.key) {
+        d.innerHTML = `<button type="button" aria-label="試聽 ${f}">▶</button><b>${f}</b><label><input type="checkbox"> 用這個</label>`;
+        const cb = d.querySelector('input'); cb.checked = picked[g.key].has(f); d.classList.toggle('on', cb.checked);
+        cb.addEventListener('change', () => { cb.checked ? picked[g.key].add(f) : picked[g.key].delete(f); d.classList.toggle('on', cb.checked); out(); });
+      } else {
+        d.innerHTML = `<button type="button" aria-label="試聽 ${f}">▶</button><b>${f}</b><select aria-label="${f} 用在哪一類"><option value="">不用</option>${GROUPS.filter(x => x.key).map(x => `<option value="${x.key}">${x.name}</option>`).join('')}</select>`;
+        const sel = d.querySelector('select');
+        const cur = GROUPS.find(x => x.key && picked[x.key] && picked[x.key].has(f)); if (cur) { sel.value = cur.key; d.classList.add('on'); }
+        sel.addEventListener('change', () => { for (const k in picked) picked[k].delete(f); if (sel.value) picked[sel.value].add(f); d.classList.toggle('on', !!sel.value); out(); });
+      }
+      d.querySelector('button').addEventListener('click', () => play(f, g.rate));
+      grid.appendChild(d);
+    }
+    sec.querySelectorAll('[data-all]').forEach(b => b.addEventListener('click', () => { grid.querySelectorAll('input').forEach(cb => { cb.checked = b.dataset.all === '1'; cb.dispatchEvent(new Event('change')); }); }));
+    sec.querySelector('[data-seq]').addEventListener('click', async () => { for (const f of g.files) { await play(f, g.rate); await new Promise(r => setTimeout(r, bufs[f].duration * 1000 / g.rate[0] + 350)); } });
+    root.appendChild(sec);
+  }
+  out();
+}
+function out() {
+  const o = {};
+  for (const g of GROUPS) if (g.key) o[g.key] = [...picked[g.key]].sort().map(path);
+  document.getElementById('out').value = JSON.stringify(o, null, 2);
+}
+document.getElementById('copy').addEventListener('click', async () => {
+  const t = document.getElementById('out'); t.select();
+  try { await navigator.clipboard.writeText(t.value); } catch (e) { document.execCommand('copy'); }
+  document.getElementById('copied').textContent = '已複製'; setTimeout(() => { document.getElementById('copied').textContent = ''; }, 1500);
+});
+fetch('sfx/manifest.json').then(r => r.json()).catch(() => ({})).then(render);
+</script>
+</body>
+</html>
