@@ -56,6 +56,7 @@ export class Ch1Props extends PropSet {
     ch1_weeds: Ch1Props.weeds,
     ch1_rock: Ch1Props.rock,
     ch1_log: Ch1Props.log,
+    ch1_tire: Ch1Props.tire,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -269,5 +270,19 @@ export class Ch1Props extends PropSet {
       ));
     }
     return log;
+  }
+
+  /** Loose tyre lying flat. */
+  static tire(ctx) {
+    const { factory, size, prop } = ctx;
+    const radius = Math.min(size.w, size.d) / 2;
+    const tyre = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, size.h, 10), factory.material('tire'));
+    tyre.position.y = size.h / 2;
+    tyre.rotation.z = (hash01(prop, 1) - 0.5) * 12 * DEG;
+    tyre.castShadow = true;
+    tyre.receiveShadow = true;
+    const group = new THREE.Group();
+    group.add(tyre);
+    return group;
   }
 }
