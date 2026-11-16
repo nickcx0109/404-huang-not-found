@@ -1,0 +1,1166 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第一關之前的漫畫：前情提要</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+<style>
+/* 1960 年代美漫的四色印刷：墨黑、泛黃的紙、復古紅、亮黃、深藍、橘 */
+:root{--ink:#17120e;--paper:#f1e3bf;--red:#cf2a1d;--yel:#f8c61a;--blu:#1f4aa0;--org:#e8782a}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#0c0c0c;overflow:hidden;font-family:"PingFang TC","Heiti TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+#stage{position:absolute;left:0;top:0;width:1600px;height:900px;transform-origin:0 0;overflow:hidden;cursor:pointer;background:var(--ink)}
+#shake{position:absolute;inset:0}
+#shake.thud{animation:thud .24s steps(4)}
+@keyframes thud{0%{transform:translate(0,9px)}33%{transform:translate(-6px,-4px)}66%{transform:translate(4px,2px)}100%{transform:none}}
+
+/* 頁面與格子 */
+.page{position:absolute;inset:0;background-color:var(--paper);
+  transition:transform .75s cubic-bezier(.6,0,.85,.35)}
+.page.gone{transform:translate(-106%,60px) rotate(-8deg)}
+.notrans,.notrans *{transition:none!important}
+.panel{position:absolute;left:0;top:0;width:1600px;height:900px;background:var(--ink);opacity:0;
+  transition:clip-path .5s cubic-bezier(.7,0,.2,1)}
+.panel.on{opacity:1;animation:enter .42s cubic-bezier(.2,1.15,.4,1)}
+@keyframes enter{from{opacity:0;transform:translate(var(--fx),var(--fy)) rotate(var(--fr)) scale(.55)}45%{opacity:1}to{opacity:1;transform:none}}
+.inner{position:absolute;inset:0;overflow:hidden;background:var(--paper);transition:clip-path .5s cubic-bezier(.7,0,.2,1)}
+.art{position:absolute;left:0;top:0;width:1600px;height:900px;transform-origin:0 0;transition:transform .5s cubic-bezier(.7,0,.2,1)}
+.art svg{display:block;width:1600px;height:900px;filter:url(#print)}
+.wt{filter:url(#wt)}
+.still *{animation-play-state:paused!important}
+.fast .panel{animation:none!important}
+.fast .os{animation-duration:.01s!important;animation-delay:0s!important}
+
+/* 墨線 */
+.k{stroke:#17120e;stroke-width:8.5;stroke-linejoin:round;stroke-linecap:round}
+.k5{stroke:#17120e;stroke-width:6;stroke-linejoin:round;stroke-linecap:round}
+.k10{stroke:#17120e;stroke-width:12;stroke-linejoin:round;stroke-linecap:round}
+.nf{fill:none}
+.sfxt{font-family:Bangers,Impact,"Arial Black",sans-serif;paint-order:stroke fill;stroke:#17120e;stroke-linejoin:round}
+.zh{font-family:"PingFang TC","Heiti TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-weight:900}
+
+/* 共用動畫 */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes on{to{opacity:1}}
+@keyframes jit{0%{transform:translate(-4px,2px)}50%{transform:translate(4px,-2px)}}
+.live .rot{animation:spin 30s linear infinite}
+.pop{transform-box:fill-box;transform-origin:center;transform:scale(0)}
+.live .pop{animation:popin .3s cubic-bezier(.2,1.7,.4,1) var(--d,.5s) forwards}
+@keyframes popin{to{transform:scale(1)}}
+.eye{opacity:0}
+.live .eye{animation:on .1s steps(1) var(--dl,.5s) forwards}
+.sway{transform-box:fill-box;transform-origin:50% 100%}
+.live .sway{animation:sway 1s ease-in-out var(--dl,0s) infinite alternate}
+@keyframes sway{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+
+/* 1 發表會 */
+.live .spot{animation:sweep 1.4s ease-in-out infinite alternate}
+.live .sp2{animation-direction:alternate-reverse}
+@keyframes sweep{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
+.flash{opacity:0}
+.live .flash{animation:flash var(--t,.7s) steps(1) var(--dl,0s) infinite}
+@keyframes flash{0%{opacity:1}18%{opacity:0}100%{opacity:0}}
+.live .bob{animation:bob .5s ease-in-out var(--dl,0s) infinite alternate}
+@keyframes bob{to{transform:translateY(-16px)}}
+.twinkle{transform-box:fill-box;transform-origin:center}
+.live .twinkle{animation:twinkle .5s ease-in-out infinite alternate}
+@keyframes twinkle{from{transform:scale(.5) rotate(0)}to{transform:scale(1.25) rotate(40deg)}}
+
+/* 2 晶片出錯 */
+.live .die{animation:die .4s steps(3) .5s forwards}
+@keyframes die{to{fill:#cf2a1d}}
+.crack{stroke-dasharray:700;stroke-dashoffset:700}
+.live .crack{animation:crack .35s linear .55s forwards}
+@keyframes crack{to{stroke-dashoffset:0}}
+.bolt{opacity:0}
+.live .bolt{animation:boltf .3s steps(1) var(--dl,.5s) infinite}
+@keyframes boltf{0%{opacity:1}55%{opacity:0}100%{opacity:0}}
+.live .chipj{animation:jit .07s steps(2) .5s infinite}
+.wflash{opacity:0}
+.live .wflash{animation:wflash .3s linear .48s}
+@keyframes wflash{0%{opacity:.95}100%{opacity:0}}
+
+/* 3 變成殭屍 */
+.lunge{transform-origin:800px 520px;transform:scale(.86)}
+.live .lunge{animation:lunge 1.5s cubic-bezier(.2,.9,.3,1) .1s forwards}
+@keyframes lunge{to{transform:scale(1.08)}}
+.live .pupil{animation:pupil .4s ease-in-out infinite alternate}
+.pupil{transform-box:fill-box;transform-origin:center}
+@keyframes pupil{from{transform:scale(.7)}to{transform:scale(1.35)}}
+.hshake{transform-box:fill-box;transform-origin:50% 100%}
+.live .hshake{animation:hshake .16s steps(2) infinite}
+@keyframes hshake{0%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+.live .sl{animation:slf .22s steps(1) infinite}
+@keyframes slf{0%{opacity:1}50%{opacity:.55}}
+
+/* 4 全球通緝 */
+.slam{transform-box:fill-box;transform-origin:center;transform:scale(2.4);opacity:0}
+.live .slam{animation:slam .26s ease-in .12s forwards}
+@keyframes slam{to{transform:scale(1);opacity:1}}
+.stamp{transform-box:fill-box;transform-origin:center;transform:scale(3.4);opacity:0}
+.live .stamp{animation:slam .24s ease-in .95s forwards}
+.live .c-red{animation:cop .5s steps(1) infinite}
+.live .c-blue{animation:cop .5s steps(1) -.25s infinite}
+@keyframes cop{0%{opacity:1}50%{opacity:.14}}
+.ping{transform-box:fill-box;transform-origin:center;opacity:0}
+.live .ping{animation:ping 1.1s ease-out var(--dl,0s) infinite}
+@keyframes ping{from{transform:scale(.3);opacity:1}to{transform:scale(1.7);opacity:0}}
+.live .heli{animation:heli 1.6s ease-in-out infinite alternate}
+@keyframes heli{from{transform:translate(-30px,0)}to{transform:translate(40px,14px)}}
+
+/* 5 城市淪陷 */
+.cal{transform-box:fill-box;transform-origin:center}
+.live .c1{animation:tear .5s ease-in .35s forwards}
+.live .c2{animation:tear .5s ease-in .95s forwards}
+@keyframes tear{to{transform:translate(560px,-360px) rotate(55deg);opacity:0}}
+.live .win{animation:winoff .1s steps(1) var(--dl,1s) forwards}
+@keyframes winoff{to{fill:#17120e}}
+.flick{transform-box:fill-box;transform-origin:50% 100%}
+.live .flick{animation:flick .24s steps(2) var(--dl,0s) infinite}
+@keyframes flick{0%{transform:scale(1,1)}50%{transform:scale(.86,1.2)}}
+.live .smokeUp{animation:smokeUp 2.4s ease-in-out var(--dl,0s) infinite alternate}
+@keyframes smokeUp{to{transform:translate(18px,-46px)}}
+
+/* 6 老黃躲藏 */
+.live .door{animation:bang .8s steps(1) infinite}
+@keyframes bang{0%{transform:translateX(-12px)}10%{transform:translateX(7px)}20%{transform:none}50%{transform:translateX(-12px)}60%{transform:translateX(7px)}70%{transform:none}}
+.live .thrust{animation:thrust .8s steps(1) var(--dl,0s) infinite}
+@keyframes thrust{0%{transform:translateX(-46px)}22%{transform:translateX(30px)}50%{transform:translateX(-46px)}72%{transform:translateX(30px)}}
+.imp{opacity:0}
+.live .imp{animation:imp .8s steps(1) infinite}
+@keyframes imp{0%{opacity:1}18%{opacity:0}50%{opacity:1}68%{opacity:0}100%{opacity:0}}
+.live .drop{animation:drop .9s linear var(--dl,0s) infinite}
+@keyframes drop{from{transform:translateY(-10px);opacity:1}to{transform:translateY(60px);opacity:0}}
+.live .cone{animation:cone .35s steps(2) infinite}
+@keyframes cone{0%{opacity:1}50%{opacity:.74}}
+
+/* 7 三支手機 */
+.bub{transform-box:fill-box;transform-origin:0% 100%;transform:scale(0)}
+.live .bub{animation:popin .3s cubic-bezier(.2,1.7,.4,1) var(--d,.5s) forwards}
+.live .vibs{animation:vibs .09s linear infinite}
+@keyframes vibs{0%{transform:translate(-5px,0) rotate(-1.6deg)}50%{transform:translate(5px,0) rotate(1.6deg)}}
+.live .vl{animation:slf .18s steps(1) infinite}
+
+/* 8 需要燃料 */
+.needle{transform-box:fill-box;transform-origin:50% 100%;transform:rotate(66deg)}
+.live .needle{animation:needle 1.2s cubic-bezier(.5,0,.6,1) .3s forwards}
+@keyframes needle{55%{transform:rotate(-76deg)}72%{transform:rotate(-56deg)}86%{transform:rotate(-70deg)}100%{transform:rotate(-64deg)}}
+.blink{opacity:.25}
+.live .blink{animation:blink .4s steps(1) 1s infinite}
+@keyframes blink{0%{opacity:1}50%{opacity:.25}}
+.live .march{animation:march .5s linear infinite}
+@keyframes march{to{stroke-dashoffset:-46}}
+.live .bounce{animation:bob .4s ease-in-out var(--dl,0s) infinite alternate}
+.wave{transform-box:fill-box;transform-origin:0% 100%}
+.live .wave{animation:wave .3s ease-in-out infinite alternate}
+@keyframes wave{from{transform:rotate(-24deg)}to{transform:rotate(22deg)}}
+
+/* 9 山路與標題 */
+.live .fogm{animation:fog var(--t,7s) ease-in-out infinite alternate}
+@keyframes fog{from{transform:translateX(-90px)}to{transform:translateX(90px)}}
+.live .beam{animation:cone .5s steps(2) infinite}
+.titleS{transform-box:fill-box;transform-origin:center;transform:scale(3.6);opacity:0}
+.live .titleS{animation:slam .28s ease-in 1.15s forwards}
+
+/* 舊紙與舊油墨：顆粒、磨損的白點、水漬、四周泛黃 */
+#grain{position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;opacity:.55;z-index:40}
+#wear{position:absolute;inset:0;pointer-events:none;opacity:.45;z-index:40}
+#stain{position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;opacity:.55;z-index:41;background-size:100% 100%}
+#age{position:absolute;inset:0;pointer-events:none;z-index:41;mix-blend-mode:multiply;
+  background:radial-gradient(ellipse at center,transparent 50%,rgba(120,70,14,.4) 100%),linear-gradient(rgba(232,196,120,.2),rgba(232,196,120,.2))}
+#hint,.btn{position:absolute;top:26px;z-index:50;font:800 17px/1 "PingFang TC","Noto Sans TC",sans-serif;color:#fff;
+  background:rgba(18,18,18,.86);border:2px solid #000;border-radius:999px;padding:10px 16px}
+#hint{right:30px}
+.btn{display:none;cursor:pointer}
+#replay{right:30px;background:var(--red)}
+#flip{right:140px}
+.single #flip{display:none!important}
+#note{position:absolute;left:30px;top:26px;z-index:50;display:none;font:800 17px/1.3 "PingFang TC","Noto Sans TC",sans-serif;color:#fff;
+  background:rgba(18,18,18,.86);border:2px solid #000;border-radius:999px;padding:10px 16px}
+.done #note.show{display:block}
+.done #hint{display:none}
+.done .btn{display:block}
+</style>
+</head>
+<body>
+
+<svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <defs>
+    <!-- 網點（Ben-Day dots）：同一種油墨、同樣大小的小圓點。點越大顏色越深，疊在別的顏色上就混出新顏色 -->
+    <pattern id="bR" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="4" cy="4" r="3" fill="#cf2a1d"/></pattern>
+    <pattern id="bR2" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="4" cy="4" r="2" fill="#cf2a1d"/></pattern>
+    <pattern id="bR3" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="4" cy="4" r="4.3" fill="#cf2a1d"/></pattern>
+    <pattern id="bK" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="4" cy="4" r="2.8" fill="#17120e"/></pattern>
+    <pattern id="bY" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="4" cy="4" r="3.3" fill="#f8c61a"/></pattern>
+    <pattern id="dW" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="4" cy="4" r="3.1" fill="#f1e3bf"/></pattern>
+    <pattern id="dW2" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="4" cy="4" r="4.4" fill="#f1e3bf"/></pattern>
+    <!-- 排線與交叉排線：用墨線的疏密畫陰影 -->
+    <pattern id="hatch" width="13" height="13" patternUnits="userSpaceOnUse" patternTransform="rotate(38)"><path d="M0 6.5H13" stroke="#17120e" stroke-width="3.2"/></pattern>
+    <pattern id="xh" width="15" height="15" patternUnits="userSpaceOnUse" patternTransform="rotate(34)"><path d="M0 7.5H15M7.5 0V15" stroke="#17120e" stroke-width="2.3"/></pattern>
+    <!-- 淡藍：紙的底色加藍點 -->
+    <pattern id="tB" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="#f1e3bf"/><circle cx="3" cy="3" r="3.1" fill="#2f6fc6"/></pattern>
+    <!-- 膚色：淡黃底加紅點 -->
+    <pattern id="skin" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#f6dcae"/><circle cx="2.5" cy="2.5" r="1.8" fill="#cf2a1d"/></pattern>
+    <!-- 綠色：黃底疊藍點，重疊的地方印出來是綠的 -->
+    <pattern id="zskin" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#f1d74e"/><circle cx="2.5" cy="2.5" r="2.6" fill="#2c8a3e"/></pattern>
+    <pattern id="stripe" width="44" height="44" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="44" height="44" fill="#f1e3bf"/><rect width="22" height="44" fill="#cf2a1d"/></pattern>
+
+    <!-- 印刷效果：1. 線條微微抖動，像手拿沾水筆畫的
+                   2. 把「黑版」（墨線）和「色版」（顏色）分開
+                   3. 色版往右下偏一點再疊回去，做出老漫畫套印不準、顏色溢出線外的樣子 -->
+    <filter id="print" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.026" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G" result="w"/>
+      <feColorMatrix in="w" type="matrix" values="0 0 0 0 .09  0 0 0 0 .07  0 0 0 0 .055  -5 -5 -5 0 2.3" result="k"/>
+      <feMorphology in="k" operator="dilate" radius="1.5" result="kd"/>
+      <feComposite in="w" in2="kd" operator="out" result="c0"/>
+      <feOffset in="c0" dx="3.5" dy="2.5" result="c1"/>
+      <feOffset in="c0" dx="13" dy="9.5" result="c2"/>
+      <feMerge><feMergeNode in="w"/><feMergeNode in="c2"/><feMergeNode in="c1"/><feMergeNode in="k"/></feMerge>
+    </filter>
+    <!-- 右下側的輪廓線加粗，做出粗細變化 -->
+    <filter id="wt" x="-6%" y="-6%" width="112%" height="112%"><feOffset in="SourceAlpha" dx="5" dy="6" result="o"/><feFlood flood-color="#17120e"/><feComposite in2="o" operator="in" result="sh"/><feMerge><feMergeNode in="sh"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+
+    <g id="zhand"></g>
+    <g id="rocket">
+      <path class="k" fill="#cf2a1d" d="M-24 -40L-58 8L-24 0Z"/><path class="k" fill="#cf2a1d" d="M24 -40L58 8L24 0Z"/>
+      <path class="k" fill="#f1e3bf" d="M0 -160C36 -116 36 -44 24 0H-24C-36 -44 -36 -116 0 -160Z"/>
+      <path class="k" fill="#cf2a1d" d="M0 -160C17 -140 26 -122 29 -104H-29C-26 -122 -17 -140 0 -160Z"/>
+      <circle class="k5" cx="0" cy="-72" r="12" fill="#1f4aa0"/>
+      <path fill="url(#bK)" d="M10 -100C22 -70 22 -30 16 0H24C34 -40 34 -80 26 -104Z"/>
+      <rect x="-16" y="0" width="32" height="12" fill="#17120e"/>
+    </g>
+    <g id="barrel">
+      <rect class="k" x="-42" y="-106" width="84" height="106" rx="10" fill="#cf2a1d"/>
+      <path class="k5 nf" d="M-42 -76H42M-42 -30H42"/>
+      <path class="k5" fill="#f8c61a" d="M0 -74L19 -53L0 -32L-19 -53Z"/>
+      <rect x="20" y="-100" width="16" height="94" fill="url(#hatch)"/>
+    </g>
+    <g id="pine"><path d="M0 -120L16 -86H8L22 -54H12L28 -20H4V0H-4V-20H-28L-12 -54H-22L-8 -86H-16Z"/></g>
+    <g id="zs"><path d="M-16 -110C-17 -121 -8 -125 0 -122C8 -119 9 -108 5 -100L7 -94L-2 -92L-4 -97C-10 -96 -15 -102 -16 -110Z"/><path d="M-21 -93C-12 -99 1 -97 7 -90L11 -66C11 -56 7 -47 5 -40L3 -34L-1 -41L-5 -33L-9 -41L-13 -34L-18 -41C-23 -57 -25 -77 -21 -93Z"/><path d="M2 -91L36 -87L46 -82L44 -77L40 -79L42 -73L36 -78L0 -79Z"/><path d="M0 -80L30 -70L41 -73L40 -68L44 -65L37 -63L30 -62L-2 -70Z"/><path d="M-18 -43L-8 -43L-9 -20L-13 0L-25 0L-19 -20Z"/><path d="M-5 -43L5 -43L12 -19L10 -4L19 0H2L3 -19Z"/></g>
+  </defs>
+</svg>
+
+<div id="stage"><div id="shake">
+
+<!-- ================= 第 2 頁（先放在下面，第 1 頁翻走後露出來） ================= -->
+<div class="page" id="pg2">
+
+  <!-- 6 老黃躲藏 -->
+  <div class="panel" id="p6"><div class="inner"><div class="art"><svg viewBox="0 0 1600 900">
+    <rect width="1600" height="900" fill="#1f4aa0"/>
+    <rect width="1600" height="900" fill="url(#bK)"/>
+    <!-- 大塊黑影：左牆和地板整片壓黑 -->
+    <polygon points="0,0 250,0 150,900 0,900" fill="#17120e"/>
+    <polygon points="0,900 0,668 1600,588 1600,900" fill="#17120e"/>
+    <g id="s6-shade"></g>
+    <!-- 手機螢幕照出來的光 -->
+    <polygon class="cone" points="700,650 330,120 960,170" fill="#f8c61a"/>
+    <!-- 老黃縮在角落：身體整塊壓黑，只有被照到的肩膀和袖子有顏色 -->
+    <path d="M350 900Q326 660 468 566Q600 506 724 588Q802 664 792 900Z" fill="#17120e"/>
+    <path d="M398 716Q404 628 474 586L492 604Q436 646 430 722Z" fill="#1f4aa0"/>
+    <path d="M704 596Q764 648 776 728L754 722Q742 656 690 612Z" fill="#1f4aa0"/>
+    <path class="nf" d="M520 606L580 660L640 606" stroke="#f1e3bf" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M580 668V900" stroke="#f1e3bf" stroke-width="4" stroke-dasharray="5 11"/>
+    <path class="nf" d="M520 892Q546 770 640 694M780 660Q802 760 800 892" stroke="#f1e3bf" stroke-width="4" stroke-linecap="round"/>
+    <g id="s6-folds"></g>
+    <g id="s6-face"></g>
+    <g fill="#f1e3bf" class="k5"><path class="drop" d="M676 404q14 24 0 36q-14 -12 0 -36z"/><path class="drop" style="--dl:-.3s" d="M700 486q12 22 0 32q-12 -10 0 -32z"/><path class="drop" style="--dl:-.6s" d="M478 420q12 22 0 32q-12 -10 0 -32z"/></g>
+    <g transform="rotate(-14 702 642)"><rect x="660" y="572" width="86" height="142" rx="13" fill="#17120e" stroke="#f1e3bf" stroke-width="5"/><rect x="669" y="586" width="68" height="106" rx="4" fill="#f8c61a"/></g>
+    <path class="k" fill="url(#skin)" d="M636 668Q634 650 656 650Q672 644 686 652Q702 654 700 676Q696 696 668 696Q640 694 636 668Z"/>
+    <path class="nf" d="M654 652l2 16M670 650l1 17M686 654l-1 15" stroke="#17120e" stroke-width="3" stroke-linecap="round"/>
+    <path class="k" fill="url(#skin)" d="M720 638Q718 622 738 622Q752 616 764 624Q776 626 774 644Q770 662 746 662Q722 660 720 638Z"/>
+    <path class="nf" d="M736 624l1 14M750 622l1 14M764 626l-1 13" stroke="#17120e" stroke-width="3" stroke-linecap="round"/>
+    <!-- 門 -->
+    <rect x="1040" y="80" width="370" height="820" fill="#17120e"/>
+    <g class="door">
+      <rect class="k10" x="1072" y="112" width="306" height="790" fill="#cf2a1d"/>
+      <path d="M1250 112H1378V902H1130Z" fill="url(#hatch)"/>
+      <rect class="k nf" x="1108" y="150" width="234" height="250"/><rect class="k nf" x="1108" y="470" width="234" height="380"/>
+      <circle class="k" cx="1104" cy="460" r="17" fill="#f8c61a"/>
+      <polygon points="1168,268 1206,236 1198,280 1246,270 1214,306 1256,330 1210,338 1228,384 1186,352 1166,396 1158,346 1112,356 1146,318 1112,286 1158,292" fill="#17120e"/>
+      <polygon points="1238,586 1276,556 1270,600 1318,592 1286,626 1328,650 1282,656 1298,702 1258,670 1238,714 1230,664 1184,674 1218,638 1184,606 1230,612" fill="#17120e"/>
+    </g>
+    <g transform="translate(1186 318)"><g class="thrust"><rect class="k" x="-170" y="-34" width="200" height="68" fill="url(#zskin)"/><use href="#zhand" transform="translate(-170 0) rotate(-90) scale(.78)"/></g></g>
+    <g transform="translate(1258 636)"><g class="thrust" style="--dl:-.4s"><rect class="k" x="-170" y="-34" width="200" height="68" fill="url(#zskin)"/><use href="#zhand" transform="translate(-170 0) rotate(-90) scale(.78)"/></g></g>
+    <g class="imp"><polygon id="s6-b1" fill="#f8c61a" class="k"/><polygon id="s6-b2" fill="#f8c61a" class="k"/></g>
+    <g fill="#f1e3bf" class="k5"><polygon points="1010,250 1050,230 1036,272"/><polygon points="980,360 1016,372 992,398"/><polygon points="1030,560 1064,540 1056,582"/><polygon points="996,690 1036,694 1012,726"/></g>
+    <g id="s6-sfx"></g>
+  </svg></div></div></div>
+
+  <!-- 7 三支手機（訊息全部用圖示） -->
+  <div class="panel" id="p7"><div class="inner"><div class="art"><svg viewBox="0 0 1600 900">
+    <rect width="1600" height="900" fill="#f8c61a"/>
+    <g id="s7-rays" class="rot" style="transform-origin:800px 450px" fill="#f1e3bf"></g>
+    <rect width="1600" height="900" fill="url(#bR)"/>
+    <g id="s7-side"></g>
+    <rect x="590" y="60" width="460" height="820" rx="56" fill="#17120e"/>
+    <rect class="k10" x="570" y="40" width="460" height="820" rx="56" fill="#17120e"/>
+    <path class="nf" d="M583 120Q579 450 583 780" stroke="#1f4aa0" stroke-width="9" stroke-linecap="round"/>
+    <rect x="596" y="110" width="408" height="680" rx="14" fill="#f1e3bf"/>
+    <rect x="596" y="110" width="408" height="96" fill="#1f4aa0"/>
+    <circle class="k5" cx="652" cy="158" r="34" fill="url(#skin)"/>
+    <path d="M620 152Q622 122 652 122Q684 122 686 152Q670 138 652 140Q634 138 620 152Z" fill="#17120e"/>
+    <path d="M630 190Q652 174 674 190L672 200H632Z" fill="#17120e"/>
+    <rect x="704" y="140" width="130" height="16" rx="8" fill="#f1e3bf"/><rect x="704" y="168" width="84" height="11" rx="5" fill="#f8c61a"/>
+    <path d="M930 176v-14M946 176v-24M962 176v-34" stroke="#f1e3bf" stroke-width="9" stroke-linecap="round"/>
+    <g id="s7-bubbles"></g>
+    <rect x="740" y="812" width="120" height="14" rx="7" fill="#f1e3bf"/>
+    <g id="s7-sfx"></g>
+  </svg></div></div></div>
+
+  <!-- 8 需要燃料 -->
+  <div class="panel" id="p8"><div class="inner"><div class="art"><svg viewBox="0 0 1600 900">
+    <rect width="1600" height="900" fill="url(#tB)"/>
+    <path class="k" fill="#f1e3bf" d="M110 250q30 -64 96 -42q44 -54 108 -10q66 -12 66 44q-10 34 -66 34h-186q-56 -10 -18 -26z"/>
+    <path class="k" fill="#f1e3bf" d="M1240 170q26 -54 82 -36q38 -46 92 -8q56 -10 56 38q-8 28 -56 28h-158q-48 -8 -16 -22z"/>
+    <rect y="810" width="1600" height="90" fill="#17120e"/>
+    <!-- 總部大樓 -->
+    <rect class="k10" x="700" y="300" width="240" height="520" fill="#f1e3bf"/>
+    <rect x="892" y="306" width="44" height="508" fill="url(#hatch)"/>
+    <polygon points="940,300 992,332 992,820 940,820" fill="#17120e"/>
+    <g id="s8-win" fill="#1f4aa0" class="k5"></g>
+    <rect x="792" y="744" width="56" height="76" fill="#17120e"/>
+    <rect x="676" y="280" width="290" height="28" fill="#17120e"/>
+    <!-- 上頂樓的路被擋住 -->
+    <path class="march nf" d="M820 740V350" stroke="#17120e" stroke-width="11" stroke-dasharray="28 18"/>
+    <polygon points="820,312 794,356 846,356" fill="#17120e"/>
+    <g class="pop os" style="--d:.9s">
+      <rect class="k10" x="656" y="524" width="328" height="54" fill="url(#stripe)"/>
+      <circle class="k10" cx="820" cy="551" r="66" fill="#cf2a1d"/>
+      <path d="M790 521L850 581M850 521L790 581" stroke="#f1e3bf" stroke-width="19" stroke-linecap="round"/>
+    </g>
+    <!-- 頂樓的火箭與老黃 -->
+    <use href="#rocket" transform="translate(806 280) scale(1.5)"/>
+    <g transform="translate(906 280)">
+      <path d="M-17 0L-15 -48Q0 -58 15 -48L17 0Z" fill="#17120e"/>
+      <circle class="k5" cx="0" cy="-68" r="16" fill="url(#skin)"/>
+      <path d="M-16 -70Q-14 -88 0 -88Q15 -88 16 -70Q8 -78 0 -77Q-8 -78 -16 -70Z" fill="#17120e"/>
+      <g class="wave"><path d="M12 -46L38 -82" stroke="#17120e" stroke-width="11" stroke-linecap="round"/><circle class="k5" cx="40" cy="-86" r="8" fill="url(#skin)"/></g>
+    </g>
+    <!-- 油表：指針掉到 E -->
+    <g transform="translate(560 440)">
+      <g class="blink"><path d="M0 -262V-292M-62 -238L-84 -260M62 -238L84 -260" stroke="#cf2a1d" stroke-width="12" stroke-linecap="round"/>
+        <circle class="k10" cx="0" cy="-196" r="40" fill="#cf2a1d"/><path d="M0 -220V-194M0 -176v1" stroke="#f1e3bf" stroke-width="13" stroke-linecap="round"/></g>
+      <path d="M-134 44A146 146 0 0 1 158 44V80H-134Z" fill="#17120e"/>
+      <path class="k10" fill="#f1e3bf" d="M-146 30A146 146 0 0 1 146 30V66H-146Z"/>
+      <path class="nf" d="M-116 30A116 116 0 0 1 -82 -52" stroke="#cf2a1d" stroke-width="26"/>
+      <path class="k nf" d="M-96 30H-122M-68 -38L-86 -56M0 -66V-92M68 -38L86 -56M96 30H122"/>
+      <text class="sfxt" x="-58" y="20" text-anchor="middle" font-size="62" fill="#cf2a1d" stroke-width="0">E</text>
+      <text class="sfxt" x="60" y="20" text-anchor="middle" font-size="62" fill="#17120e" stroke-width="0">F</text>
+      <g class="needle os"><polygon class="k5" points="-11,30 11,30 0,-100" fill="#17120e"/></g>
+      <circle cx="0" cy="30" r="18" fill="#17120e"/>
+    </g>
+    <!-- 三個人把燃料桶送上去 -->
+    <path class="march nf" d="M1080 440C1104 332 1012 222 906 182" stroke="#17120e" stroke-width="12" stroke-dasharray="28 18"/>
+    <polygon points="880,170 916,158 902,200" fill="#17120e"/>
+    <g id="s8-girls"></g>
+    <g transform="translate(1034 812)"><use class="bounce" href="#barrel"/></g>
+    <g transform="translate(1126 812)"><use class="bounce" style="--dl:-.2s" href="#barrel"/></g>
+    <g transform="translate(1080 706)"><use class="bounce" style="--dl:-.1s" href="#barrel"/></g>
+  </svg></div></div></div>
+
+  <!-- 9 霧中山路與標題 -->
+  <div class="panel" id="p9"><div class="inner"><div class="art"><svg viewBox="0 0 1600 900">
+    <rect width="1600" height="900" fill="#1f4aa0"/>
+    <rect width="1600" height="900" fill="url(#bK)"/>
+    <circle class="k10" cx="1230" cy="230" r="150" fill="#f8c61a"/>
+    <path d="M1230 80A150 150 0 0 1 1230 380A200 200 0 0 0 1230 80Z" fill="url(#bR)"/>
+    <g id="s9-far" fill="#17120e"></g>
+    <polygon class="k10" points="300,900 756,440 844,440 1300,900" fill="url(#tB)"/>
+    <path d="M800 470V900" stroke="#f1e3bf" stroke-width="12" stroke-dasharray="34 30"/>
+    <!-- 路的盡頭：老黃的車 -->
+    <polygon class="beam" points="776,436 824,436 980,640 620,640" fill="#f8c61a"/>
+    <rect class="k5" x="768" y="408" width="64" height="30" rx="8" fill="#cf2a1d"/>
+    <path class="k5" fill="#f1e3bf" d="M778 408L786 392H814L822 408Z"/>
+    <circle cx="776" cy="430" r="6" fill="#f8c61a" class="k5"/><circle cx="824" cy="430" r="6" fill="#f8c61a" class="k5"/>
+    <g id="s9-eyes"></g>
+    <g id="s9-near" fill="#17120e"></g>
+    <path class="fogm" fill="url(#dW2)" d="M-200 600Q100 556 400 600T1000 600T1600 600T1900 600V656Q1600 700 1300 656T700 656T100 656T-200 656Z"/>
+    <g id="s9-girls"></g>
+    <path class="fogm" style="--t:5s" fill="url(#dW2)" d="M-200 836Q100 800 400 836T1000 836T1600 836T1900 836V910H-200Z"/>
+    <g transform="translate(560 232) rotate(-4)"><g class="titleS os">
+      <text class="sfxt" x="13" y="15" text-anchor="middle" font-size="176" fill="#cf2a1d" stroke-width="17" letter-spacing="6">404:</text>
+      <text class="sfxt" x="0" y="0" text-anchor="middle" font-size="176" fill="#f8c61a" stroke-width="14" letter-spacing="6">404:</text>
+      <text class="sfxt" x="10" y="120" text-anchor="middle" font-size="96" fill="#cf2a1d" stroke-width="13" letter-spacing="3">HUANG NOT FOUND</text>
+      <text class="sfxt" x="0" y="110" text-anchor="middle" font-size="96" fill="#f8c61a" stroke-width="10" letter-spacing="3">HUANG NOT FOUND</text>
+    </g></g>
+  </svg></div></div></div>
+</div>
+
+<!-- ================= 第 1 頁 ================= -->
+<div class="page" id="pg1">
+
+  <!-- 1 發表會 -->
+  <div class="panel" id="p1"><div class="inner"><div class="art"><svg viewBox="0 0 1600 900">
+    <rect width="1600" height="900" fill="#1f4aa0"/>
+    <rect width="1600" height="900" fill="url(#bK)"/>
+    <clipPath id="c1"><rect x="300" y="70" width="1000" height="470"/></clipPath>
+    <rect x="300" y="70" width="1000" height="470" fill="#f8c61a"/>
+    <g clip-path="url(#c1)"><g id="s1-rays" class="rot" style="transform-origin:800px 330px" fill="#cf2a1d"></g></g>
+    <rect x="300" y="70" width="1000" height="470" fill="url(#bR2)"/>
+    <rect class="k10 nf" x="300" y="70" width="1000" height="470"/>
+    <text class="sfxt" x="690" y="216" text-anchor="middle" font-size="150" letter-spacing="10" fill="#f1e3bf" stroke-width="13">MVIDIA</text>
+    <!-- 兩側的布幕：整塊壓黑，只留幾道藍色反光 -->
+    <path d="M0 0H236Q204 450 252 900H0Z" fill="#17120e"/><path d="M1600 0H1364Q1396 450 1348 900H1600Z" fill="#17120e"/>
+    <g id="s1-drape"></g>
+    <polygon class="spot" style="transform-origin:120px 0px" points="120,-20 520,900 60,900" fill="url(#dW)"/>
+    <polygon class="spot sp2" style="transform-origin:1480px 0px" points="1480,-20 1540,900 1080,900" fill="url(#dW)"/>
+    <!-- 老黃舉起晶片 -->
+    <g class="wt">
+      <path d="M676 500Q594 562 610 682Q640 702 692 690Q664 610 708 548Z" fill="#17120e"/>
+      <path class="k" fill="url(#skin)" d="M628 676Q622 706 648 722Q676 726 684 700L680 678Z"/>
+      <path d="M916 498L1022 264L1084 294L972 542Z" fill="#17120e"/>
+      <path d="M1002 334L1030 348L976 470L952 458Z" fill="#1f4aa0"/>
+      <g id="s1-face"></g>
+      <path d="M655 800L672 500Q690 462 760 452L800 502L840 452Q910 462 928 500L945 800Z" fill="#17120e"/>
+      <path d="M700 522Q690 640 700 790H722Q712 640 724 526Z" fill="#1f4aa0"/>
+      <path d="M890 532Q905 650 898 790H918Q926 650 912 526Z" fill="#1f4aa0"/>
+      <path class="nf" d="M760 452L800 505L840 452" stroke="#f1e3bf" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M800 512V800" stroke="#f1e3bf" stroke-width="4" stroke-dasharray="5 11"/>
+      <g id="s1-folds"></g>
+      <path class="k" fill="url(#skin)" d="M1024 252Q1020 222 1048 214L1084 226Q1102 242 1094 270L1070 298Q1040 302 1028 282Z"/>
+      <path class="nf" d="M1040 232l36 12M1034 250l42 14M1036 270l34 11" stroke="#17120e" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <g id="s1-krackle"></g>
+    <g transform="translate(1080 158) rotate(12)">
+      <path d="M0 -150V-112M0 150V112M-150 0H-112M150 0H112M-106 -106L-82 -82M106 -106L82 -82M-106 106L-82 82M106 106L82 82" stroke="#f8c61a" stroke-width="12" stroke-linecap="round"/>
+      <path d="M-40 -64v-22M-14 -64v-22M14 -64v-22M40 -64v-22M-40 64v22M-14 64v22M14 64v22M40 64v22M-64 -40h-22M-64 -14h-22M-64 14h-22M-64 40h-22M64 -40h22M64 -14h22M64 14h22M64 40h22" stroke="#17120e" stroke-width="15" stroke-linecap="round"/>
+      <rect class="k" x="-64" y="-64" width="128" height="128" rx="12" fill="#1f4aa0"/>
+      <path d="M60 -44V60H-44Z" fill="url(#bK)"/>
+      <rect class="k5" x="-38" y="-38" width="76" height="76" rx="4" fill="#f8c61a"/>
+      <path class="twinkle k5" d="M52 -92L62 -62L92 -52L62 -42L52 -12L42 -42L12 -52L42 -62Z" fill="#f1e3bf"/>
+    </g>
+    <rect y="800" width="1600" height="100" fill="#17120e"/>
+    <g id="s1-crowd"></g>
+  </svg></div></div></div>
+
+  <!-- 2 晶片出錯 -->
+  <div class="panel" id="p2"><div class="inner"><div class="art"><svg viewBox="0 0 1600 900">
+    <rect width="1600" height="900" fill="#cf2a1d"/>
+    <polygon id="s2-burst" fill="#f8c61a" class="k10"/>
+    <rect width="1600" height="900" fill="url(#bR)"/>
+    <g id="s2-lines" class="sl"></g>
+    <g id="s2-krackle"></g>
+    <g transform="translate(800 440)">
+      <g transform="rotate(-152) translate(250 0)"><polygon class="bolt k" points="0,-16 150,-44 118,-6 300,-34 252,8 440,-8 236,40 268,12 104,40 138,10 0,18" fill="#f1e3bf"/></g>
+      <g transform="rotate(-28) translate(250 0)"><polygon class="bolt k" style="--dl:.62s" points="0,-16 150,-44 118,-6 300,-34 252,8 440,-8 236,40 268,12 104,40 138,10 0,18" fill="#f1e3bf"/></g>
+      <g transform="rotate(30) translate(250 0)"><polygon class="bolt k" style="--dl:.56s" points="0,-16 150,-44 118,-6 300,-34 252,8 440,-8 236,40 268,12 104,40 138,10 0,18" fill="#f1e3bf"/></g>
+      <g transform="rotate(150) translate(250 0)"><polygon class="bolt k" style="--dl:.7s" points="0,-16 150,-44 118,-6 300,-34 252,8 440,-8 236,40 268,12 104,40 138,10 0,18" fill="#f1e3bf"/></g>
+      <g transform="rotate(-9)"><g class="chipj">
+        <g id="s2-pins" fill="#f8c61a" class="k"></g>
+        <rect x="-182" y="-182" width="400" height="400" rx="26" fill="#17120e"/>
+        <rect class="k10" x="-200" y="-200" width="400" height="400" rx="26" fill="#1f4aa0"/>
+        <path d="M194 -150V168Q194 194 168 194H-150Z" fill="url(#bK)"/>
+        <rect class="die os k" x="-126" y="-126" width="252" height="252" rx="8" fill="#f8c61a"/>
+        <text class="sfxt" y="64" text-anchor="middle" font-size="196" fill="#17120e" stroke-width="0">M</text>
+        <path class="crack os nf" d="M-126 -50L-52 -16L-78 44L-6 60L14 126" stroke="#f1e3bf" stroke-width="10" stroke-linejoin="round"/>
+        <path class="crack os nf" d="M126 -84L60 -40L84 6L30 20" stroke="#f1e3bf" stroke-width="10" stroke-linejoin="round"/>
+      </g></g>
+    </g>
+    <rect class="wflash os" width="1600" height="900" fill="#f1e3bf"/>
+    <g id="s2-sfx"></g>
+  </svg></div></div></div>
+
+  <!-- 3 變成殭屍 -->
+  <div class="panel" id="p3"><div class="inner"><div class="art"><svg viewBox="0 0 1600 900">
+    <rect width="1600" height="900" fill="#cf2a1d"/>
+    <rect width="1600" height="900" fill="url(#bY)"/>
+    <g id="s3-lines" class="sl"></g>
+    <g id="s3-crowd"></g>
+    <g class="lunge os wt">
+      <path d="M420 900Q462 650 800 616Q1138 650 1180 900Z" fill="#17120e"/>
+      <path class="k" d="M736 640L800 772L864 640Z" fill="#f1e3bf"/>
+      <path class="k" d="M784 664H816L828 786L800 818L772 786Z" fill="#cf2a1d"/>
+      <g id="s3-face"></g>
+    </g>
+    <g transform="translate(296 742) rotate(18) scale(1.5)"><g class="hshake"><use href="#zhand"/></g></g>
+    <g transform="translate(1304 742) rotate(-18) scale(-1.5 1.5)"><g class="hshake"><use href="#zhand"/></g></g>
+    <g id="s3-sfx"></g>
+  </svg></div></div></div>
+
+  <!-- 4 全球通緝 -->
+  <div class="panel" id="p4"><div class="inner"><div class="art"><svg viewBox="0 0 1600 900">
+    <rect width="1600" height="900" fill="#1f4aa0"/>
+    <rect width="1600" height="900" fill="url(#xh)"/>
+    <polygon class="c-red" points="-50,900 -50,240 760,900" fill="#cf2a1d"/>
+    <polygon class="c-blue" points="1650,900 1650,240 840,900" fill="url(#tB)"/>
+    <!-- 直升機與探照燈 -->
+    <g class="heli">
+      <polygon points="230,230 420,900 -40,900" fill="url(#dW)"/>
+      <path d="M90 130H400" stroke="#17120e" stroke-width="12" stroke-linecap="round"/>
+      <path d="M244 132V160" stroke="#17120e" stroke-width="12"/>
+      <ellipse cx="240" cy="200" rx="96" ry="46" fill="#17120e"/>
+      <path d="M318 190L470 176V198L322 214Z" fill="#17120e"/><circle cx="470" cy="186" r="26" fill="#17120e"/>
+      <path d="M176 196Q186 166 228 166V200Z" fill="#f1e3bf"/>
+      <path d="M176 262H306M200 244V262M280 244V262" stroke="#17120e" stroke-width="9" stroke-linecap="round"/>
+    </g>
+    <!-- 全球搜索：地球上的準星 -->
+    <g transform="translate(1340 300)">
+      <circle class="ping" cx="0" cy="0" r="150" fill="none" stroke="#cf2a1d" stroke-width="12"/>
+      <circle class="ping" style="--dl:-.55s" cx="0" cy="0" r="150" fill="none" stroke="#cf2a1d" stroke-width="12"/>
+      <circle class="k10" cx="0" cy="0" r="132" fill="url(#tB)"/>
+      <path class="k5" fill="url(#zskin)" d="M-84 -50q36 -42 80 -18q14 44 -26 64q-44 12 -54 -46zM20 30q44 -18 66 22q-18 44 -56 34q-20 -24 -10 -56z"/>
+      <path d="M40 -126A132 132 0 0 1 40 126A190 190 0 0 0 40 -126Z" fill="url(#bK)"/>
+      <ellipse class="k5 nf" cx="0" cy="0" rx="60" ry="132"/><path class="k5 nf" d="M-132 0H132"/>
+      <path d="M0 -176V-96M0 176V96M-176 0H-96M176 0H96" stroke="#cf2a1d" stroke-width="14" stroke-linecap="round"/>
+      <circle cx="0" cy="0" r="52" fill="none" stroke="#cf2a1d" stroke-width="12"/>
+    </g>
+    <!-- 通緝令 -->
+    <g transform="translate(800 462) rotate(-4)"><g class="slam os">
+      <rect x="-250" y="-370" width="540" height="780" fill="#17120e"/>
+      <rect class="k10" x="-270" y="-390" width="540" height="780" fill="#f1e3bf"/>
+      <text class="sfxt" x="0" y="-246" text-anchor="middle" font-size="152" fill="#cf2a1d" stroke-width="9" letter-spacing="6">WANTED</text>
+      <rect class="k" x="-200" y="-218" width="400" height="336" fill="#f8c61a"/>
+      <path d="M-200 -170H200M-200 -110H200M-200 -50H200M-200 10H200M-200 70H200" stroke="#17120e" stroke-width="2.5"/>
+      <rect x="-200" y="-218" width="400" height="336" fill="url(#bR2)"/>
+      <g id="s4-face"></g>
+      <path d="M-176 118Q-166 22 -62 0L0 52L62 0Q166 22 176 118Z" fill="#17120e"/>
+      <path class="nf" d="M-62 0L0 52L62 0" stroke="#1f4aa0" stroke-width="6" stroke-linejoin="round"/>
+      <text class="sfxt" x="0" y="262" text-anchor="middle" font-size="150" fill="#17120e" stroke-width="0" letter-spacing="8">404</text>
+      <text class="sfxt" x="0" y="338" text-anchor="middle" font-size="62" fill="#17120e" stroke-width="0" letter-spacing="5">NOT FOUND</text>
+      <circle cx="-244" cy="-364" r="10" fill="#17120e"/><circle cx="244" cy="-364" r="10" fill="#17120e"/><circle cx="-244" cy="364" r="10" fill="#17120e"/><circle cx="244" cy="364" r="10" fill="#17120e"/>
+      <g transform="translate(0 -30) rotate(-15)"><g class="stamp os">
+        <rect x="-222" y="-70" width="444" height="140" rx="16" fill="none" stroke="#cf2a1d" stroke-width="13"/>
+        <text class="zh" x="0" y="34" text-anchor="middle" font-size="98" fill="#cf2a1d" letter-spacing="8">全球通緝</text>
+      </g></g>
+    </g></g>
+  </svg></div></div></div>
+
+  <!-- 5 城市淪陷，時間一天天過去 -->
+  <div class="panel" id="p5"><div class="inner"><div class="art"><svg viewBox="0 0 1600 900">
+    <rect width="1600" height="900" fill="#f8c61a"/>
+    <!-- 天空的漸層不是真的漸層，而是三段大小不同的紅點 -->
+    <rect width="1600" height="240" fill="url(#bR3)"/>
+    <rect y="240" width="1600" height="200" fill="url(#bR)"/>
+    <rect y="440" width="1600" height="270" fill="url(#bR2)"/>
+    <circle class="k10" cx="800" cy="350" r="216" fill="#e8782a"/>
+    <g id="s5-smoke" fill="#17120e"></g>
+    <g id="s5-city"></g>
+    <g id="s5-fire"></g>
+    <rect y="700" width="1600" height="200" fill="#cf2a1d"/>
+    <rect y="700" width="1600" height="200" fill="url(#bY)"/>
+    <path d="M0 700H1600" stroke="#17120e" stroke-width="10"/>
+    <g id="s5-horde"></g>
+    <g id="s5-cal" transform="translate(800 250)"></g>
+  </svg></div></div></div>
+</div>
+
+<div id="grain"></div><div id="wear"></div><div id="stain"></div><div id="age"></div>
+<div id="hint">按任意鍵或點一下畫面可跳過 ▶▶</div>
+<button class="btn" id="flip">⇄ 換頁</button>
+<button class="btn" id="replay">↻ 重播</button>
+<div id="note"></div>
+</div></div>
+
+<script>
+'use strict';
+const NS = 'http://www.w3.org/2000/svg';
+const $ = id => document.getElementById(id);
+function S(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+let seed = 23;
+const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+const rr = (a, b) => a + rnd() * (b - a);
+const INK = '#17120e', PAPER = '#f1e3bf', RED = '#cf2a1d', YEL = '#f8c61a', BLU = '#1f4aa0', ORG = '#e8782a';
+const LBLU = 'url(#tB)', GRN = 'url(#zskin)', SKIN = 'url(#skin)';   // 淡藍、綠、膚色都是用網點疊出來的
+
+/* ---------- 畫圖小工具 ---------- */
+// 放射狀的色塊
+function rays(g, cx, cy, r, n) {
+  for (let i = 0; i < n; i++) {
+    const a0 = i * 2 * Math.PI / n, a1 = a0 + Math.PI / n;
+    S('polygon', { points: `${cx},${cy} ${cx + r * Math.cos(a0)},${cy + r * Math.sin(a0)} ${cx + r * Math.cos(a1)},${cy + r * Math.sin(a1)}` }, g);
+  }
+}
+// 爆炸形狀
+function burst(cx, cy, ro, ri, n, j = .16) {
+  let s = '';
+  for (let i = 0; i < n * 2; i++) {
+    const a = i * Math.PI / n - Math.PI / 2, r = (i % 2 ? ri : ro) * (1 + rr(-j, j));
+    s += `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)} `;
+  }
+  return s;
+}
+// 集中線
+function speed(g, cx, cy, r0, r1, n, color = INK) {
+  for (let i = 0; i < n; i++) {
+    const a = rr(0, Math.PI * 2), w = rr(.008, .028), ri = r0 * rr(.85, 1.35);
+    S('polygon', { fill: color, points: `${cx + ri * Math.cos(a)},${cy + ri * Math.sin(a)} ${cx + r1 * Math.cos(a - w)},${cy + r1 * Math.sin(a - w)} ${cx + r1 * Math.cos(a + w)},${cy + r1 * Math.sin(a + w)}` }, g);
+  }
+}
+// 狀聲字
+function sfx(id, txt, x, y, size, rot, d) {
+  const g = S('g', { transform: `translate(${x} ${y}) rotate(${rot})` }, $(id));
+  const p = S('g', { class: 'pop os', style: `--d:${d}s` }, g);
+  const a = { class: 'sfxt', 'font-size': size, 'text-anchor': 'middle', 'letter-spacing': size * .03 };
+  S('text', { ...a, x: size * .07, y: size * .07, fill: RED, 'stroke-width': size * .1 }, p).textContent = txt;
+  S('text', { ...a, fill: YEL, 'stroke-width': size * .08 }, p).textContent = txt;
+}
+// 三位主角：紅髮、金髮、黑髮（老美漫裡的黑髮會印成深藍色）
+const HAIR = [RED, YEL, BLU];
+const HAIRBACK = [
+  'M-28 -4Q-36 -44 0 -46Q36 -44 28 -4Q40 26 30 52L14 32H-14L-30 52Q-40 26 -28 -4Z',
+  'M-29 -4Q-37 -44 0 -46Q37 -44 29 -4Q32 10 46 14Q30 30 16 18H-16Q-30 30 -46 14Q-32 10 -29 -4Z',
+  'M-27 -4Q-35 -44 0 -46Q35 -44 27 -4L24 18H-24Z',
+];
+function girlIcon(g, x, y, s, i, body) {
+  const o = S('g', { transform: `translate(${x} ${y}) scale(${s})` }, g);
+  const kk = { stroke: INK, 'stroke-width': 4, 'stroke-linejoin': 'round' };
+  if (i === 2) S('circle', { ...kk, cx: 0, cy: -52, r: 13, fill: HAIR[i] }, o);
+  S('path', { ...kk, d: HAIRBACK[i], fill: HAIR[i] }, o);
+  if (body) S('path', { fill: INK, d: 'M-34 70Q-38 112 -27 150L-31 224H-5L0 164L5 224H31L27 150Q38 112 34 70Z' }, o);
+  S('path', { fill: INK, d: 'M-36 72Q-34 32 -11 25H11Q34 32 36 72Z' }, o);
+  S('path', { ...kk, d: 'M-7 12H7L9 29Q0 37 -9 29Z', fill: SKIN }, o);
+  S('path', { ...kk, d: 'M-15 -6Q-16 -26 0 -27Q16 -26 15 -6Q13 10 0 20Q-13 10 -15 -6Z', fill: SKIN }, o);
+  S('path', { ...kk, d: 'M-21 -4Q-26 -40 0 -40Q26 -40 21 -4Q12 -20 -4 -17Q-15 -14 -21 -4Z', fill: HAIR[i] }, o);
+  S('path', { class: 'nf', d: 'M-10 -3Q-6.5 -7 -3 -3M3 -3Q6.5 -7 10 -3', stroke: INK, 'stroke-width': 2.6, 'stroke-linecap': 'round' }, o);
+  S('path', { d: 'M-5 8Q0 5 5 8Q0 13 -5 8Z', fill: RED }, o);
+}
+// 人群的剪影：頭、脖子、肩膀整塊壓黑，只在左上緣留一道邊緣光。三種造型：短髮、戴帽子、鮑伯頭
+function headSil(g, x, y, r, v, rim = YEL) {
+  const o = S('g', { transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${(r / 50).toFixed(3)})` }, g);
+  S('path', { fill: INK, d: 'M-124 196Q-116 84 -36 66L-30 42Q-50 16 -46 -16Q-42 -62 0 -64Q42 -62 46 -16Q50 16 30 42L36 66Q116 84 124 196Z' }, o);
+  if (v === 1) S('path', { fill: INK, d: 'M-76 -20Q-40 -34 -42 -44Q-44 -92 0 -94Q44 -92 42 -44Q40 -34 76 -20L72 -6Q0 -30 -72 -6Z' }, o);
+  if (v === 2) S('path', { fill: INK, d: 'M-56 36Q-70 -44 -30 -66Q0 -80 30 -66Q70 -44 56 36Q40 44 34 20L-34 20Q-40 44 -56 36Z' }, o);
+  const line = { class: 'nf', stroke: rim, 'stroke-width': 5, 'stroke-linecap': 'round' };
+  S('path', { ...line, d: v === 1 ? 'M-34 -50Q-34 -82 -4 -86' : v === 2 ? 'M-50 -20Q-48 -54 -22 -62' : 'M-39 -18Q-36 -54 -4 -57' }, o);
+  S('path', { ...line, d: 'M-110 150Q-102 100 -54 80' }, o);
+  return o;
+}
+
+
+/* ---------- 美漫的上墨工具 ---------- */
+// 排線（feathering）：一排由粗到尖的短線，從陰影邊緣往亮處刷出去
+function feather(g, x1, y1, x2, y2, n, len, ang, w = 5, col = INK) {
+  const a = ang * Math.PI / 180;
+  for (let i = 0; i < n; i++) {
+    const t = (i + .5) / n, bx = x1 + (x2 - x1) * t, by = y1 + (y2 - y1) * t;
+    const l = len * rr(.55, 1), aa = a + rr(-.12, .12);
+    const px = Math.cos(aa + Math.PI / 2) * w / 2, py = Math.sin(aa + Math.PI / 2) * w / 2;
+    S('polygon', { fill: col, points: `${(bx - px).toFixed(1)},${(by - py).toFixed(1)} ${(bx + px).toFixed(1)},${(by + py).toFixed(1)} ${(bx + Math.cos(aa) * l).toFixed(1)},${(by + Math.sin(aa) * l).toFixed(1)}` }, g);
+  }
+}
+// 能量點：一團大小不一的黑點，用來表現能量和爆炸
+function krackle(g, cx, cy, r0, r1, n) {
+  for (let i = 0; i < n; i++) {
+    const a = rr(0, Math.PI * 2), r = rr(r0, r1);
+    S('circle', { cx: cx + r * Math.cos(a), cy: cy + r * Math.sin(a), r: rr(3, 15) * (1 - (r - r0) / (r1 - r0) * .6), fill: INK }, g);
+  }
+}
+// 老黃的臉：有顴骨、下巴的角度，右半邊壓大塊黑色陰影
+function huangFace(parent, cx, cy, s, mood, neck = true) {
+  const g = S('g', { transform: `translate(${cx} ${cy}) scale(${s})` }, parent);
+  const P = (d, a) => S('path', { d, ...a }, g);
+  const ink = { fill: INK }, skin = { fill: 'url(#skin)', class: 'k' };
+  const line = w => ({ class: 'nf', stroke: INK, 'stroke-width': w, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+  if (neck) {
+    P('M-40 92L-46 178H46L40 92Q0 126 -40 92Z', skin);
+    P('M-38 100Q0 138 38 100L42 152Q0 130 -42 152Z', ink);
+  }
+  P('M-72 -12C-93 -20 -96 26 -75 40Z', skin); P('M72 -12C93 -20 96 26 75 40Z', skin);
+  P('M-84 2q6 10 2 22', line(3));
+  P('M-74 -40C-78 -100 -40 -124 0 -124C40 -124 78 -100 74 -40L72 14C70 44 62 72 50 90L26 118Q0 130 -26 118L-50 90C-62 72 -70 44 -72 14Z', skin);
+  P('M74 -40L72 14C70 44 62 72 50 90L28 116C42 86 46 52 41 24C37 4 44 -22 58 -46Z', ink);
+  feather(g, 56, -40, 40, 24, 7, 22, 176, 5);
+  feather(g, 41, 26, 30, 112, 9, 24, 184, 5);
+  feather(g, -68, 30, -52, 78, 5, 20, -18, 4);
+  P('M-79 -26C-88 -112 -46 -142 4 -140C56 -140 92 -106 79 -24C74 -60 62 -80 42 -90C12 -72 -30 -76 -56 -88C-68 -74 -75 -52 -79 -26Z', ink);
+  P('M-46 -120C-14 -132 26 -130 52 -114C26 -122 -14 -122 -44 -110Z', { fill: BLU });
+  P('M-64 -92C-56 -102 -46 -108 -36 -110C-48 -100 -56 -90 -60 -76Z', { fill: BLU });
+  P('M5 -8L15 40Q19 55 4 58L0 51Q9 47 7 38Z', ink);
+  P('M-13 53q-6 -9 3 -14', line(3)); P('M-11 57Q0 63 12 57', line(3));
+  const M = { proud: { open: .85, bi: -19, bo: -17, mid: -30, iris: 6.5, look: 2 },
+              stern: { open: .7, bi: -11, bo: -24, mid: -23, iris: 6.5, look: 0 },
+              fear:  { open: 1.7, bi: -40, bo: -18, mid: -34, iris: 4.6, look: 5 } }[mood];
+  [-1, 1].forEach(d => {
+    const x = d * 33, o = M.open;
+    P(`M${x - 19} 1Q${x} ${-11 * o} ${x + 19} 0Q${x} ${9 * o} ${x - 19} 1Z`, { fill: '#f1e3bf', stroke: INK, 'stroke-width': 2 });
+    S('circle', { cx: x + M.look, cy: -1, r: M.iris, fill: INK }, g);
+    S('circle', { cx: x + M.look - 2, cy: -3, r: 1.6, fill: PAPER }, g);
+    P(`M${x - 22} 3Q${x} ${-14 * o - 2} ${x + 22} 1Q${x} ${-9 * o} ${x - 22} 3Z`, ink);
+    P(`M${x - 14} ${6 * o + 2}Q${x} ${10 * o + 2} ${x + 15} ${5 * o + 2}`, line(2));
+    P(`M${d * 62} ${M.bo}Q${d * 36} ${M.mid} ${d * 9} ${M.bi}L${d * 9} ${M.bi + 8}Q${d * 36} ${M.mid + 10} ${d * 60} ${M.bo + 5}Z`, ink);
+  });
+  if (mood === 'proud') {
+    P('M-24 82Q2 96 28 78Q4 104 -24 82Z', { fill: '#f1e3bf', stroke: INK, 'stroke-width': 3, 'stroke-linejoin': 'round' });
+    P('M-30 78Q2 94 32 74', line(4));
+    P('M-36 68q-7 9 -2 18M38 64q6 8 2 16', line(3));
+    P('M-10 106Q4 111 18 104', line(3));
+  } else if (mood === 'stern') {
+    P('M-25 85Q0 80 25 85', line(5));
+    P('M-14 94Q0 99 14 94Q0 105 -14 94Z', ink);
+    P('M-32 76q-5 9 -1 16M32 76q5 9 1 16', line(3));
+  } else {
+    P('M-27 78Q0 68 27 78Q31 102 0 106Q-31 102 -27 78Z', ink);
+    P('M-22 80Q0 73 22 80L20 93Q0 97 -20 93Z', { fill: '#f1e3bf' });
+    P('M-11 77V95M0 75V96M11 77V95M-21 87H21', line(1.6));
+    P('M-34 70q-8 12 -3 24M34 70q8 12 3 24', line(3));
+    P('M-40 -62Q-20 -70 0 -64M6 -66Q26 -72 44 -62M-30 -76Q-10 -82 8 -78', line(2.5));
+  }
+  P('M-5 113q5 4 10 0', line(3));
+  return g;
+}
+// 殭屍的臉：像骷髏，眼窩和臉頰凹進去全黑
+function zombieFace(parent, cx, cy, s) {
+  const g = S('g', { transform: `translate(${cx} ${cy}) scale(${s})` }, parent);
+  const P = (d, a) => S('path', { d, ...a }, g);
+  const sw = w => w / s;
+  const ink = { fill: INK }, sk = { fill: 'url(#zskin)', stroke: INK, 'stroke-width': sw(9), 'stroke-linejoin': 'round' };
+  const line = w => ({ class: 'nf', stroke: INK, 'stroke-width': sw(w), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+  P('M-34 96L-46 190H46L34 96Z', sk);
+  P('M-30 104Q0 140 30 104L36 168Q0 140 -36 168Z', ink);
+  P('M-40 150L-30 112M40 150L30 112', line(4));
+  P('M-68 -14L-92 -34L-84 30L-70 34Z', sk); P('M68 -14L92 -34L84 30L70 34Z', sk);
+  P('M-72 -44C-76 -106 -38 -130 0 -130C38 -130 76 -106 72 -44L66 12C62 36 54 54 47 72L40 106Q30 136 0 140Q-30 136 -40 106L-47 72C-54 54 -62 36 -66 12Z', sk);
+  P('M72 -44L66 12C62 36 54 54 47 72L40 106Q34 124 22 134C36 100 40 60 36 30C33 6 42 -24 56 -50Z', ink);
+  feather(g, 54, -46, 36, 30, 8, 20, 178, 4.5);
+  feather(g, 36, 32, 24, 130, 9, 20, 186, 4.5);
+  P('M-76 -36L-92 -92L-64 -80L-70 -132L-42 -104L-34 -156L-10 -116L6 -164L22 -116L48 -150L46 -100L80 -122L66 -76L92 -80L76 -34C70 -78 44 -100 0 -102C-44 -100 -70 -78 -76 -36Z', ink);
+  [-1, 1].forEach(d => {
+    P(`M${d * 60} -20Q${d * 36} -40 ${d * 8} -16Q${d * 8} 14 ${d * 34} 20Q${d * 58} 14 ${d * 60} -20Z`, ink);
+    P(`M${d * 66} -34L${d * 4} -18L${d * 6} -8L${d * 64} -22Z`, ink);
+    S('circle', { class: 'pupil', cx: d * 32, cy: -2, r: 7, fill: YEL, stroke: RED, 'stroke-width': sw(4) }, g);
+    feather(g, d * 56, 17, d * 20, 21, 5, 14, 90, 3.5);
+  });
+  P('M-11 30Q0 4 11 30Q13 44 0 38Q-13 44 -11 30Z', ink);
+  P('M-63 22Q-46 44 -42 82Q-56 62 -64 36Z', ink);
+  feather(g, -46, 40, -42, 80, 4, 16, 10, 3.5);
+  P('M-42 62Q0 44 42 62L38 108Q0 130 -38 108Z', ink);
+  for (let i = -4; i < 4; i++) {
+    const x = i * 9.6 + .8, yu = 57 + Math.abs(i + .5) * 1.2, yl = 107 - Math.abs(i + .5) * 1.6;
+    S('rect', { x, y: yu, width: 8.2, height: 15, rx: 1.5, fill: '#f1e3bf', stroke: INK, 'stroke-width': sw(2.5) }, g);
+    S('rect', { x, y: yl - 13, width: 8.2, height: 13, rx: 1.5, fill: '#f1e3bf', stroke: INK, 'stroke-width': sw(2.5) }, g);
+  }
+  P('M-30 74q-2 16 2 20M28 74q3 14 -1 18M0 76v14', { class: 'nf', stroke: PAPER, 'stroke-width': sw(2.5), 'stroke-linecap': 'round' });
+  P('M-42 62Q-52 70 -46 84M42 62Q52 70 46 84', line(4));
+  P('M-40 -66Q-18 -74 0 -68M8 -70Q28 -76 44 -66M-28 -82Q-8 -88 10 -84', line(3.5));
+  P('M-58 -56l10 16l-8 12l10 14', line(3.5));
+  P('M-38 126l8 -18M38 126l-8 -18', line(3));
+  return g;
+}
+// 一根有關節和尖指甲的手指
+function finger(g, x, y, ang, len, w) {
+  const o = S('g', { transform: `translate(${x} ${y}) rotate(${ang})` }, g);
+  S('path', { fill: 'url(#zskin)', class: 'k', d: `M${-w / 2} 6L${-w * .56} ${-len * .44}L${-w * .4} ${-len * .5}L${-w * .44} ${-len * .8}L${-w * .2} ${-len * .96}L${w * .2} ${-len * .96}L${w * .44} ${-len * .8}L${w * .4} ${-len * .5}L${w * .56} ${-len * .44}L${w / 2} 6Z` }, o);
+  S('path', { fill: INK, opacity: .92, d: `M${w * .14} 4L${w * .5} 4L${w * .54} ${-len * .44}L${w * .4} ${-len * .5}L${w * .42} ${-len * .78}L${w * .22} ${-len * .9}Z` }, o);
+  S('path', { class: 'nf', d: `M${-w * .36} ${-len * .46}Q0 ${-len * .42} ${w * .36} ${-len * .46}M${-w * .3} ${-len * .79}Q0 ${-len * .76} ${w * .3} ${-len * .79}`, stroke: INK, 'stroke-width': 3, 'stroke-linecap': 'round' }, o);
+  S('path', { fill: INK, d: `M${-w * .26} ${-len * .93}L0 ${-len * 1.13}L${w * .26} ${-len * .93}Z` }, o);
+}
+// 殭屍的手：手掌、四指、拇指、手背的筋、右側陰影
+(() => {
+  const h = $('zhand');
+  S('path', { fill: 'url(#zskin)', class: 'k', d: 'M-64 14Q-78 -24 -62 -58L62 -58Q80 -24 70 14L56 132H-54Z' }, h);
+  S('path', { fill: INK, d: 'M70 14L56 132H26C48 92 54 40 50 -40L62 -58Q80 -24 70 14Z' }, h);
+  feather(h, 50, -40, 30, 128, 9, 22, 184, 5);
+  S('path', { class: 'nf', d: 'M-46 -50L-22 108M-15 -50L-8 112M17 -50L6 112', stroke: INK, 'stroke-width': 3, 'stroke-linecap': 'round' }, h);
+  finger(h, 72, -4, 58, 112, 34);
+  [[-46, -10, 150], [-15, -3, 182], [17, 4, 174], [48, 11, 142]].forEach(([x, a, len]) => finger(h, x, -54, a, len, 31));
+})();
+
+/* ---------- 各格的細節 ---------- */
+// 1 發表會
+(() => {
+  rays($('s1-rays'), 800, 330, 760, 14);
+  huangFace($('s1-face'), 800, 336, .86, 'proud');
+  feather($('s1-folds'), 724, 540, 716, 770, 10, 34, 0, 7, BLU);
+  feather($('s1-folds'), 890, 540, 900, 770, 10, 34, 180, 7, BLU);
+  // 兩側布幕的皺摺反光
+  const dr = $('s1-drape');
+  [[70, 20, 94, 780, 84], [164, 20, 196, 780, 84], [1530, 20, 1506, 780, 96], [1436, 20, 1404, 780, 96]].forEach(([x1, y1, x2, y2, a]) => feather(dr, x1, y1, x2, y2, 15, 62, a, 10, BLU));
+  krackle($('s1-krackle'), 1080, 158, 120, 230, 34);
+  const g = $('s1-crowd');
+  for (let i = 0; i < 15; i++) {
+    const x = 30 + i * 110 + rr(-18, 18), y = rr(812, 850), r = rr(52, 64);
+    headSil(g, x, y, r, i % 3);
+    if (i % 2 === 0) {
+      const b = S('g', { class: 'bob', style: `--dl:${(-rr(0, .8)).toFixed(2)}s` }, g);
+      S('path', { d: `M${x + 34} ${y + 10}L${x + 48} ${y - 118}`, stroke: INK, 'stroke-width': 28, 'stroke-linecap': 'round' }, b);
+      S('rect', { x: x + 22, y: y - 190, width: 56, height: 88, rx: 9, fill: INK }, b);
+      S('rect', { x: x + 29, y: y - 182, width: 42, height: 62, rx: 4, fill: LBLU }, b);
+      S('path', { class: 'flash', d: 'M0 -48L11 -11L48 0L11 11L0 48L-11 11L-48 0L-11 -11Z', fill: PAPER, stroke: INK, 'stroke-width': 5,
+        transform: `translate(${x + 50} ${y - 198})`, style: `--t:${rr(.5, 1).toFixed(2)}s;--dl:${rr(0, .7).toFixed(2)}s` }, b);
+    }
+  }
+})();
+
+// 2 晶片出錯
+(() => {
+  $('s2-burst').setAttribute('points', burst(800, 440, 760, 440, 16));
+  speed($('s2-lines'), 800, 440, 430, 1100, 46);
+  krackle($('s2-krackle'), 800, 440, 300, 470, 70);
+  const g = $('s2-pins');
+  for (let i = -3; i <= 3; i++) {
+    S('rect', { x: i * 52 - 13, y: -246, width: 26, height: 56 }, g);
+    S('rect', { x: i * 52 - 13, y: 190, width: 26, height: 56 }, g);
+    S('rect', { x: -246, y: i * 52 - 13, width: 56, height: 26 }, g);
+    S('rect', { x: 190, y: i * 52 - 13, width: 56, height: 26 }, g);
+  }
+  sfx('s2-sfx', 'BZZZT!', 1150, 810, 230, -8, .6);
+})();
+
+// 3 變成殭屍
+(() => {
+  speed($('s3-lines'), 800, 430, 470, 1150, 60);
+  zombieFace($('s3-face'), 800, 398, 1.9);
+  const g = $('s3-crowd');
+  [[90, 430, 96], [270, 380, 84], [420, 450, 70], [1510, 430, 96], [1330, 380, 84], [1180, 450, 70]].forEach(([x, y, r], i) => {
+    headSil(g, x, y, r, i % 3);
+    const e = S('g', { class: 'eye os', style: `--dl:${(.4 + i * .16).toFixed(2)}s` }, g);
+    S('ellipse', { cx: x - r * .36, cy: y - r * .16, rx: r * .2, ry: r * .12, fill: YEL }, e);
+    S('ellipse', { cx: x + r * .36, cy: y - r * .16, rx: r * .2, ry: r * .12, fill: YEL }, e);
+  });
+  sfx('s3-sfx', 'GRAAAH!', 800, 150, 170, -5, .5);
+})();
+
+// 4 通緝令上的照片
+huangFace($('s4-face'), 0, -104, .64, 'stern');
+
+// 5 城市淪陷
+(() => {
+  const city = $('s5-city'), fire = $('s5-fire');
+  let x = -30, idx = 0;
+  while (x < 1620) {
+    const w = Math.round(rr(100, 172));
+    let h = Math.round(rr(210, 430));
+    if (Math.abs(x + w / 2 - 800) < 280) h = Math.min(h, 290);
+    const y = 704 - h;
+    S('rect', { x, y, width: w, height: h, fill: '#1f4aa0', class: 'k' }, city);
+    S('rect', { x: x + w - 52, y: y + 4, width: 30, height: h - 4, fill: 'url(#hatch)' }, city);
+    S('rect', { x: x + w - 24, y, width: 24, height: h, fill: INK }, city);
+    const cols = Math.floor((w - 46) / 30), rows = Math.floor((h - 30) / 40);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      S('rect', { x: x + 16 + c * 30, y: y + 20 + r * 40, width: 16, height: 22, fill: YEL,
+        class: rnd() < .12 ? '' : 'win os', style: `--dl:${rr(.3, 1.8).toFixed(2)}s` }, city);
+    }
+    if (idx === 2 || idx === 8) {
+      const f = S('g', { transform: `translate(${x + w / 2} ${y})` }, fire);
+      const fl = S('g', { class: 'flick', style: `--dl:${idx === 2 ? 0 : -.12}s` }, f);
+      S('path', { class: 'k', d: 'M-56 0L-68 -66L-40 -44L-34 -130L-6 -76L12 -176L34 -84L58 -120L56 0Z', fill: RED }, fl);
+      S('path', { d: 'M-28 0L-34 -40L-16 -28L-10 -78L8 -46L18 -96L30 -40L30 0Z', fill: YEL }, fl);
+    }
+    x += w + Math.round(rr(-6, 14)); idx++;
+  }
+  const smoke = $('s5-smoke');
+  [[330, 470, 0], [1270, 420, -1], [1010, 500, -1.8]].forEach(([sx, sy, dl]) => {
+    const s = S('g', { class: 'smokeUp', style: `--dl:${dl}s` }, smoke);
+    [[0, 0, 64], [44, -76, 56], [0, -150, 60], [54, -224, 52], [18, -300, 46]].forEach(([dx, dy, r]) => S('circle', { cx: sx + dx, cy: sy + dy, r }, s));
+  });
+  const horde = $('s5-horde');
+  for (let i = 0; i < 15; i++) {
+    const zx = 40 + i * 108 + rr(-22, 22), sc = rr(2, 2.7);
+    const o = S('g', { transform: `translate(${zx} 906) scale(${sc})` }, horde);
+    S('use', { href: '#zs', class: 'sway', fill: INK, style: `--dl:${(-rr(0, 1)).toFixed(2)}s` }, o);
+    S('circle', { cx: -1, cy: -111, r: 2.6, fill: YEL }, o);
+  }
+  // 日曆：一頁一頁撕掉，表示時間過去
+  const cal = $('s5-cal');
+  S('rect', { x: -112, y: -142, width: 260, height: 300, fill: INK }, cal);
+  [['99', ''], ['30', 'c2'], ['1', 'c1']].forEach(([n, cls]) => {
+    const p = S('g', { class: `cal os ${cls}` }, cal);
+    S('rect', { class: 'k10', x: -130, y: -160, width: 260, height: 300, fill: PAPER }, p);
+    S('rect', { class: 'k', x: -130, y: -160, width: 260, height: 86, fill: RED }, p);
+    S('text', { class: 'sfxt', x: 0, y: -96, 'text-anchor': 'middle', 'font-size': 64, fill: PAPER, 'stroke-width': 0, 'letter-spacing': 8 }, p).textContent = 'DAY';
+    S('text', { class: 'sfxt', x: 0, y: 108, 'text-anchor': 'middle', 'font-size': 176, fill: INK, 'stroke-width': 0 }, p).textContent = n;
+    S('circle', { cx: -70, cy: -160, r: 13, fill: INK }, p); S('circle', { cx: 70, cy: -160, r: 13, fill: INK }, p);
+  });
+})();
+
+// 6 老黃躲藏
+(() => {
+  huangFace($('s6-face'), 580, 462, .98, 'fear', false);
+  // 黑影的邊緣用排線刷向亮處，不要一刀切
+  feather($('s6-shade'), 246, 20, 158, 650, 30, 46, 8, 8);
+  feather($('s6-shade'), 176, 662, 1030, 618, 70, 30, -72, 6);
+  feather($('s6-folds'), 430, 640, 420, 716, 5, 26, 0, 6, BLU);
+  feather($('s6-folds'), 752, 650, 764, 724, 5, 26, 180, 6, BLU);
+  $('s6-b1').setAttribute('points', burst(1010, 318, 96, 48, 9));
+  $('s6-b2').setAttribute('points', burst(1082, 636, 84, 42, 9));
+  sfx('s6-sfx', 'BAM!', 876, 214, 196, -10, .3);
+  sfx('s6-sfx', 'BAM!', 930, 800, 124, 8, .75);
+})();
+
+// 7 三支手機
+(() => {
+  rays($('s7-rays'), 800, 450, 1000, 16);
+  const side = $('s7-side');
+  [-1, 1].forEach((d, n) => {
+    const o = S('g', { transform: `translate(${800 + d * 530} 480) rotate(${d * 12})` }, side);
+    S('path', { class: 'vl nf', d: 'M-196 -150q-22 150 0 300M196 -150q22 150 0 300M-228 -100q-16 100 0 200M228 -100q16 100 0 200', stroke: INK, 'stroke-width': 9, 'stroke-linecap': 'round' }, o);
+    const p = S('g', { class: 'vibs' }, o);
+    S('path', { class: 'k', d: `M${d * 60} 330Q${d * 200} 300 ${d * 190} 120L${d * 100} 140L${d * 40} 290Z`, fill: SKIN }, p);
+    S('rect', { x: -136, y: -256, width: 300, height: 540, rx: 40, fill: INK }, p);
+    S('rect', { class: 'k10', x: -150, y: -270, width: 300, height: 540, rx: 40, fill: INK }, p);
+    S('path', { class: 'nf', d: 'M-139 -210Q-142 0 -139 210', stroke: BLU, 'stroke-width': 7, 'stroke-linecap': 'round' }, p);
+    S('rect', { x: -128, y: -214, width: 256, height: 430, rx: 10, fill: PAPER }, p);
+    S('rect', { x: -128, y: -214, width: 256, height: 62, fill: BLU }, p);
+    S('circle', { class: 'k5', cx: -92, cy: -183, r: 21, fill: SKIN }, p);
+    [[-110, -110, 190, RED], [-110, -4, 150, BLU], [-110, 102, 176, ORG]].forEach(([bx, by, bw, c], k) => {
+      const b = S('g', { class: 'bub os', style: `--d:${(.35 + k * .6 + n * .1).toFixed(2)}s` }, p);
+      S('rect', { class: 'k', x: bx, y: by, width: bw, height: 82, rx: 24, fill: PAPER }, b);
+      S('circle', { cx: bx + 44, cy: by + 41, r: 20, fill: c }, b);
+      S('rect', { x: bx + 76, y: by + 32, width: bw - 104, height: 18, rx: 9, fill: INK }, b);
+    });
+    for (let i = 0; i < 4; i++) {
+      S('rect', { class: 'k', x: d > 0 ? 122 : -172, y: -70 + i * 66, width: 50, height: 50, rx: 22, fill: SKIN }, p);
+      S('rect', { class: 'k5', x: d > 0 ? 126 : -148, y: -58 + i * 66, width: 22, height: 26, rx: 8, fill: d > 0 ? ORG : RED }, p);
+    }
+  });
+  // 中間手機上的三則訊息，全部用圖示。外框改成漫畫的對話框，不用圓角方塊
+  const B = $('s7-bubbles');
+  const bub = (y, d) => {
+    const b = S('g', { class: 'bub os', style: `--d:${d}s` }, B);
+    S('path', { class: 'k', fill: PAPER, d: `M654 ${y + 6}Q790 ${y - 10} 930 ${y + 8}Q968 ${y + 72} 934 ${y + 140}Q790 ${y + 158} 676 ${y + 144}L606 ${y + 172}L636 ${y + 122}Q602 ${y + 66} 654 ${y + 6}Z` }, b);
+    return b;
+  };
+  // (1) 殭屍會攻擊所有人
+  let b = bub(232, .3);
+  zombieFace(b, 712, 302, .36);
+  [826, 886].forEach(ex => {
+    S('rect', { class: 'k', x: ex - 15, y: 252, width: 30, height: 70, rx: 11, fill: RED }, b);
+    S('circle', { class: 'k', cx: ex, cy: 350, r: 16, fill: RED }, b);
+  });
+  // (2) 搭火箭離開地球
+  b = bub(410, .9);
+  S('circle', { class: 'k', cx: 706, cy: 490, r: 48, fill: LBLU }, b);
+  S('path', { class: 'k5', d: 'M680 468q14 -18 32 -6q4 18 -12 26q-16 4 -20 -20zM716 500q16 -6 24 8q-6 16 -20 12z', fill: GRN }, b);
+  S('path', { class: 'nf', d: 'M760 498Q804 520 842 516', stroke: INK, 'stroke-width': 8, 'stroke-dasharray': '14 12', 'stroke-linecap': 'round' }, b);
+  S('use', { href: '#rocket', transform: 'translate(856 512) rotate(50) scale(.62)' }, b);
+  // (3) 到總部來找我
+  b = bub(588, 1.5);
+  const g = S('g', { transform: 'translate(694 680)' }, b);
+  S('rect', { class: 'k', x: -30, y: -22, width: 60, height: 86, fill: PAPER }, g);
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) S('rect', { x: -19 + c * 24, y: -10 + r * 24, width: 14, height: 14, fill: BLU }, g);
+  S('path', { class: 'k', d: 'M0 -26C-24 -52 -24 -84 0 -84C24 -84 24 -52 0 -26Z', fill: RED }, g);
+  S('circle', { cx: 0, cy: -62, r: 9, fill: PAPER }, g);
+  S('path', { d: 'M836 682H780', stroke: INK, 'stroke-width': 13, 'stroke-linecap': 'round' }, b);
+  S('polygon', { points: '750,682 784,656 784,708', fill: INK, class: 'k5' }, b);
+  [866, 900, 934].forEach((px, i) => girlIcon(b, px, 660, .74, i));
+  sfx('s7-sfx', 'BZZ!', 214, 236, 124, -14, .2);
+  sfx('s7-sfx', 'BZZ!', 1396, 242, 124, 12, .45);
+})();
+
+// 8 需要燃料
+(() => {
+  const w = $('s8-win');
+  for (let r = 0; r < 9; r++) {
+    const y = 330 + r * 50;
+    if (y > 470 && y < 600) continue;
+    [716, 758, 848, 890].forEach(x => S('rect', { x, y, width: 34, height: 32 }, w));
+  }
+  const g = $('s8-girls');
+  [[962, 524], [1080, 524], [1198, 524]].forEach(([x, y], i) => girlIcon(g, x, y, 1.28, i, true));
+})();
+
+// 9 霧中山路
+(() => {
+  const far = $('s9-far');
+  for (let i = 0; i < 22; i++) {
+    const h = rr(1.3, 2.3);
+    S('use', { href: '#pine', transform: `translate(${i * 76 + rr(-14, 14)} ${rr(452, 480)}) scale(${h * .9} ${h})` }, far);
+  }
+  const near = $('s9-near');
+  [[60, 910, 4.6, 6.4], [250, 910, 3, 4.4], [1540, 910, 4.8, 6.8], [1360, 910, 3.2, 4.6]].forEach(([x, y, sx, sy]) =>
+    S('use', { href: '#pine', transform: `translate(${x} ${y}) scale(${sx} ${sy})` }, near));
+  const eyes = $('s9-eyes');
+  [[150, 560], [330, 500], [470, 470], [620, 452], [1000, 456], [1150, 480], [1290, 520], [1450, 566]].forEach(([x, y], i) => {
+    const e = S('g', { class: 'eye os', style: `--dl:${(.4 + i * .14).toFixed(2)}s` }, eyes);
+    S('ellipse', { cx: x, cy: y, rx: 9, ry: 6, fill: RED, stroke: INK, 'stroke-width': 2 }, e);
+    S('ellipse', { cx: x + 26, cy: y, rx: 9, ry: 6, fill: RED, stroke: INK, 'stroke-width': 2 }, e);
+  });
+  // 三位主角的背影：頭小、肩寬、腰細，照美漫的英雄比例畫（大約七頭半身）
+  const girls = $('s9-girls');
+  const HAIRB = [
+    'M-26 -420Q-30 -452 0 -454Q30 -452 26 -420Q34 -380 30 -340Q36 -310 26 -286L16 -300L6 -280L-4 -300L-14 -282L-24 -298Q-36 -320 -30 -350Q-34 -384 -26 -420Z',
+    'M-27 -420Q-31 -452 0 -454Q31 -452 27 -420Q28 -392 46 -372Q24 -366 12 -378H-12Q-24 -366 -46 -372Q-28 -392 -27 -420Z',
+    'M-25 -420Q-29 -452 0 -454Q29 -452 25 -420Q25 -398 12 -388H-12Q-25 -398 -25 -420Z',
+  ];
+  const STRAND = ['M-12 -446Q-18 -400 -14 -340M2 -450Q-2 -400 4 -330M14 -444Q20 -400 18 -340', 'M-12 -446Q-16 -420 -14 -394M2 -450V-392M14 -444Q18 -420 16 -394', 'M-12 -446Q-16 -424 -13 -402M13 -446Q17 -424 14 -402'];
+  [600, 800, 1000].forEach((x, i) => {
+    const o = S('g', { class: 'wt', transform: `translate(${x} ${912 - (i === 1 ? 8 : 0)}) scale(${i === 1 ? .96 : .9})` }, girls);
+    if (i === 0) { S('path', { d: 'M-82 -208L-150 -440', stroke: INK, 'stroke-width': 30, 'stroke-linecap': 'round' }, o); S('path', { d: 'M-92 -240L-150 -440', stroke: PAPER, 'stroke-width': 15, 'stroke-linecap': 'round' }, o); }
+    if (i === 1) { S('path', { d: 'M82 -208L150 -30', stroke: INK, 'stroke-width': 26, 'stroke-linecap': 'round' }, o); S('path', { d: 'M98 -170L146 -42', stroke: BLU, 'stroke-width': 8, 'stroke-linecap': 'round' }, o); }
+    const edge = { fill: INK, stroke: PAPER, 'stroke-width': 4, 'stroke-linejoin': 'round' };
+    S('path', { ...edge, d: 'M-10 -384L-62 -366Q-52 -310 -36 -270Q-56 -236 -52 -196L-46 -110L-42 -8L-50 0H-14L-18 -110L-4 -190L0 -196L4 -190L18 -110L14 0H50L42 -8L46 -110L52 -196Q56 -236 36 -270Q52 -310 62 -366L10 -384Z' }, o);
+    S('path', { ...edge, d: 'M-62 -366Q-80 -338 -82 -290L-90 -212L-78 -204L-68 -214L-64 -290Q-58 -330 -50 -352Z' }, o);
+    S('path', { ...edge, d: 'M62 -366Q80 -338 82 -290L90 -212L78 -204L68 -214L64 -290Q58 -330 50 -352Z' }, o);
+    // 月光從右上方照過來：身體右側留深藍色的反光
+    S('path', { fill: BLU, d: 'M54 -358Q46 -312 33 -274L27 -278Q40 -314 46 -354Z' }, o);
+    S('path', { fill: BLU, d: 'M48 -194L42 -110L38 -18H31L35 -110L41 -194Z' }, o);
+    S('path', { fill: BLU, d: 'M78 -334Q80 -300 78 -262L72 -262Q74 -300 72 -330Z' }, o);
+    S('path', { class: 'nf', d: 'M-24 -344Q-18 -304 -26 -274M24 -344Q18 -304 26 -274M-38 -264H38M0 -204V-264', stroke: PAPER, 'stroke-width': 2.5 }, o);
+    if (i === 2) S('path', { class: 'k5', d: 'M72 -214h66v18h-40v32h-26Z', fill: PAPER }, o);
+    const hk = { stroke: INK, 'stroke-width': 5, 'stroke-linejoin': 'round' };
+    S('path', { ...hk, d: 'M-9 -392H9V-378H-9Z', fill: SKIN }, o);
+    S('path', { ...hk, d: HAIRB[i], fill: HAIR[i] }, o);
+    if (i === 2) S('path', { ...hk, d: 'M-9 -438Q0 -449 9 -438Q19 -392 8 -332Q0 -316 -6 -334Q4 -392 -9 -438Z', fill: HAIR[i] }, o);
+    S('path', { d: 'M-18 -434Q0 -444 18 -434L18 -427Q0 -437 -18 -427Z', fill: PAPER }, o);
+    S('path', { class: 'nf', d: STRAND[i], stroke: INK, 'stroke-width': 2.5, 'stroke-linecap': 'round' }, o);
+    if (i === 0) feather(o, 28, -400, 28, -300, 6, 16, 190, 4);
+  });
+})();
+
+/* ---------- 版面：每頁上下兩列，分隔線是斜的 ---------- */
+const W = 1600, H = 900, M = 20, G = 18;
+function layout(h, cutsA, cutsB) {
+  const rows = [{ top: x => M, bot: x => h(x) - G / 2, cuts: cutsA }, { top: x => h(x) + G / 2, bot: x => H - M, cuts: cutsB }];
+  const out = [];
+  rows.forEach(r => {
+    const edges = [[M, M], ...r.cuts, [W - M, W - M]];
+    for (let i = 0; i < edges.length - 1; i++) {
+      const lo = i === 0 ? 0 : G / 2, ro = i === edges.length - 2 ? 0 : G / 2;
+      const lt = edges[i][0] + lo, lb = edges[i][1] + lo, rt = edges[i + 1][0] - ro, rb = edges[i + 1][1] - ro;
+      out.push([[lt, r.top(lt)], [rt, r.top(rt)], [rb, r.bot(rb)], [lb, r.bot(lb)]]);
+    }
+  });
+  return out;
+}
+const SLOTS = [
+  ...layout(x => 452 - 44 * x / W, [[930, 876]], [[470, 524], [1016, 1066]]),   // 第 1 頁：上 2 格、下 3 格
+  ...layout(x => 384 + 50 * x / W, [[650, 606]], [[566, 628]]),                   // 第 2 頁：上 2 格、下 2 格
+];
+// 把多邊形往內縮 d，用來做黑色外框
+function inset(pts, d) {
+  const n = pts.length, L = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[i], b = pts[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
+    L.push({ p: [a[0] - dy / len * d, a[1] + dx / len * d], r: [dx, dy] });
+  }
+  return pts.map((_, i) => {
+    const A = L[(i + n - 1) % n], Bq = L[i];
+    const cr = A.r[0] * Bq.r[1] - A.r[1] * Bq.r[0];
+    const t = ((Bq.p[0] - A.p[0]) * Bq.r[1] - (Bq.p[1] - A.p[1]) * Bq.r[0]) / cr;
+    return [A.p[0] + A.r[0] * t, A.p[1] + A.r[1] * t];
+  });
+}
+const poly = pts => 'polygon(' + pts.map(q => q[0].toFixed(1) + 'px ' + q[1].toFixed(1) + 'px').join(',') + ')';
+const FULL = [[0, 0], [W, 0], [W, H], [0, H]];
+
+/* ---------- 每一格的設定：從哪飛進來、全螢幕播多久、縮小後畫面對準哪裡 ---------- */
+const PANELS = [
+  { from: [-900, -300, -12], hold: 1400, focus: [820, 400] },
+  { from: [900, -300, 12],   hold: 1500, focus: [800, 440] },
+  { from: [-900, 400, -10],  hold: 1500, focus: [800, 420] },
+  { from: [0, 700, 6],       hold: 1700, focus: [800, 462], zoom: 1.16, thud: 1190 },
+  { from: [900, 400, 10],    hold: 1800, focus: [800, 430] },
+  { from: [-900, -300, -12], hold: 1600, focus: [800, 470] },
+  { from: [900, -300, 12],   hold: 2200, focus: [800, 470] },
+  { from: [-900, 400, -10],  hold: 2200, focus: [800, 480] },
+  { from: [900, 400, 10],    hold: 2400, focus: [800, 300], thud: 1430 },
+];
+const PAGE1 = 5;
+PANELS.forEach((p, i) => {
+  p.el = $('p' + (i + 1)); p.inner = p.el.querySelector('.inner'); p.art = p.el.querySelector('.art');
+  p.el.style.setProperty('--fx', p.from[0] + 'px');
+  p.el.style.setProperty('--fy', p.from[1] + 'px');
+  p.el.style.setProperty('--fr', p.from[2] + 'deg');
+  const pts = SLOTS[i], xs = pts.map(q => q[0]), ys = pts.map(q => q[1]);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, h = Math.max(...ys) - y0;
+  const s = Math.max(w / W, h / H) * (p.zoom || 1);
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const tx = clamp(x0 + w / 2 - p.focus[0] * s, x0 + w - W * s, x0);
+  const ty = clamp(y0 + h / 2 - p.focus[1] * s, y0 + h - H * s, y0);
+  p.slot = { outer: poly(pts), inner: poly(inset(pts, 7)), art: `translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px) scale(${s.toFixed(4)})` };
+});
+const FULL_OUT = poly(FULL), FULL_IN = poly(inset(FULL, 12));
+function setFull(p) { p.el.style.clipPath = FULL_OUT; p.inner.style.clipPath = FULL_IN; p.art.style.transform = 'none'; }
+function setSlot(p) { p.el.style.clipPath = p.slot.outer; p.inner.style.clipPath = p.slot.inner; p.art.style.transform = p.slot.art; }
+
+/* ---------- 播放控制 ---------- */
+const stage = $('stage'), shake = $('shake'), pg1 = $('pg1');
+const HAS2 = PANELS.length > PAGE1;   // 這段漫畫有沒有第 2 頁
+if (!HAS2) stage.classList.add('single');
+let timers = [], state = 'idle';
+const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+function thud() { shake.classList.remove('thud'); void shake.offsetWidth; shake.classList.add('thud'); }
+function reset() {
+  timers.forEach(clearTimeout); timers = [];
+  stage.classList.add('notrans');
+  stage.classList.remove('fast', 'done');
+  pg1.classList.remove('gone');
+  PANELS.forEach(p => { p.el.classList.remove('on', 'live', 'still'); p.el.style.zIndex = 1; setFull(p); });
+  void stage.offsetWidth;
+  stage.classList.remove('notrans');
+}
+function play() {
+  reset(); state = 'playing';
+  let t = 350;
+  PANELS.forEach((p, i) => {
+    later(() => { p.el.style.zIndex = 20; p.el.classList.add('on', 'live'); }, t);   // 1. 飛進來佔滿整個畫面，開始播動畫
+    if (p.thud) later(thud, t + p.thud);
+    t += 420 + p.hold;
+    later(() => setSlot(p), t);                                                       // 2. 播完，縮回自己的格子
+    later(() => { thud(); p.el.classList.add('still'); p.el.style.zIndex = 1; }, t + 500);   // 3. 落定後靜止
+    t += 500 + 450;
+    if (HAS2 && i === PAGE1 - 1) { later(() => pg1.classList.add('gone'), t + 600); t += 600 + 850; }   // 第 1 頁滿了就翻頁
+  });
+  later(finish, t + 200);
+}
+/* ---------- 播完之後：進入這一關 ---------- */
+const LEVEL = 'ch1';                                 // 這段漫畫播完要進哪一關
+const GAME_URL = '../index.html?level=' + LEVEL;     // 遊戲頁
+const LEVEL_FILE = '../levels/' + LEVEL + '.json';   // 這一關的關卡檔，用來確認關卡做好了沒
+// 網址後面加 ?stay：播完停在最後一頁，不進關卡（檢查漫畫時用）
+const STAY = new URLSearchParams(location.search).has('stay');
+function note(msg) { const n = $('note'); n.textContent = msg; n.classList.add('show'); }
+async function enterLevel(delay) {
+  if (STAY) return;
+  if (location.protocol === 'file:') { note('預覽模式：用遊戲的伺服器開啟，播完才會自動進關卡'); return; }
+  let ready = false;
+  try { ready = (await fetch(LEVEL_FILE, { cache: 'no-store' })).ok; } catch (e) { ready = false; }
+  if (!ready) { note('這一關的關卡還沒做好（找不到 levels/' + LEVEL + '.json），先停在這裡'); return; }
+  // 讓玩家看一下完整的一頁再進關卡；這段時間按了「重播」就不跳
+  setTimeout(() => { if (state === 'done') location.href = GAME_URL; }, delay);
+}
+function finish(skipped) { state = 'done'; stage.classList.add('done'); enterLevel(skipped ? 300 : 1500); }
+function skip() {
+  if (state !== 'playing') return;
+  timers.forEach(clearTimeout); timers = [];
+  stage.classList.add('notrans', 'fast');
+  PANELS.forEach(p => { p.el.classList.remove('still'); p.el.classList.add('on', 'live'); p.el.style.zIndex = 1; setSlot(p); });
+  if (HAS2) pg1.classList.add('gone');
+  void stage.offsetWidth;
+  stage.classList.remove('notrans');
+  setTimeout(() => PANELS.forEach(p => p.el.classList.add('still')), 120);
+  finish(true);
+}
+function fit() {
+  const s = Math.min(innerWidth / W, innerHeight / H);
+  stage.style.transform = `translate(${(innerWidth - W * s) / 2}px,${(innerHeight - H * s) / 2}px) scale(${s})`;
+}
+// 舊紙和舊油墨的質感：都是用雜訊圖疊在最上層
+const tex = svg => 'url("data:image/svg+xml;utf8,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' " + svg + '</svg>') + '")';
+// 紙的顆粒
+$('grain').style.backgroundImage = tex("width='320' height='320'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/>" +
+  "<feColorMatrix values='0 0 0 0 .5  0 0 0 0 .42  0 0 0 0 .3  0 0 0 .55 0'/></filter><rect width='320' height='320' filter='url(#n)'/>");
+// 油墨磨損：有些地方墨沒印上去，露出紙的顏色
+$('wear').style.backgroundImage = tex("width='420' height='420'><filter id='s' color-interpolation-filters='sRGB'><feTurbulence type='fractalNoise' baseFrequency='.42' numOctaves='3' seed='11' stitchTiles='stitch'/>" +
+  "<feColorMatrix values='0 0 0 0 .945  0 0 0 0 .89  0 0 0 0 .75  12 0 0 0 -8.5'/></filter><rect width='420' height='420' filter='url(#s)'/>");
+// 泛黃的水漬
+$('stain').style.backgroundImage = tex("width='800' height='450'><filter id='b' color-interpolation-filters='sRGB'><feTurbulence type='fractalNoise' baseFrequency='.006 .009' numOctaves='3' seed='5'/>" +
+  "<feColorMatrix values='0 0 0 0 .6  0 0 0 0 .4  0 0 0 0 .15  1.8 0 0 0 -.7'/></filter><rect width='800' height='450' filter='url(#b)'/>");
+
+addEventListener('resize', fit);
+addEventListener('keydown', e => {
+  if (state === 'playing') skip();
+  else if (state === 'done' && (e.key === 'r' || e.key === 'R' || e.key === 'Enter' || e.key === ' ')) play();
+});
+stage.addEventListener('click', () => skip());
+$('replay').addEventListener('click', e => { e.stopPropagation(); play(); });
+$('flip').addEventListener('click', e => { e.stopPropagation(); pg1.classList.toggle('gone'); });
+// 檢查用：直接看某一格全螢幕的樣子
+window.__show = i => { reset(); state = 'debug'; const p = PANELS[i]; p.el.style.zIndex = 20; p.el.classList.add('on', 'live'); if (i >= PAGE1) pg1.classList.add('gone'); };
+fit();
+let started = false;
+const start = () => { if (!started) { started = true; if (state === 'idle') play(); } };
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(start);
+setTimeout(start, 900);
+</script>
+</body>
+</html>
