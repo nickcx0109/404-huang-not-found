@@ -5,12 +5,12 @@ import { Aabb, CollisionWorld } from '../web/js/CollisionWorld.js';
 test('CollisionWorld depenetrates the nearest face before moving away or standing still', () => {
   const world = new CollisionWorld();
   world.add(new Aabb(-1, 0, -1, 1, 3, 1));
-  for (const [x, z, dx, dz, axis, sign] of [
+  for (const [startX, startZ, dx, dz, axis, sign] of [
     [-1.2, 0, -0.1, 0, 'x', -1], [1.2, 0, 0.1, 0, 'x', 1],
     [0, -1.2, 0, -0.1, 'z', -1], [0, 1.2, 0, 0.1, 'z', 1],
     [-1.2, 0, 0, 0, 'x', -1], [0.9, 0, -0.05, 0, 'x', 1],
   ]) {
-    const moved = world.move(x, z, dx, dz, 0.35, 0, 1.8);
+    const moved = world.move(startX, startZ, dx, dz, 0.35, 0, 1.8);
     assert.ok(moved[axis] * sign > 1.35);
     assert.equal(world.hit(moved.x, moved.z, 0.35, 0, 1.8), null);
   }

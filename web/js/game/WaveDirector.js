@@ -27,15 +27,15 @@ export class ExampleWaveDirector extends WaveDirector {
       const area = areas[Math.floor(ctx.rng() * areas.length)];
       const angle = ctx.rng() * Math.PI * 2;
       const offset = Math.sqrt(ctx.rng()) * area.r;
-      const x = area.x + Math.cos(angle) * offset;
-      const z = area.z + Math.sin(angle) * offset;
-      if (x - radius < bounds.minX || x + radius > bounds.maxX ||
-          z - radius < bounds.minZ || z + radius > bounds.maxZ ||
-          ctx.collision.hit(x, z, radius, 0, ctx.pathFinder.height)) continue;
+      const spawnX = area.x + Math.cos(angle) * offset;
+      const spawnZ = area.z + Math.sin(angle) * offset;
+      if (spawnX - radius < bounds.minX || spawnX + radius > bounds.maxX ||
+          spawnZ - radius < bounds.minZ || spawnZ + radius > bounds.maxZ ||
+          ctx.collision.hit(spawnX, spawnZ, radius, 0, ctx.pathFinder.height)) continue;
       result.type = this.config.type;
-      result.x = x;
+      result.x = spawnX;
       result.y = 0;
-      result.z = z;
+      result.z = spawnZ;
       this.remaining--;
       return true;
     }

@@ -175,13 +175,13 @@ export class PathFinder {
     if (col < 0 || row < 0 || col >= this.cols || row >= this.rows) return false;
     const index = row * this.cols + col;
     if (this._state[index] === UNKNOWN) {
-      const x = this.minX + (col + 0.5) * this.cell;
-      const z = this.minZ + (row + 0.5) * this.cell;
+      const centreX = this.minX + (col + 0.5) * this.cell;
+      const centreZ = this.minZ + (row + 0.5) * this.cell;
       const b = this.collision.bounds;
       const inside =
-        x - this.clearanceRadius >= b.minX && x + this.clearanceRadius <= b.maxX &&
-        z - this.clearanceRadius >= b.minZ && z + this.clearanceRadius <= b.maxZ;
-      const hit = !inside || this.collision.hit(x, z, this.clearanceRadius, 0, this.height);
+        centreX - this.clearanceRadius >= b.minX && centreX + this.clearanceRadius <= b.maxX &&
+        centreZ - this.clearanceRadius >= b.minZ && centreZ + this.clearanceRadius <= b.maxZ;
+      const hit = !inside || this.collision.hit(centreX, centreZ, this.clearanceRadius, 0, this.height);
       this._state[index] = hit ? BLOCKED : FREE;
     }
     return this._state[index] === FREE;
