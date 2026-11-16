@@ -145,6 +145,7 @@ export class Ch3Props extends PropSet {
     ch3_rubble: Ch3Props.rubble,
     ch3_glass: Ch3Props.glass,
     ch3_boards: Ch3Props.boards,
+    ch3_barricade: Ch3Props.barricade,
   };
 
   /**
@@ -802,5 +803,37 @@ export class Ch3Props extends PropSet {
       group.add(plank);
     }
     return group;
+  }
+
+  /**
+   * Furniture piled up to block a way through: a cabinet on its side, a desk thrown on top,
+   * chairs and planks. The level binds it to a collider named "block_<exit marker id>";
+   * LevelFlow removes that collider and hides this pile when the player clears it, so every
+   * mesh here stays out of the static batch.
+   */
+  static barricade(ctx) {
+    const { factory, size, prop } = ctx;
+    const { w, h, d } = size;
+    const pile = new THREE.Group();
+    pile.add(part(factory, 'ch3Cabinet', w * 0.82, h * 0.42, d * 0.8, -w * 0.06, 0, 0));
+    const desk = part(factory, 'ch3Desk', w * 0.7, 0.06, d * 1.1, w * 0.08, h * 0.42, 0);
+    desk.rotation.z = (10 + 12 * hash01(prop, 1)) * DEG;
+    pile.add(desk);
+    const leaning = part(factory, 'ch3Desk', 0.06, h * 0.9, d * 0.9, w * 0.4, 0, 0);
+    leaning.rotation.z = -24 * DEG;
+    pile.add(leaning);
+    [-1, 1].forEach((side) => {
+      const chair = part(factory, 'ch3Chair', 0.5, 0.5, 0.5, side * w * 0.26, h * 0.5, side * d * 0.12);
+      chair.rotation.set(0.5 * side, hash01(prop, 3 + side) * 2, 0.6);
+      pile.add(chair);
+    });
+    for (let i = 0; i < 3; i++) {
+      const plank = part(factory, 'ch3Board', w * 1.05, 0.14, 0.03, 0, 0, 0);
+      plank.position.set(0, h * (0.3 + 0.25 * i), -d * 0.5 - 0.02);
+      plank.rotation.z = (hash01(prop, 10 + i) - 0.5) * 0.5;
+      pile.add(plank);
+    }
+    pile.traverse((object) => { object.userData.dynamic = true; });
+    return pile;
   }
 }
