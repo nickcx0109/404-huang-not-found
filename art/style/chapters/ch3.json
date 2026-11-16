@@ -59,6 +59,7 @@
     "ch3Hazard": "#7d6a25",
     "ch3Rocket": "#5a5f5e",
     "ch3RocketDark": "#22262a",
+    "ch3Pad": "#2f3231",
 
     "ch3Fire": {
       "color": "#ff8428",
@@ -75,7 +76,8 @@
 
     "surfaces": {
       "ground": { "texture": "concrete", "metres": [4, 4], "roughness": 0.7 },
-      "collider": { "texture": "stucco", "metres": [3, 3] }
+      "collider": { "texture": "stucco", "metres": [3, 3] },
+      "ch3Pad": { "texture": "metal", "metres": [3, 3] }
     }
   }
 }

@@ -118,6 +118,7 @@ export class Ch3Props extends PropSet {
     server_rack: Ch3Props.serverRack,
     freight_elevator: Ch3Props.freightElevator,
     rocket: Ch3Props.rocket,
+    launch_pad: Ch3Props.launchPad,
     ch3_ceiling: Ch3Props.ceiling,
     ch3_ceiling_lamp: Ch3Props.ceilingLamp,
     ch3_desk: Ch3Props.desk,
@@ -241,6 +242,42 @@ export class Ch3Props extends PropSet {
       rocket.add(fin);
     }
     return rocket;
+  }
+
+  /**
+   * Launch pad: a low eight-sided deck with a hazard ring, and a service tower on its left
+   * (-X) with an arm reaching toward the rocket in the middle.
+   */
+  static launchPad(ctx) {
+    const { factory, size } = ctx;
+    const radius = Math.min(size.w, size.d) / 2;
+    const pad = new THREE.Group();
+    const disc = (r, height, key, y) => {
+      const geometry = new THREE.CylinderGeometry(r, r * 1.03, height, 8);
+      geometry.translate(0, height / 2, 0);
+      const mesh = new THREE.Mesh(geometry, factory.material(key));
+      mesh.position.y = y;
+      mesh.rotation.y = Math.PI / 8;
+      mesh.receiveShadow = true;
+      mesh.castShadow = true;
+      return mesh;
+    };
+    pad.add(disc(radius, 0.35, 'ch3Pad', 0));
+    pad.add(disc(radius * 0.78, 0.03, 'ch3Hazard', 0.35));
+    pad.add(disc(radius * 0.7, 0.04, 'ch3Pad', 0.36));
+
+    const towerX = -radius * 0.82;
+    const towerHeight = size.h;
+    [[-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]].forEach(([x, z]) => {
+      pad.add(stick(factory, 'ch3RocketDark', v3(towerX + x, 0.35, z), v3(towerX + x, towerHeight, z), 0.07, 4));
+    });
+    for (let y = 2.4; y < towerHeight; y += 2.6) {
+      pad.add(part(factory, 'ch3RocketDark', 1.6, 0.08, 1.6, towerX, y, 0));
+      pad.add(stick(factory, 'ch3RocketDark', v3(towerX - 0.7, y - 2.2, 0.7), v3(towerX + 0.7, y, 0.7), 0.035, 4));
+      pad.add(stick(factory, 'ch3RocketDark', v3(towerX + 0.7, y - 2.2, -0.7), v3(towerX - 0.7, y, -0.7), 0.035, 4));
+    }
+    pad.add(stick(factory, 'ch3RocketDark', v3(towerX + 0.7, towerHeight * 0.62, 0), v3(-radius * 0.24, towerHeight * 0.6, 0), 0.09, 5));
+    return pad;
   }
 
   /** Ceiling slab; the level places it at ceiling height with a "size". */
