@@ -21,7 +21,7 @@
 | `SceneBuilder`、`BuiltLevel` | 將資料組成碰撞與場景，整合工廠、靜態合併、模型實例化與除錯標記 |
 | `PropFactory` | 名稱到外觀：已載入模型 → 已註冊替身 → 灰色方塊；保留所有權重複警告 |
 | `props/PropSet` | 以繼承統一道具 builders 與模型 extras 的註冊，不依賴 Three.js 執行期 |
-| `props/CommonProps`、`props/ChNProps` | 各負責人的外觀建置函式；既有章節不需改入口就能新增表內項目 |
+| `props/CommonProps`、`props/ChNProps` | 共用與各章的外觀建置函式；既有章節不需改入口就能新增表內項目 |
 | `ModelLibrary`、`ModelInstancer`、`StaticBatcher` | 載入清單核可的 GLB、合併重複模型、合併同材質靜態網格 |
 | `Palette`、`Emitters` | palette 合併與顏色；自發光材質、燈與其動畫 |
 | `Atmosphere`、`Flashlight`、`PostFX` | 霧、環境光、手電筒與後製；數值仍由 palette 決定 |
@@ -49,7 +49,7 @@
 
 建置函式接收 `{ prop, size, factory }`，其中 `size` 是 `{ w, h, d }`，回傳以底部中心為原點的 `Object3D`（公尺、+Y 朝上、正面朝 -Z）。extras 接收同樣內容與 `object`，只在使用真實模型時補上子物件。顏色依然由工廠讀 palette，不能寫死色碼。
 
-只有新增「整組」道具模組時，才需要在 `main.js` 匯入新類別並加入 `registerWith(PropFactory)` 的清單；共用檔案先與組長協調。詳細流程見 [ADDING_AN_ASSET.md](../art/ADDING_AN_ASSET.md) 與 [OWNERSHIP.md](../art/OWNERSHIP.md)。
+只有新增「整組」道具模組時，才需要在 `main.js` 匯入新類別並加入 `registerWith(PropFactory)` 的清單。詳細流程見 [ADDING_AN_ASSET.md](../art/ADDING_AN_ASSET.md) 與 [CHAPTER_FILES.md](../art/CHAPTER_FILES.md)。
 
 ## 共用核心類別
 

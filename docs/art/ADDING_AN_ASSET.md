@@ -15,7 +15,7 @@
 
 ## 1. 登記規格卡
 
-在**自己那一章**的清單（`art/manifest/ch1.json`、`ch2.json`、`ch3.json`；跨章共用的在 `common.json`，要先跟組長說）加一筆，或把已經列在裡面的 `planned` 改成 `wip`：
+在**那一章**的清單（`art/manifest/ch1.json`、`ch2.json`、`ch3.json`；跨章共用的在 `common.json`）加一筆，或把已經列在裡面的 `planned` 改成 `wip`：
 
 ```json
 { "id": "fuel_barrel", "class": "small_prop", "source": "blender", "status": "wip", "size": [0.6, 0.9, 0.6], "notes": "燃料桶" }
@@ -59,7 +59,7 @@ def build(asset):
 
 規則：
 
-- **腳本裡不寫顏色數值**。要新顏色：自己那一章用的，加在 `art/style/chapters/<章>.json` 的 `"_assets": { "colors": { "名字": "#rrggbb" } }`；大家都會用到的才加進 `palette.json`（共用檔，先跟組長說）。
+- **腳本裡不寫顏色數值**。要新顏色：只有一章用的，加在 `art/style/chapters/<章>.json` 的 `"_assets": { "colors": { "名字": "#rrggbb" } }`；大家都會用到的才加進 `palette.json`。
 - 不用貼圖，顏色都是頂點色。「降飽和＋髒污」由工具在匯出前統一加上去（越靠近地面越髒、每個面深淺略有不同），所以不同人做的東西看起來是同一套。
 - 面數算三角面：一個方塊 12 面，12 邊的圓柱 44 面。
 - 腳本只能用 `asset`，不要自己開檔、匯出或改場景設定。
@@ -109,7 +109,7 @@ node tools/art/assets.mjs check --chapter ch3
 
 ## 6. 核可與 commit
 
-章節負責人看過預覽圖，覺得可以，就把規格卡的 `status` 改成 `ready`，再跑一次 check，然後 commit 這個資產的四樣東西：規格卡的修改、腳本、GLB、預覽圖。
+自己（或請組員）看過預覽圖，覺得可以，就把規格卡的 `status` 改成 `ready`，再跑一次 check，然後 commit 這個資產的四樣東西：規格卡的修改、腳本、GLB、預覽圖。
 
 ```
 git add art/manifest/ch3.json art/blender/fuel_barrel.py web/assets/models/fuel_barrel.glb art/previews/fuel_barrel
