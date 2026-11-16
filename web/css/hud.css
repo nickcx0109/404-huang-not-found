@@ -1,0 +1,93 @@
+/* In-game HUD. Loaded by js/ui/hud/HudAssets.js, so only with ?play=1.
+   No boxes, no panels: text and marks sit straight on the picture and stay readable through
+   a dark outline and a soft shadow. Every size is in em of the root, which follows the view height. */
+.hud {
+  /* The only four colours of the HUD. */
+  --bone: #d8d2c4;   /* main text */
+  --ash: #6b6a64;    /* secondary information */
+  --dried: #7a1a12;  /* hurt, danger, low health */
+  --fresh: #c4301f;  /* only for the moment something is dangerous right now */
+
+  --num: "Stardos Stencil", "Special Elite", "Courier New", monospace;
+  --type: "Special Elite", "Courier New", Courier, monospace;
+  --edge: 0 0 0.07em rgba(8, 6, 5, 0.95), 0 0.05em 0.14em rgba(8, 6, 5, 0.9), 0 0 0.55em rgba(8, 6, 5, 0.6);
+  --mark-shadow: drop-shadow(0 0 0.14em rgba(8, 6, 5, 0.95)) drop-shadow(0 0.05em 0.3em rgba(8, 6, 5, 0.6));
+  /* One cartridge, used as a mask for the round icons: bullet, case, rim. */
+  --round: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 28' preserveAspectRatio='none'%3E%3Cpath d='M5 .4C7.3 3.2 8.3 6.2 8.4 10.1H1.6C1.7 6.2 2.7 3.2 5 .4Z'/%3E%3Cpath d='M1.2 11.2H8.8V24.4H1.2Z'/%3E%3Cpath d='M.4 25.4H9.6V27.6H.4Z'/%3E%3C/svg%3E");
+
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  font-size: clamp(10px, 1.9vh, 30px);
+  color: var(--bone);
+}
+
+.hud-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* Resting state: almost gone. A change brings the widget up fast; it sinks back slowly. */
+.hud-widget {
+  position: absolute;
+  opacity: 0.5;
+  transition: opacity 1.6s ease-in;
+}
+
+.hud-widget.is-awake {
+  opacity: 1;
+  transition: opacity 0.12s ease-out;
+}
+
+/* Large stencil numbers, slightly worn. */
+.hud-num {
+  position: relative;
+  display: inline-block;
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 3.5em;
+  line-height: 0.82;
+  letter-spacing: 0.01em;
+  -webkit-text-stroke: 0.03em rgba(8, 6, 5, 0.55);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+  filter: var(--hud-rough, none);
+}
+
+/* ---- motion ------------------------------------------------------------- */
+
+@keyframes hud-throb {
+  0%, 100% { opacity: 0; }
+  18% { opacity: 0.9; }
+  45% { opacity: 0.15; }
+}
+
+/* Hard cut, like a lamp with a loose wire. */
+@keyframes hud-blink {
+  0%, 59% { opacity: 1; }
+  60%, 100% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud *,
+  .hud *::after {
+    animation: none !important;
+  }
+
+  .hud-health.is-hit .hud-health__num,
+  .hud-ammo.is-firing .hud-ammo__mag {
+    transform: none;
+  }
+
+  .hud-ammo__rounds i.is-spent {
+    transform: translateY(var(--lift, 0)) rotate(var(--tilt, 0deg));
+  }
+
+  .hud-health__trail {
+    transition: none;
+  }
+}
