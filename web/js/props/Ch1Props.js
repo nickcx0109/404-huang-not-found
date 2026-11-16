@@ -20,12 +20,19 @@ function hash01(prop, salt) {
 
 const DEG = Math.PI / 180;
 
+/** Box part in a palette colour, placed by its bottom centre. */
+function part(factory, colorKey, w, h, d, x, y, z) {
+  return factory.part(factory.material(colorKey), w, h, d, x, y, z);
+}
+
 export class Ch1Props extends PropSet {
   static id = 'ch1';
 
   static builders = {
     tree: Ch1Props.tree,
     escape_car: Ch1Props.escapeCar,
+    guardrail: Ch1Props.guardrail,
+    guardrail_broken: Ch1Props.guardrailBroken,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -85,5 +92,41 @@ export class Ch1Props extends PropSet {
       car.add(glow);
     }
     return car;
+  }
+
+  /** Steel guard rail along the longer side of `size`: posts every 2 m and one rail. */
+  static guardrail(ctx) {
+    return Ch1Props._rail(ctx, false);
+  }
+
+  /** Guard rail that something drove through: one end of the rail is bent to the ground. */
+  static guardrailBroken(ctx) {
+    return Ch1Props._rail(ctx, true);
+  }
+
+  static _rail(ctx, broken) {
+    const { factory, size } = ctx;
+    const alongZ = size.d >= size.w;
+    const length = alongZ ? size.d : size.w;
+    const rail = new THREE.Group();
+    const posts = Math.max(2, Math.round(length / 2) + 1);
+    for (let i = 0; i < posts; i++) {
+      const at = -length / 2 + (length * i) / (posts - 1);
+      const post = part(factory, 'ch1Rail', 0.1, size.h, 0.1, 0, 0, at);
+      if (broken && i >= posts - 2) post.rotation.x = 35 * DEG;
+      rail.add(post);
+    }
+    const kept = broken ? length * 0.6 : length;
+    rail.add(part(factory, 'ch1Rail', 0.06, 0.28, kept, 0, size.h - 0.34, -length / 2 + kept / 2));
+    if (broken) {
+      const bent = part(factory, 'ch1Rust', 0.06, 0.28, length * 0.42, 0, 0, 0);
+      bent.position.set(0.25, size.h * 0.32, length / 2 - length * 0.2);
+      bent.rotation.set(-22 * DEG, 14 * DEG, 0);
+      rail.add(bent);
+    }
+    if (!alongZ) rail.rotation.y = Math.PI / 2;
+    const group = new THREE.Group();
+    group.add(rail);
+    return group;
   }
 }

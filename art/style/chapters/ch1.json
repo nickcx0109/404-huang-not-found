@@ -33,6 +33,9 @@
     "roughness": 0.92,
     "groundRoughness": 0.85,
 
+    "ch1Rail": "#555b5b",
+    "ch1Rust": "#3f2c20",
+
     "surfaces": {
       "ground": { "texture": "stone", "metres": [5, 5], "roughness": 0.9 },
       "road": { "texture": "asphalt", "metres": [6, 2.2], "roughness": 0.8 }
