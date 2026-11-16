@@ -36,6 +36,7 @@ export class Ch1Props extends PropSet {
     ch1_lane_mark: Ch1Props.laneMark,
     ch1_barrier: Ch1Props.barrier,
     ch1_barrier_fallen: Ch1Props.barrierFallen,
+    ch1_car_flipped: Ch1Props.carFlipped,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -159,6 +160,17 @@ export class Ch1Props extends PropSet {
     barrier.position.y = size.d * 0.5;
     const group = new THREE.Group();
     group.add(barrier);
+    return group;
+  }
+
+  /** A car lying on its roof. */
+  static carFlipped(ctx) {
+    const { prop, size } = ctx;
+    const car = CommonProps.carBody(ctx);
+    car.rotation.z = Math.PI + (hash01(prop, 1) - 0.5) * 10 * DEG;
+    car.position.y = size.h * 0.98;
+    const group = new THREE.Group();
+    group.add(car);
     return group;
   }
 }
