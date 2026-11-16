@@ -28,6 +28,7 @@
   ],
 
   "props": [
+    {"name": "ch3_emergency_light", "x": 9.8, "y": 2.55, "z": -44.2, "rotY": 90, "size": [0.3,0.26,0.18]},
     {"name": "ch3_parapet", "collider": "parapet_0"},
     {"name": "ch3_parapet", "collider": "parapet_1"},
     {"name": "ch3_parapet", "collider": "parapet_2"},

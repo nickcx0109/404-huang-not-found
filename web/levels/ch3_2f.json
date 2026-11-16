@@ -24,6 +24,7 @@
   ],
 
   "props": [
+    {"name": "ch3_emergency_light", "x": -12.5, "y": 2.55, "z": -39.8, "rotY": 180, "size": [0.3,0.26,0.18]},
     {"name": "ch3_ceiling", "x": 0, "y": 3.2, "z": -20, "size": [33,0.12,57]},
     {"name": "ch3_stair_hole", "x": -15, "y": 0, "z": -43.7, "rotY": 0, "size": [1.8,1,4.6]},
     {"name": "ch3_stairs", "x": -10, "y": 0, "z": -44, "rotY": 180, "size": [1.8,3.2,4.6]},
@@ -50,7 +51,9 @@
     {"name": "ch3_ceiling_lamp", "x": -10.99, "y": 3.2, "z": -32.45, "rotY": 0, "size": [1.2,0.07,0.3]},
     {"name": "ch3_ceiling_lamp", "x": -3.95, "y": 3.2, "z": -31.83, "rotY": 90, "size": [1.2,0.07,0.3]},
     {"name": "ch3_ceiling_lamp", "x": 3.71, "y": 3.2, "z": -32.21, "rotY": 0, "size": [1.2,0.07,0.3]},
-    {"name": "ch3_ceiling_lamp", "x": 11.06, "y": 3.2, "z": -31.43, "rotY": 90, "size": [1.2,0.07,0.3]}
+    {"name": "ch3_ceiling_lamp", "x": 11.06, "y": 3.2, "z": -31.43, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_emergency_light", "x": -10, "y": 2.55, "z": -11.8, "rotY": 180, "size": [0.3,0.26,0.18]},
+    {"name": "ch3_emergency_light", "x": 10, "y": 2.55, "z": -11.8, "rotY": 180, "size": [0.3,0.26,0.18]}
   ],
 
   "spawns": {
