@@ -57,6 +57,7 @@ export class Ch1Props extends PropSet {
     ch1_rock: Ch1Props.rock,
     ch1_log: Ch1Props.log,
     ch1_tire: Ch1Props.tire,
+    ch1_tent: Ch1Props.tent,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -284,5 +285,24 @@ export class Ch1Props extends PropSet {
     const group = new THREE.Group();
     group.add(tyre);
     return group;
+  }
+
+  /** Small ridge tent with its entrance toward the front (-Z); one side has sagged. */
+  static tent(ctx) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const tent = new THREE.Group();
+    const slope = Math.hypot(w / 2, h);
+    const lean = Math.atan2(w / 2, h);
+    [-1, 1].forEach((side) => {
+      const sheet = part(factory, 'ch1Tent', 0.04, slope, d, 0, 0, 0);
+      sheet.position.set(side * w * 0.5, 0, 0);
+      sheet.rotation.z = side * lean * (side > 0 ? 1.08 : 1);
+      tent.add(sheet);
+    });
+    tent.add(stick(factory, 'ch1Pole', new THREE.Vector3(0, 0, -d / 2), new THREE.Vector3(0, h, -d / 2), 0.025));
+    tent.add(stick(factory, 'ch1Pole', new THREE.Vector3(0, 0, d / 2), new THREE.Vector3(0, h * 0.9, d / 2), 0.025));
+    tent.add(part(factory, 'ch1CabinDark', w * 0.7, 0.03, d * 0.9, 0, 0.01, 0));
+    return tent;
   }
 }
