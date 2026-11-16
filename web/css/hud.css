@@ -58,6 +58,91 @@
   filter: var(--hud-rough, none);
 }
 
+/* ---- health, bottom left ------------------------------------------------ */
+
+.hud-health {
+  left: 2.8em;
+  bottom: 2.4em;
+}
+
+.hud-health__num {
+  transition: transform 0.3s ease-out;
+}
+
+/* A copy of the number in fresh red on top of it; only its opacity moves. */
+.hud-health__num::after {
+  content: attr(data-value);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--fresh);
+  opacity: 0;
+  transition: opacity 0.7s ease-out;
+}
+
+/* A hit: the number drops a little and goes red at once, then the red drains out. */
+.hud-health.is-hit .hud-health__num {
+  transform: translateY(0.05em);
+  transition-duration: 0.04s;
+}
+
+.hud-health.is-hit .hud-health__num::after {
+  opacity: 1;
+  transition: none;
+}
+
+.hud-health.is-low .hud-health__num {
+  color: var(--dried);
+  -webkit-text-stroke-color: rgba(216, 210, 196, 0.16);
+}
+
+.hud-health.is-low .hud-health__num::after {
+  animation: hud-throb 1.5s ease-in-out infinite;
+}
+
+.hud-health__stroke {
+  margin-top: 0.5em;
+  filter: var(--mark-shadow);
+}
+
+.hud-health__bar {
+  position: relative;
+  width: 12.5em;
+  height: 1.35em;
+  -webkit-mask: var(--brush) center / 100% 100% no-repeat;
+  mask: var(--brush) center / 100% 100% no-repeat;
+}
+
+.hud-health__bar i {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+}
+
+.hud-health__ghost {
+  background: var(--ash);
+  opacity: 0.3;
+}
+
+/* Left behind by a hit: waits a moment, then drains. */
+.hud-health__trail {
+  background: var(--dried);
+  transition: transform 0.9s cubic-bezier(0.5, 0, 0.9, 0.7) 0.45s;
+}
+
+.hud-health.is-rising .hud-health__trail {
+  transition: none;
+}
+
+.hud-health__fill {
+  background: var(--bone);
+  transition: transform 0.07s linear, background-color 0.6s ease-out;
+}
+
+.hud-health.is-low .hud-health__fill {
+  background: var(--dried);
+}
+
 /* ---- motion ------------------------------------------------------------- */
 
 @keyframes hud-throb {
