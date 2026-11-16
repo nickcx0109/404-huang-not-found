@@ -10,6 +10,13 @@
   "hemisphere": { "sky": "#384446", "ground": "#040605", "intensity": 0.055 },
   "moon": { "intensity": 0 },
   "flashlight": { "intensity": 3.0, "angle": 18, "penumbra": 0.3, "distance": 26, "decay": 1.4 },
+  "post": {
+    "exposure": 0.72,
+    "saturation": 0.66,
+    "vignette": { "strength": 0.92, "start": 0.2, "end": 0.95 },
+    "grain": 0.075,
+    "chromaticAberration": 0.0025
+  },
   "accent": {
     "color": "#ffb020"
   }
