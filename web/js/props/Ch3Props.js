@@ -138,6 +138,7 @@ export class Ch3Props extends PropSet {
     ch3_blood_pool: Ch3Props.bloodPool,
     ch3_blood_trail: Ch3Props.bloodTrail,
     ch3_blood_smear: Ch3Props.bloodSmear,
+    ch3_desk_flipped: Ch3Props.deskFlipped,
   };
 
   /**
@@ -677,5 +678,16 @@ export class Ch3Props extends PropSet {
       for (let finger = 0; finger < 4; finger++) flat(0.018, 0.09, x - 0.045 + finger * 0.03, y + 0.1);
     }
     return smear;
+  }
+
+  /** A desk thrown onto its side. */
+  static deskFlipped(ctx) {
+    const { prop, size } = ctx;
+    const desk = Ch3Props.desk(ctx);
+    desk.rotation.z = (hash01(prop, 7) < 0.5 ? 1 : -1) * (80 + 16 * hash01(prop, 8)) * DEG;
+    desk.position.y = size.w * 0.5;
+    const group = new THREE.Group();
+    group.add(desk);
+    return group;
   }
 }
