@@ -8,8 +8,8 @@
   ],
   "extends": "mood/heavy",
 
-  "fog": { "color": "#121716", "density": 0.066 },
-  "hemisphere": { "sky": "#3d4a4c", "ground": "#050706", "intensity": 0.09 },
+  "fog": { "color": "#1a2422", "density": 0.058 },
+  "hemisphere": { "sky": "#4c6068", "ground": "#0b100e", "intensity": 0.34 },
   "moon": { "intensity": 0 },
   "flashlight": { "intensity": 2.9, "angle": 17, "penumbra": 0.3, "distance": 26, "decay": 1.4 },
   "post": {
@@ -78,6 +78,10 @@
     "ch1RoadTint": "#b9bcbc",
     "ch1GroundTint": "#a9aca6",
     "ch1Leaf": "#2e2416",
+    "ch1Silhouette": "#070a09",
+    "ch1Mist": { "color": "#34423f", "intensity": 1 },
+    "ch1Torch": { "color": "#cfd8d2", "intensity": 1 },
+    "ch1Lamp": { "color": "#ffd9a0", "intensity": 3.2 },
 
     "surfaces": {
       "ch1Barrier": { "texture": "concrete", "metres": [2, 1] },

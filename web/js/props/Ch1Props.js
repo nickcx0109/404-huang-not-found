@@ -204,7 +204,7 @@ function roadTextures() {
         const lane = u < 0.5 ? u * 2 : (u - 0.5) * 2;
         const track = Math.exp(-Math.pow((lane - 0.3) / 0.07, 2)) + Math.exp(-Math.pow((lane - 0.72) / 0.07, 2));
         const speck = rnd();
-        let grey = 50 + 30 * grain[i] + 22 * (broad[i] - 0.5) + 5 * track + (speck < 0.03 ? 30 : speck > 0.975 ? -20 : 0);
+        let grey = 92 + 36 * grain[i] + 26 * (broad[i] - 0.5) + 6 * track + (speck < 0.03 ? 34 : speck > 0.975 ? -26 : 0);
         const pool = smoothstep(0.58, 0.68, water[i] + 0.1 * (1 - clamp01(edge / 1.2)) + 0.05 * track);
         const damp = smoothstep(0.44, 0.6, water[i]);
         grey *= 1 - 0.42 * damp - 0.2 * pool;
@@ -215,9 +215,9 @@ function roadTextures() {
         const mud = clamp01(1 - edge / (0.35 + 1.5 * dirt[i]));
         if (mud > 0) {
           const tone = 0.55 + 0.7 * grain[i];
-          r += (58 * tone - r) * mud;
-          g += (47 * tone - g) * mud;
-          b += (34 * tone - b) * mud;
+          r += (88 * tone - r) * mud;
+          g += (72 * tone - g) * mud;
+          b += (52 * tone - b) * mud;
         }
         cd.data[i * 4] = r;
         cd.data[i * 4 + 1] = g;
@@ -338,13 +338,13 @@ function groundTextures() {
     const rd = rg.createImageData(S, S);
     for (let i = 0; i < S * S; i++) {
       const tone = 0.55 + 0.55 * broad[i] + 0.35 * (fine[i] - 0.5);
-      let r = 44 * tone;
-      let g = 38 * tone;
-      let b = 29 * tone;
+      let r = 74 * tone;
+      let g = 64 * tone;
+      let b = 48 * tone;
       const green = smoothstep(0.56, 0.7, moss[i]);
-      r += (34 * tone - r) * green * 0.8;
-      g += (44 * tone - g) * green * 0.8;
-      b += (26 * tone - b) * green * 0.8;
+      r += (52 * tone - r) * green * 0.8;
+      g += (68 * tone - g) * green * 0.8;
+      b += (40 * tone - b) * green * 0.8;
       const pool = smoothstep(0.62, 0.7, water[i]); // muddy water: brown and cloudy
       const damp = smoothstep(0.5, 0.64, water[i]);
       r *= 1 - 0.35 * damp;
@@ -1528,6 +1528,264 @@ function forestOf(factory) {
   return forests.get(factory);
 }
 
+// ================================================================================================
+// Fog and light you can see. Three.js fog only fades things with distance; what makes the night
+// thick is added here: a low mist that drifts, a faint cone in front of the flashlight, damp
+// specks that show only inside the beam, and cones in front of the lamps that still burn.
+//
+// These things have to follow the camera, and a prop builder is never told about the camera.
+// The driver below is a mesh that draws nothing; Three.js calls its onBeforeRender with the
+// camera every frame, and that is where everything is moved.
+// ================================================================================================
+
+/** Soft clouds with holes, as a white image whose alpha is the mist. Tiles in both directions. */
+function mistTexture() {
+  return paintedOnce('mist', () => {
+    const S = 256;
+    const canvas = makeCanvas(S, S);
+    const g = canvas.getContext('2d');
+    const broad = cloud(S, S, 2, 2, 5, 401);
+    const patch = cloud(S, S, 1, 1, 2, 402);
+    const data = g.createImageData(S, S);
+    for (let i = 0; i < S * S; i++) {
+      // thick in some places, almost gone in others: the road closes in and opens up again
+      const alpha = smoothstep(0.34, 0.72, broad[i] * 0.75 + patch[i] * 0.4);
+      data.data[i * 4] = data.data[i * 4 + 1] = data.data[i * 4 + 2] = 255;
+      data.data[i * 4 + 3] = 255 * alpha;
+    }
+    g.putImageData(data, 0, 0);
+    return canvas;
+  });
+}
+
+/** A beam seen from the side: bright at the lamp (top of the image), fading along and toward the rim. */
+function beamTexture() {
+  return paintedOnce('beam', () => {
+    const canvas = makeCanvas(64, 256);
+    const g = canvas.getContext('2d');
+    const along = g.createLinearGradient(0, 0, 0, 256);
+    along.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    along.addColorStop(0.12, 'rgba(255, 255, 255, 0.9)');
+    along.addColorStop(0.4, 'rgba(255, 255, 255, 0.4)');
+    along.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    g.fillStyle = along;
+    g.fillRect(0, 0, 64, 256);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.encoding = THREE.sRGBEncoding;
+    return texture;
+  });
+}
+
+/**
+ * A cone of lit fog in front of a lamp. It opens along -Z from the origin; `reach` and `radius`
+ * in metres. Purely additive: it never darkens anything and costs no real light.
+ */
+function lightCone(color, reach, radius, strength) {
+  // Four cones inside one another, each very faint: where they overlap the fog is brighter,
+  // so the beam is densest along its axis and has no hard rim.
+  const positions = [];
+  const uvs = [];
+  [1, 0.78, 0.56, 0.34].forEach((share) => {
+    const shell = new THREE.ConeGeometry(radius * share, reach, 24, 1, true).toNonIndexed();
+    shell.translate(0, -reach / 2, 0); // tip at the origin
+    shell.rotateX(Math.PI / 2);        // opening toward -Z
+    positions.push(...shell.attributes.position.array);
+    uvs.push(...shell.attributes.uv.array);
+    shell.dispose();
+  });
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.computeBoundingSphere();
+  const material = new THREE.MeshBasicMaterial({
+    map: beamTexture(), color: color.clone().multiplyScalar(strength), transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+  material.name = 'ch1:beam';
+  const cone = new THREE.Mesh(geometry, material);
+  cone.userData.dynamic = true;
+  cone.renderOrder = 20;
+  return cone;
+}
+
+/** Colour and strength of a palette emitter, or a fallback when the palette has none. */
+function emitterColor(factory, key, fallback) {
+  const spec = factory.greybox[key];
+  if (spec && typeof spec.color === 'string') return Palette.color(spec.color).multiplyScalar(spec.intensity === undefined ? 1 : spec.intensity);
+  return Palette.color(fallback);
+}
+
+/**
+ * Builds the weather of the level: mist layers, the flashlight's cone and the specks in it.
+ * Returns a group to add to the scene once.
+ */
+function buildWeather(factory) {
+  const weather = new THREE.Group();
+  weather.name = 'ch1:weather';
+  const state = { time: 0 };
+  animate(factory, (time) => { state.time = time; });
+
+  // ---- low mist: six sheets between ankle and waist, each drifting its own way ------------------
+  const SPAN = 80;
+  const mistColor = emitterColor(factory, 'ch1Mist', '#5a6b68');
+  const sheets = [];
+  for (let i = 0; i < 6; i++) {
+    const texture = new THREE.CanvasTexture(mistTexture());
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(SPAN / (34 + i * 9), SPAN / (34 + i * 9));
+    const material = new THREE.MeshBasicMaterial({
+      map: texture, color: mistColor, transparent: true, opacity: 0.17 - i * 0.018, depthWrite: false,
+    });
+    material.name = 'ch1:mist';
+    const geometry = new THREE.PlaneGeometry(SPAN, SPAN);
+    geometry.rotateX(-Math.PI / 2);
+    const sheet = new THREE.Mesh(geometry, material);
+    sheet.position.y = 0.14 + i * 0.13;
+    sheet.frustumCulled = false;
+    sheet.matrixAutoUpdate = false;
+    sheet.userData.dynamic = true;
+    sheet.renderOrder = 12 + i;
+    const angle = i * 1.9 + 0.4;
+    sheets.push({ sheet, texture, scale: 34 + i * 9, driftX: Math.cos(angle) * (0.05 + i * 0.012), driftZ: Math.sin(angle) * (0.05 + i * 0.012) });
+    weather.add(sheet);
+  }
+
+  // ---- the flashlight in the fog: a faint cone and damp specks that only show inside it -----------
+  const torchColor = emitterColor(factory, 'ch1Torch', '#cfd8d2');
+  const cone = lightCone(torchColor, 16, 4.6, 0.016);
+  cone.frustumCulled = false;
+  cone.matrixAutoUpdate = false;
+  weather.add(cone);
+
+  const SPECKS = 1400;
+  const BOX = 26;
+  const positions = new Float32Array(SPECKS * 3);
+  const rnd = seeded(77);
+  for (let i = 0; i < SPECKS; i++) {
+    positions[i * 3] = (rnd() - 0.5) * BOX;
+    positions[i * 3 + 1] = rnd() * 4.2;
+    positions[i * 3 + 2] = (rnd() - 0.5) * BOX;
+  }
+  const speckGeometry = new THREE.BufferGeometry();
+  speckGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const speckMaterial = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: {
+      uTime: { value: 0 },
+      uBeam: { value: 0 },                       // 1 while the flashlight is on
+      uColor: { value: torchColor.clone() },
+      uCell: { value: new THREE.Vector3() },     // camera position, so the cloud of specks wraps around it
+      uBox: { value: BOX },
+    },
+    vertexShader: [
+      'uniform float uTime; uniform vec3 uCell; uniform float uBox;',
+      'varying float vLit;',
+      'void main() {',
+      '  vec3 p = position;',
+      '  p.x += sin( uTime * 0.21 + position.y * 3.1 ) * 0.35 + uTime * 0.05;',
+      '  p.y += sin( uTime * 0.17 + position.x * 2.3 ) * 0.2 - uTime * 0.02;',
+      '  p.z += cos( uTime * 0.19 + position.y * 2.7 ) * 0.35;',
+      // wrap the cloud around the camera so there are always specks ahead
+      '  p.xz = mod( p.xz - uCell.xz + uBox * 0.5, uBox ) - uBox * 0.5 + uCell.xz;',
+      '  p.y = mod( p.y, 4.2 );',
+      '  vec4 mv = viewMatrix * vec4( p, 1.0 );',
+      '  float dist = -mv.z;',
+      '  float along = dot( normalize( mv.xyz ), vec3( 0.0, 0.0, -1.0 ) );',
+      // inside the beam (it leaves the camera along -Z) and not too far away
+      '  vLit = smoothstep( 0.95, 0.985, along ) * smoothstep( 13.0, 2.0, dist ) * step( 0.4, dist );',
+      '  gl_PointSize = clamp( 16.0 / max( dist, 0.4 ), 1.0, 3.5 );',
+      '  gl_Position = projectionMatrix * mv;',
+      '}',
+    ].join('\n'),
+    fragmentShader: [
+      'uniform vec3 uColor; uniform float uBeam;',
+      'varying float vLit;',
+      'void main() {',
+      '  vec2 c = gl_PointCoord - 0.5;',
+      '  float round = smoothstep( 0.5, 0.1, length( c ) );',
+      '  gl_FragColor = vec4( uColor * 0.32 * vLit * uBeam * round, 1.0 );',
+      '}',
+    ].join('\n'),
+  });
+  speckMaterial.name = 'ch1:specks';
+  const specks = new THREE.Points(speckGeometry, speckMaterial);
+  specks.frustumCulled = false;
+  specks.userData.dynamic = true;
+  specks.renderOrder = 21;
+  weather.add(specks);
+
+  // ---- the driver: draws nothing, but is told about the camera every frame -------------------------
+  const driver = new THREE.Mesh(
+    new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3)),
+    new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false })
+  );
+  driver.frustumCulled = false;
+  driver.userData.dynamic = true;
+  driver.renderOrder = -100;
+  const aim = new THREE.Matrix4();
+  driver.onBeforeRender = (renderer, scene, camera) => {
+    const eye = camera.position;
+    sheets.forEach(({ sheet, texture, scale, driftX, driftZ }) => {
+      // the sheet follows the player; its pattern stays where it is in the world and drifts slowly
+      sheet.matrixWorld.makeTranslation(eye.x, sheet.position.y, eye.z);
+      texture.offset.set(eye.x / scale + driftX * state.time, -eye.z / scale + driftZ * state.time);
+    });
+    let torch = null;
+    for (const child of camera.children) if (child.isSpotLight) torch = child;
+    const lit = torch && torch.intensity > 0 ? 1 : 0;
+    cone.visible = lit === 1;
+    // tip a little below the eye, where the hand holding the torch is
+    cone.matrixWorld.copy(camera.matrixWorld).multiply(aim.makeTranslation(0.1, -0.12, -0.3));
+    speckMaterial.uniforms.uTime.value = state.time;
+    speckMaterial.uniforms.uBeam.value = lit;
+    speckMaterial.uniforms.uCell.value.copy(eye);
+  };
+  weather.add(driver);
+  return weather;
+}
+
+/** A lamp that is failing: mostly on, dipping, sometimes almost out, never regular. */
+function stutter(time) {
+  const n = Math.sin(time * 11.3) + Math.sin(time * 6.7 + 1.9) + Math.sin(time * 29.1 + 0.3);
+  return n > 0.5 ? 1 : n > -0.6 ? 0.45 : 0.06;
+}
+
+/** Hazard lights: on for half a second, off for half a second, like a relay. */
+function blink(time) {
+  return (time % 1.1) < 0.55 ? 1 : 0.02;
+}
+
+/** Additive material showing cells of the marks image in an emitter's colour: light lying on the road. */
+function glowSheetMaterial(factory, key, fallback, strength, levelAt) {
+  const set = wetSet(factory);
+  const id = 'glow:' + key + ':' + strength;
+  if (!set.has(id)) {
+    const base = emitterColor(factory, key, fallback).multiplyScalar(strength);
+    const material = new THREE.MeshBasicMaterial({
+      map: markTexture(), color: base.clone(), transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+    });
+    material.name = 'ch1:' + id;
+    if (levelAt) animate(factory, (time) => material.color.copy(base).multiplyScalar(levelAt(time)));
+    set.set(id, material);
+  }
+  return set.get(id);
+}
+
+/** Self-lit surface in an emitter's colour (lamp heads, car lights); `levelAt(time)` makes it blink or stutter. */
+function lampMaterial(factory, key, fallback, levelAt) {
+  const set = wetSet(factory);
+  const id = 'lamp:' + key + (levelAt ? ':' + levelAt.name : '');
+  if (!set.has(id)) {
+    const base = emitterColor(factory, key, fallback);
+    const material = new THREE.MeshBasicMaterial({ color: base.clone() });
+    material.name = 'ch1:' + id;
+    if (levelAt) animate(factory, (time) => material.color.copy(base).multiplyScalar(levelAt(time)));
+    set.set(id, material);
+  }
+  return set.get(id);
+}
+
 export class Ch1Props extends PropSet {
   static id = 'ch1';
 
@@ -1555,6 +1813,9 @@ export class Ch1Props extends PropSet {
     ch1_ground: Ch1Props.ground,
     ch1_tree_fallen: Ch1Props.treeFallen,
     ch1_tree_leaning: Ch1Props.treeLeaning,
+    ch1_lamp: (ctx) => Ch1Props.lamp(ctx, 'dead'),
+    ch1_lamp_stutter: (ctx) => Ch1Props.lamp(ctx, 'stutter'),
+    ch1_lamp_fallen: (ctx) => Ch1Props.lamp(ctx, 'fallen'),
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -2112,7 +2373,10 @@ export class Ch1Props extends PropSet {
     floor.position.y = 0.012;
     floor.receiveShadow = true;
     floor.userData.dynamic = true;
-    return floor;
+    // the level has one ground, so this is also where its weather (mist, torch beam, specks) is hung
+    const world = new THREE.Group();
+    world.add(floor, buildWeather(factory));
+    return world;
   }
 
   /**
@@ -2219,5 +2483,50 @@ export class Ch1Props extends PropSet {
     const leaning = new THREE.Group();
     leaning.add(wood);
     return leaning;
+  }
+
+  /**
+   * Street lamp on the shoulder, its arm reaching over the road (toward -Z). `mode`:
+   * 'dead' (most of them), 'stutter' (one, flickering unevenly, with a cone of lit fog under it
+   * and its light lying on the wet road) or 'fallen' (the post lies across the shoulder).
+   * The light is faked: a glowing head, a cone and a patch on the road, no real light.
+   */
+  static lamp(ctx, mode) {
+    const { factory, prop } = ctx;
+    const post = new THREE.Group();
+    const pole = stick(factory, 'ch1Pole', new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 6.2, 0), 0.07, 6);
+    const arm = stick(factory, 'ch1Pole', new THREE.Vector3(0, 6.1, 0), new THREE.Vector3(0, 6.35, -1.7), 0.045, 5);
+    const lit = mode === 'stutter';
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.28, 0.1, 0.62),
+      lit ? lampMaterial(factory, 'ch1Lamp', '#ffd9a0', stutter) : factory.material('ch1Pole')
+    );
+    head.position.set(0, 6.3, -1.95);
+    post.add(pole, arm, head);
+    post.add(part(factory, 'ch1Rust', 0.3, 0.5, 0.3, 0, 0, 0));
+    if (lit) {
+      const cone = lightCone(emitterColor(factory, 'ch1Lamp', '#ffd9a0'), 6.4, 2.8, 0.014);
+      cone.rotation.x = -Math.PI / 2;
+      cone.position.set(0, 6.25, -1.95);
+      const base = cone.material.color.clone();
+      animate(factory, (time) => cone.material.color.copy(base).multiplyScalar(stutter(time)));
+      post.add(cone);
+      const pool = new QuadSheet().floor(MARK.soft, 0, -1.95, 9, 9, 0, 0.06 - prop.y);
+      const light = pool.mesh(glowSheetMaterial(factory, 'ch1Lamp', '#ffd9a0', 0.09, stutter));
+      light.renderOrder = 5;
+      post.add(light);
+    }
+    if (mode === 'fallen') {
+      post.rotation.set(-(84 + 4 * hash01(prop, 1)) * DEG, 0, 0);
+      post.position.y = 0.12;
+      const lying = new THREE.Group();
+      lying.add(post);
+      // glass from the head where it hit the road
+      const sheet = new QuadSheet().floor(MARK.glass, 0, -6.4, 1.6, 1.6, hash01(prop, 2) * 6, 0.05);
+      lying.add(sheet.mesh(markMaterial(factory)));
+      return lying;
+    }
+    post.rotation.set((hash01(prop, 3) - 0.5) * 0.05, 0, (hash01(prop, 4) - 0.5) * 0.07);
+    return post;
   }
 }

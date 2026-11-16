@@ -1217,7 +1217,14 @@
     {"name": "ch1_turn_sign_left", "x": 97.9, "y": 0, "z": -101.5, "rotY": 90, "size": [1.3,1.7,0.08]},
     {"name": "ch1_turn_sign_left", "x": 97.9, "y": 0, "z": -98, "rotY": 90, "size": [1.3,1.7,0.08]},
     {"name": "ch1_tree_fallen", "x": 61, "y": 0, "z": -93.25, "rotY": 90, "size": [7.5,1.6,1]},
-    {"name": "ch1_tree_leaning", "x": 80.3, "y": 0, "z": -150, "rotY": 80}
+    {"name": "ch1_tree_leaning", "x": 80.3, "y": 0, "z": -150, "rotY": 80},
+    {"name": "ch1_lamp", "x": -4.7, "y": 0, "z": -20, "rotY": -90},
+    {"name": "ch1_lamp", "x": 4.7, "y": 0, "z": -60, "rotY": 90},
+    {"name": "ch1_lamp_stutter", "x": 4.7, "y": 0, "z": -84, "rotY": 90},
+    {"name": "ch1_lamp", "x": 20, "y": 0, "z": -104.7, "rotY": 0},
+    {"name": "ch1_lamp_fallen", "x": 74, "y": 0, "z": -104.6, "rotY": 0},
+    {"name": "ch1_lamp", "x": 94.7, "y": 0, "z": -140, "rotY": 90},
+    {"name": "ch1_lamp", "x": 85.3, "y": 0, "z": -165, "rotY": -90}
   ],
 
   "spawns": {
