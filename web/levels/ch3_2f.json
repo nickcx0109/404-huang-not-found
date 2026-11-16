@@ -26,7 +26,31 @@
   "props": [
     {"name": "ch3_ceiling", "x": 0, "y": 3.2, "z": -20, "size": [33,0.12,57]},
     {"name": "ch3_stair_hole", "x": -15, "y": 0, "z": -43.7, "rotY": 0, "size": [1.8,1,4.6]},
-    {"name": "ch3_stairs", "x": -10, "y": 0, "z": -44, "rotY": 180, "size": [1.8,3.2,4.6]}
+    {"name": "ch3_stairs", "x": -10, "y": 0, "z": -44, "rotY": 180, "size": [1.8,3.2,4.6]},
+    {"name": "ch3_ceiling_lamp", "x": -11.21, "y": 3.2, "z": 4.1, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -4.07, "y": 3.2, "z": 4.2, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": 4.26, "y": 3.2, "z": 3.67, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": 11.33, "y": 3.2, "z": 3.88, "rotY": 0, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -11.03, "y": 3.2, "z": -1.9, "rotY": 0, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": 3.78, "y": 3.2, "z": -1.8, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -10.75, "y": 3.2, "z": -8.56, "rotY": 0, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -4.39, "y": 3.2, "z": -8.59, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": 4.09, "y": 3.2, "z": -8.21, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -11.21, "y": 3.2, "z": -13.41, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -3.68, "y": 3.2, "z": -14.52, "rotY": 0, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": 3.87, "y": 3.2, "z": -13.97, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": 10.74, "y": 3.2, "z": -14.42, "rotY": 0, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -11.37, "y": 3.2, "z": -19.84, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -4.02, "y": 3.2, "z": -20.24, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": 3.78, "y": 3.2, "z": -20.27, "rotY": 0, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": 11.32, "y": 3.2, "z": -20.18, "rotY": 0, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -11, "y": 3.2, "z": -26.49, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -4.08, "y": 3.2, "z": -26.52, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": 4.08, "y": 3.2, "z": -25.63, "rotY": 0, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -10.99, "y": 3.2, "z": -32.45, "rotY": 0, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": -3.95, "y": 3.2, "z": -31.83, "rotY": 90, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": 3.71, "y": 3.2, "z": -32.21, "rotY": 0, "size": [1.2,0.07,0.3]},
+    {"name": "ch3_ceiling_lamp", "x": 11.06, "y": 3.2, "z": -31.43, "rotY": 90, "size": [1.2,0.07,0.3]}
   ],
 
   "spawns": {
