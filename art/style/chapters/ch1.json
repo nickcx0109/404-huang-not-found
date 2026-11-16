@@ -17,5 +17,25 @@
     "grain": 0.075,
     "chromaticAberration": 0.0025,
     "bloom": { "enabled": true, "threshold": 0.85, "knee": 0.5, "strength": 0.8, "levels": 3 }
+  },
+
+  "greybox": {
+    "ground": "#20251e",
+    "grid": "#20251e",
+    "collider": "#3c413d",
+    "road": "#34383a",
+    "tree": "#141712",
+    "car": "#2a2f30",
+    "tire": "#101211",
+    "truck": "#30373a",
+    "crate": "#4a4234",
+    "metal": "#24282a",
+    "roughness": 0.92,
+    "groundRoughness": 0.85,
+
+    "surfaces": {
+      "ground": { "texture": "stone", "metres": [5, 5], "roughness": 0.9 },
+      "road": { "texture": "asphalt", "metres": [6, 2.2], "roughness": 0.8 }
+    }
   }
 }
