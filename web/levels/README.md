@@ -201,7 +201,7 @@ LevelData ──▶ SceneBuilder ──▶ CollisionWorld   碰撞（只看 coll
 （讀取、驗證）      │
                    └──▶ PropFactory ──▶ mesh     外觀（道具名稱 → 模型 → 灰盒替身 → 灰色方塊）
                           ▲ ModelLibrary          讀資產清單，載入標成 ready 的 GLB；載不到就退回替身
-                          ▲ props/*.js            灰盒替身，一個負責人一個檔案：CommonProps、Ch1Props、Ch2Props、Ch3Props
+                          ▲ props/*.js            灰盒替身，一章一個檔案：CommonProps、Ch1Props、Ch2Props、Ch3Props
                           ▲ Emitters              會發光的材質和小燈：重點色、紅色警示燈、螢幕，以及閃爍和擺動
                    └──▶ StaticBatcher            同材質的靜態 mesh 合併，減少 draw call
                    └──▶ ModelInstancer           同一個模型出現兩次以上，改成一個 InstancedMesh
@@ -219,4 +219,4 @@ App               把上面接起來；處理網址參數、走動模式與截�
 
 `main.js` 先註冊 `CommonProps`、`Ch1Props`、`Ch2Props`、`Ch3Props`，再執行 `App.boot()`。`PropSet` 共用道具建置與模型 extras 的註冊契約；`core/` 提供尚未接入玩法的事件、物件池和狀態機。沒有打包步驟，仍用 `node tools/serve.mjs` 啟動；`npm test` 執行不需瀏覽器的單元測試。詳細模組地圖與擴充方式見 [ARCHITECTURE.md](../../docs/tech/ARCHITECTURE.md)。
 
-誰可以改哪些檔案，看 [docs/art/OWNERSHIP.md](../../docs/art/OWNERSHIP.md)；怎麼做一個模型，看 [docs/art/ADDING_AN_ASSET.md](../../docs/art/ADDING_AN_ASSET.md)。
+章節檔案和共用檔案的區分，看 [docs/art/CHAPTER_FILES.md](../../docs/art/CHAPTER_FILES.md)；怎麼做一個模型，看 [docs/art/ADDING_AN_ASSET.md](../../docs/art/ADDING_AN_ASSET.md)。

@@ -1,5 +1,5 @@
 {
-  "_about": "Chapter 2, hold the gate. This file is the palette block \"ch2\" (levels pick it with \"palette\": \"ch2\"). It starts from the chosen mood (heavy) and changes only what a three-way defence needs; the differences are listed in STYLE_GUIDE.md. Owned by the chapter 2 team member.",
+  "_about": "Chapter 2, hold the gate. This file is the palette block \"ch2\" (levels pick it with \"palette\": \"ch2\"). It starts from the chosen mood (heavy) and changes only what a three-way defence needs; the differences are listed in STYLE_GUIDE.md.",
   "extends": "mood/heavy",
   "fog": { "color": "#161c23", "density": 0.045 },
   "hemisphere": { "sky": "#8090a4", "ground": "#22272e", "intensity": 1.5 },

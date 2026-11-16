@@ -8,10 +8,10 @@
 |---|---|---|
 | T1 場景骨架 | ✅ 完成 | `web/`、`tools/serve.mjs`；測試關卡 `?level=test` |
 | T2 氣氛樣板 | ✅ 完成，**選定 heavy** | `palette.json` 的 `mood.defaultPreset = "heavy"`；候選截圖在 `art/style/refs/candidates/` |
-| T3 第二章灰盒 | ✅ 完成，**待章節負責人確認** | `web/levels/ch2.json`、`palette.json` 的 `ch2` 區塊；截圖在 `art/style/refs/ch2-greybox/`（先看 `plan.jpg`） |
+| T3 第二章灰盒 | ✅ 完成 | `web/levels/ch2.json`、`palette.json` 的 `ch2` 區塊；截圖在 `art/style/refs/ch2-greybox/`（先看 `plan.jpg`） |
 | T4 資產工具＋共用框架 | ✅ 完成 | Blender 資產流程（build → preview → check）、每章各自的清單／替身／palette 檔、GLB 模型載入。用 `test_crate` 跑通 |
-| 三章平行製作 | ⏭ 下一步 | **分工與各自要貼給 Claude 的任務見 [TEAM_SPLIT.md](TEAM_SPLIT.md)**。三個人各做一章：灰盒（第二章已有）→ 資產 → 擺模型與打光。先讀 [OWNERSHIP.md](OWNERSHIP.md)（誰改哪些檔案）和 [ADDING_AN_ASSET.md](ADDING_AN_ASSET.md) |
-| 共用道具（原 T5） | 未開始 | 不用素材包，改成用 Blender 腳本自己做：`art/manifest/common.json` 列了 8 個，分配寫在 TEAM_SPLIT.md |
+| 三章製作 | ⏭ 下一步 | 待辦項目在 [TODO.md](../../TODO.md)（第一章、第三章灰盒，各章資產與打光）。開工前讀 [CHAPTER_FILES.md](CHAPTER_FILES.md)（章節檔案與共用檔案）和 [ADDING_AN_ASSET.md](ADDING_AN_ASSET.md) |
+| 共用道具（原 T5） | 進行中 | `art/manifest/common.json` 列了 8 個；5 個 `ready`，剩下的在 TODO.md |
 
 ## 接手的人要知道的
 
@@ -25,7 +25,7 @@
   - bloom 用 1/4 解析度（比半解析度省 0.8 ms）。
   - 關卡 props 多一個選填欄位 `size: [寬, 高, 深]`，給沒有 collider 的灰盒替身用。
 - **框架怎麼分工**（T4）：
-  - 每章四個自己的檔案：`web/levels/chN.json`、`web/js/props/ChNProps.js`、`art/style/chapters/chN.json`、`art/manifest/chN.json`，加上自己清單裡的資產腳本、模型、預覽圖。其他都是共用檔案，改之前先跟組長說。完整清單在 [OWNERSHIP.md](OWNERSHIP.md)。
+  - 每章四個自己的檔案：`web/levels/chN.json`、`web/js/props/ChNProps.js`、`art/style/chapters/chN.json`、`art/manifest/chN.json`，加上自己清單裡的資產腳本、模型、預覽圖。其他都是共用檔案。完整清單在 [CHAPTER_FILES.md](CHAPTER_FILES.md)。
   - 道具的外觀照「模型 → 灰盒替身 → 灰色方塊」的順序決定。模型要清單標成 `ready`、關卡的 `manifests` 有列那份清單才會載入；載不到會自動退回，不會壞。
   - `palette.json` 現在只放 `default`、`mood`、`blockout`；`ch2` 區塊搬到 `art/style/chapters/ch2.json`，畫面和搬之前逐像素相同。
   - 模型的顏色也從 palette 來（`_assets.colors`），「降飽和＋髒污」由工具統一加。
@@ -40,4 +40,4 @@
   - 效能（1080p）：draw call 29～44、三角面約 5 千、Iris Xe 每幀約 7.4 ms。
 - **已知待辦**：見 [docs/tech/KNOWN_ISSUES.md](../tech/KNOWN_ISSUES.md)（PR #1 審查找到的 10 項，加上 T1～T3 回報過還沒處理的）。做框架時沒有動其中任何一項。
 - **git 身分**：全域設定為 `Hsu <109849259+big0527@users.noreply.github.com>`。commit 結尾加 `Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>`。
-- **PR**：T1、T2 在 PR #1，已合併。T3＋框架＋分工文件在 PR #2（`feat/scene-ch2`）。
+- **PR**：T1、T2 在 PR #1，已合併。T3＋框架在 PR #2（`feat/scene-ch2`）。
