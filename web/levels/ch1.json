@@ -50,7 +50,15 @@
     {"id": "log_11", "x": -3.2, "z": -80, "w": 5.4, "d": 0.6, "h": 0.5},
     {"id": "guardrail_12", "x": -4.2, "z": -90, "w": 0.25, "d": 10, "h": 0.75},
     {"id": "barrier_13", "x": 2.2, "z": -92.5, "w": 2.2, "d": 0.5, "h": 0.9},
-    {"id": "barrier_fallen_14", "x": 4.9, "z": -96.2, "w": 2.2, "d": 0.9, "h": 0.5}
+    {"id": "barrier_fallen_14", "x": 4.9, "z": -96.2, "w": 2.2, "d": 0.9, "h": 0.5},
+    {"id": "rock_15", "x": -5.6, "z": -104.6, "w": 2.4, "d": 2.2, "h": 1.4},
+    {"id": "car_wreck_16", "x": 14.5, "z": -98.2, "w": 4.3, "d": 1.9, "h": 1.4},
+    {"id": "barrier_17", "x": 26, "z": -102.8, "w": 0.5, "d": 2.2, "h": 0.9},
+    {"id": "van_wreck_18", "x": 33.5, "z": -95.6, "w": 2.2, "d": 5.2, "h": 2.3},
+    {"id": "guardrail_broken_22", "x": 60, "z": -95.9, "w": 9, "d": 0.25, "h": 0.75},
+    {"id": "car_flipped_23", "x": 66, "z": -101.6, "w": 4.3, "d": 1.9, "h": 1.4},
+    {"id": "barrier_fallen_24", "x": 77.6, "z": -97.2, "w": 2.2, "d": 0.9, "h": 0.5},
+    {"id": "rock_25", "x": 95.6, "z": -95.2, "w": 2.6, "d": 2.2, "h": 1.5}
   ],
 
   "props": [
@@ -1183,7 +1191,18 @@
     {"name": "ch1_log", "collider": "log_11"},
     {"name": "guardrail", "collider": "guardrail_12"},
     {"name": "ch1_barrier", "collider": "barrier_13"},
-    {"name": "ch1_barrier_fallen", "collider": "barrier_fallen_14", "size": [2.2,0.9,0.5]}
+    {"name": "ch1_barrier_fallen", "collider": "barrier_fallen_14", "size": [2.2,0.9,0.5]},
+    {"name": "ch1_rock", "collider": "rock_15"},
+    {"name": "car_wreck", "collider": "car_wreck_16", "size": [1.9,1.4,4.3], "rotY": 90},
+    {"name": "ch1_trash", "x": 17.6, "y": 0, "z": -101.4, "rotY": 155, "size": [1.6,0.5,1.4]},
+    {"name": "ch1_barrier", "collider": "barrier_17", "size": [2.2,0.9,0.5], "rotY": 90},
+    {"name": "van_wreck", "collider": "van_wreck_18"},
+    {"name": "ch1_tire", "x": 30.4, "y": 0, "z": -99.5, "size": [0.66,0.22,0.66]},
+    {"name": "guardrail_broken", "collider": "guardrail_broken_22"},
+    {"name": "ch1_car_flipped", "collider": "car_flipped_23", "size": [1.9,1.4,4.3], "rotY": 90},
+    {"name": "ch1_trash", "x": 70.5, "y": 0, "z": -99.4, "rotY": 71, "size": [2.4,0.5,1.6]},
+    {"name": "ch1_barrier_fallen", "collider": "barrier_fallen_24", "size": [2.2,0.9,0.5]},
+    {"name": "ch1_rock", "collider": "rock_25"}
   ],
 
   "spawns": {
