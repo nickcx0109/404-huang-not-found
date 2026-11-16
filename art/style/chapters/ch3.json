@@ -32,6 +32,8 @@
     "groundRoughness": 0.7,
     "screen": { "color": "#9fb4bd", "intensity": 0.9 },
 
+    "ch3Ceiling": "#1b1d1d",
+
     "surfaces": {
       "ground": { "texture": "concrete", "metres": [4, 4], "roughness": 0.7 },
       "collider": { "texture": "stucco", "metres": [3, 3] }
