@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Three-player co-op zombie shooter (course project). The game itself needs no build step; the dependencies here are only for tooling.",
   "scripts": {
+    "test": "node --test",
     "serve": "node tools/serve.mjs",
     "shots": "node tools/art/shots.mjs",
     "assets": "node tools/art/assets.mjs"
