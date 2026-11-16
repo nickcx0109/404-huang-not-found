@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CommonProps } from './CommonProps.js';
 import { PropSet } from './PropSet.js';
+import { Palette } from '../Palette.js';
 
 // Ch1Props: greybox stand-ins for chapter 1 (the foggy mountain road).
 // Same contract as CommonProps.js: each builder gets { prop, size, factory } and returns an
@@ -19,6 +20,72 @@ function hash01(prop, salt) {
 }
 
 const DEG = Math.PI / 180;
+
+/**
+ * Settings of a warm emitter. When the level is viewed with a palette block that does not
+ * define it (e.g. ?palette=blockout), it falls back to that block's accent colour, unlit.
+ */
+function warmSpec(factory, key) {
+  const spec = factory.greybox[key];
+  if (spec && typeof spec.color === 'string') return spec;
+  const accent = factory.emitters.accent;
+  return { color: accent.color, intensity: accent.intensity, light: null };
+}
+
+/** Glowing materials of the warm emitters, one set per PropFactory. */
+const warmMaterials = new WeakMap();
+
+/**
+ * Self-lit material for a warm emitter (palette greybox.<key>): brighter than 1, so it reads
+ * through the fog and feeds the bloom. `levelAt(time)` (optional) animates its brightness.
+ */
+function warmMaterial(factory, key, levelAt) {
+  let cache = warmMaterials.get(factory);
+  if (!cache) {
+    cache = new Map();
+    warmMaterials.set(factory, cache);
+  }
+  let material = cache.get(key);
+  if (!material) {
+    const spec = warmSpec(factory, key);
+    const base = Palette.color(spec.color).multiplyScalar(spec.intensity);
+    material = new THREE.MeshBasicMaterial({ color: base.clone() });
+    material.name = 'glow:' + key;
+    cache.set(key, material);
+    if (levelAt) animate(factory, (time) => material.color.copy(base).multiplyScalar(levelAt(time)));
+  }
+  return material;
+}
+
+/** Point light of a warm emitter: reaches only a few metres. Null when the palette turns it off. */
+function warmLight(factory, key, levelAt) {
+  const spec = warmSpec(factory, key);
+  const cfg = spec.light;
+  if (!cfg || !(cfg.intensity > 0)) return null;
+  const light = new THREE.PointLight(Palette.color(spec.color), cfg.intensity, cfg.distance, cfg.decay);
+  light.name = key + '-light';
+  if (levelAt) animate(factory, (time) => { light.intensity = cfg.intensity * levelAt(time); });
+  return light;
+}
+
+/**
+ * Runs `step(time)` every frame together with the level's other emitters, so a still frame
+ * (?shot=, fixed time) always shows the same state. Emitters has no public hook for this yet;
+ * if its animation list ever goes away the lights simply stop flickering.
+ */
+function animate(factory, step) {
+  step(0);
+  const list = factory.emitters && factory.emitters._animations;
+  if (Array.isArray(list)) list.push(step);
+}
+
+/**
+ * A glowing mesh: not part of the shadow pass. It can still be batched with the others of its
+ * material, because flicker is animated on the shared material, not on the mesh.
+ */
+function glowing(geometry, material) {
+  return new THREE.Mesh(geometry, material);
+}
 
 /** Box part in a palette colour, placed by its bottom centre. */
 function part(factory, colorKey, w, h, d, x, y, z) {
@@ -58,6 +125,7 @@ export class Ch1Props extends PropSet {
     ch1_log: Ch1Props.log,
     ch1_tire: Ch1Props.tire,
     ch1_tent: Ch1Props.tent,
+    ch1_campfire: Ch1Props.campfire,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -304,5 +372,53 @@ export class Ch1Props extends PropSet {
     tent.add(stick(factory, 'ch1Pole', new THREE.Vector3(0, 0, d / 2), new THREE.Vector3(0, h * 0.9, d / 2), 0.025));
     tent.add(part(factory, 'ch1CabinDark', w * 0.7, 0.03, d * 0.9, 0, 0.01, 0));
     return tent;
+  }
+
+  /**
+   * Camp fire: a ring of stones, charred logs and a flame that wavers. Warm light 1 of 3.
+   * The flame and its light share one flicker so the ground brightens with the fire.
+   */
+  static campfire(ctx) {
+    const { factory, size } = ctx;
+    const spec = warmSpec(factory, 'ch1Fire');
+    const radius = Math.min(size.w, size.d) / 2;
+    const fire = new THREE.Group();
+
+    for (let i = 0; i < 8; i++) {
+      const turn = (i / 8) * Math.PI * 2;
+      const stone = part(factory, 'ch1Rock', 0.24, 0.16, 0.2, Math.cos(turn) * radius, 0, Math.sin(turn) * radius);
+      stone.rotation.y = -turn;
+      fire.add(stone);
+    }
+    for (let i = 0; i < 4; i++) {
+      const turn = (i / 4) * Math.PI * 2 + 0.4;
+      fire.add(stick(
+        factory, 'ch1Ember',
+        new THREE.Vector3(Math.cos(turn) * radius * 0.85, 0.05, Math.sin(turn) * radius * 0.85),
+        new THREE.Vector3(-Math.cos(turn) * radius * 0.2, 0.32, -Math.sin(turn) * radius * 0.2),
+        0.05
+      ));
+    }
+
+    const f = spec.flicker || { base: 1, slow: 0, fast: 0 };
+    const level = (time) => f.base + f.slow * Math.sin(time * 9.7) + f.fast * Math.sin(time * 23.3 + 1.7);
+    const flame = warmMaterial(factory, 'ch1Fire', level);
+    [[0, 0.55, 0.2], [0.1, 0.4, 0.13], [-0.09, 0.34, 0.11]].forEach(([x, height, width]) => {
+      const geometry = new THREE.ConeGeometry(width, height, 5);
+      geometry.translate(0, height / 2, 0);
+      const tongue = glowing(geometry, flame);
+      tongue.position.set(x, 0.1, x * 0.6);
+      fire.add(tongue);
+    });
+    const embers = glowing(new THREE.CylinderGeometry(radius * 0.55, radius * 0.6, 0.06, 8), flame);
+    embers.position.y = 0.05;
+    fire.add(embers);
+
+    const light = warmLight(factory, 'ch1Fire', level);
+    if (light) {
+      light.position.set(0, spec.light.height || 0.7, 0);
+      fire.add(light);
+    }
+    return fire;
   }
 }
