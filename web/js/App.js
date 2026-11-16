@@ -131,6 +131,11 @@ export class App {
       const { installGameplay } = await import('./game/installGameplay.js');
       installGameplay(this);
     }
+    if (!options.shot) {
+      // Ways out to other levels and the blocks in front of them; null when the level has none.
+      const { installLevelFlow } = await import('./level/installLevelFlow.js');
+      this.flow = installLevelFlow(this);
+    }
 
     this._resize();
     window.addEventListener('resize', () => this._resize());
@@ -268,6 +273,7 @@ export class App {
     const dt = Math.min(CONFIG.maxFrameTime, Math.max(0, elapsed));
 
     if (!this.game || this.game.canMove) this.player.update(dt);
+    if (this.flow) this.flow.update(dt);
     if (this.game && this.player.locked) {
       this.combat.updateAim();
       this.game.update(dt);
