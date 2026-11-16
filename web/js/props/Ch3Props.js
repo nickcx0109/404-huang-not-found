@@ -140,6 +140,7 @@ export class Ch3Props extends PropSet {
     ch3_blood_smear: Ch3Props.bloodSmear,
     ch3_desk_flipped: Ch3Props.deskFlipped,
     ch3_partition_broken: Ch3Props.partitionBroken,
+    ch3_ceiling_fallen: Ch3Props.ceilingFallen,
   };
 
   /**
@@ -703,6 +704,27 @@ export class Ch3Props extends PropSet {
     const fallen = part(factory, 'ch3Partition', w * 0.45, d, h * 0.8, w * 0.3, 0, (hash01(prop, 2) - 0.5) * 1.2);
     fallen.rotation.y = (hash01(prop, 3) - 0.5) * 1.2;
     group.add(fallen);
+    return group;
+  }
+
+  /**
+   * A stretch of ceiling that has come down on one side: a tilted panel, loose tiles and the
+   * cables that were above it. The origin is at the ceiling.
+   */
+  static ceilingFallen(ctx) {
+    const { factory, size, prop } = ctx;
+    const { w, h, d } = size;
+    const group = new THREE.Group();
+    const panel = part(factory, 'ch3Ceiling', w, 0.05, d, 0, 0, 0);
+    panel.position.set(0, -h * 0.5, 0);
+    panel.rotation.z = (hash01(prop, 1) < 0.5 ? 1 : -1) * (24 + 20 * hash01(prop, 2)) * DEG;
+    group.add(panel);
+    for (let i = 0; i < 4; i++) {
+      const x = (hash01(prop, 10 + i) - 0.5) * w;
+      const z = (hash01(prop, 20 + i) - 0.5) * d;
+      const drop = h * (0.4 + 0.6 * hash01(prop, 30 + i));
+      group.add(stick(factory, 'ch3Cable', v3(x, 0, z), v3(x + (hash01(prop, 40 + i) - 0.5) * 0.5, -drop, z), 0.012, 3));
+    }
     return group;
   }
 }
