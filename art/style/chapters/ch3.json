@@ -62,6 +62,7 @@
     "ch3Pad": "#2f3231",
     "ch3Cage": "#15171a",
     "ch3Vent": "#3d4141",
+    "ch3Parapet": "#252928",
 
     "ch3Fire": {
       "color": "#ff8428",
@@ -79,6 +80,7 @@
     "surfaces": {
       "ground": { "texture": "concrete", "metres": [4, 4], "roughness": 0.7 },
       "collider": { "texture": "stucco", "metres": [3, 3] },
+      "ch3Parapet": { "texture": "concrete", "metres": [3, 1.2] },
       "ch3Pad": { "texture": "metal", "metres": [3, 3] }
     }
   }

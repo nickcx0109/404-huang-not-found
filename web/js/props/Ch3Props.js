@@ -132,6 +132,7 @@ export class Ch3Props extends PropSet {
     ch3_emergency_light: Ch3Props.emergencyLight,
     ch3_work_lamp: Ch3Props.workLamp,
     ch3_vent: Ch3Props.vent,
+    ch3_parapet: Ch3Props.parapet,
   };
 
   /**
@@ -530,5 +531,10 @@ export class Ch3Props extends PropSet {
     unit.add(fan);
     unit.add(part(factory, 'ch3LiftDark', w * 0.8, h * 0.3, 0.03, 0, h * 0.35, -d / 2 - 0.015));
     return unit;
+  }
+
+  /** Low wall around the roof edge. */
+  static parapet(ctx) {
+    return ctx.factory.box(ctx.size, 'ch3Parapet');
   }
 }
