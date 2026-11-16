@@ -1536,6 +1536,24 @@ class Forest {
       row(10.9, 3.9, 1.0, (x, z, near) => { if (!this.inGap(near, x, z)) this.tree(x, z, near, rnd(), rnd(), rnd(), rnd(), false); });
       // far layers: outlines only
       [21, 25.5, 30.5].forEach((offset) => row(offset, 3.1, 2.4, (x, z, near) => this.tree(x, z, near, rnd(), rnd(), 0.3 + rnd() * 0.7, 0, false)));
+      // stumps where trees were cut or snapped, a few of them on the shoulder
+      const stump = paintedOnce('stump', () => {
+        const wood = newBuffers();
+        const shade = () => [0.55, 0.62, 0.5];
+        addTube(wood, [
+          { p: new THREE.Vector3(0, -0.05, 0), r: 0.36 }, { p: new THREE.Vector3(0, 0.3, 0), r: 0.25 },
+          { p: new THREE.Vector3(0.03, 0.62, 0), r: 0.22 }, { p: new THREE.Vector3(0.05, 0.7, 0.02), r: 0.02 },
+        ], 7, shade);
+        return toGeometry(wood);
+      });
+      const stumpAt = (x, z, near) => {
+        this.dummy.position.set(x, 0, z);
+        this.dummy.rotation.set((rnd() - 0.5) * 0.2, rnd() * 6.28, (rnd() - 0.5) * 0.2);
+        this.dummy.scale.set(0.7 + rnd() * 0.8, 0.5 + rnd() * 1.1, 0.7 + rnd() * 0.8);
+        this.plant('stump', near.leg, stump, this.materials().bark, { capacity: 80, receiveShadow: true });
+      };
+      row(10.1, 15, 1.4, stumpAt);
+      row(7.7, 38, 1.2, stumpAt);
       // undergrowth: sparse on the shoulder, thick at the wall
       row(4.2, 1.5, 1.0, (x, z, near) => this.plantAt(x, z, near, rnd() * 0.5, rnd(), 0.35 + rnd() * 0.4));  // grass in the broken edge
       row(6.2, 2.4, 2.2, (x, z, near) => this.plantAt(x, z, near, rnd(), rnd(), 0.6 + rnd() * 0.6));
@@ -1677,17 +1695,28 @@ function buildWeather(factory) {
   const torchColor = emitterColor(factory, 'ch1Torch', '#cfd8d2');
   // Seen from behind the torch a cone would show its rim, so the beam is built from soft round
   // patches standing across it, one behind the other, each as wide as the beam is there.
-  const haze = { positions: [], uvs: [] };
+  const haze = { positions: [], uvs: [], colors: [] };
   [2.2, 3.6, 5.2, 7, 9, 11.5, 14.5].forEach((ahead) => {
     const r = Math.tan(17 * DEG) * ahead * 1.3;
-    [[-r, -r, 0, 0], [r, -r, 1, 0], [r, r, 1, 1], [-r, -r, 0, 0], [r, r, 1, 1], [-r, r, 0, 1]].forEach(([x, y, u, v]) => {
-      haze.positions.push(x, y, -ahead);
-      haze.uvs.push(u, v);
-    });
+    // Each patch stops just above the road and fades out toward that edge (dark vertices add
+    // nothing), so the lit fog does not end in a straight line where it meets the ground.
+    const low = Math.max(-r, -1.5);
+    const fade = Math.min(r, low + 0.7);
+    const rows = [[low, 0], [fade, 1], [r, 1]];
+    for (let i = 0; i < rows.length - 1; i++) {
+      const [y0, c0] = rows[i];
+      const [y1, c1] = rows[i + 1];
+      [[-r, y0, c0], [r, y0, c0], [r, y1, c1], [-r, y0, c0], [r, y1, c1], [-r, y1, c1]].forEach(([x, y, c]) => {
+        haze.positions.push(x, y, -ahead);
+        haze.uvs.push((x / r + 1) / 2, (y / r + 1) / 2);
+        haze.colors.push(c, c, c);
+      });
+    }
   });
   const hazeGeometry = new THREE.BufferGeometry();
   hazeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(haze.positions, 3));
   hazeGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(haze.uvs, 2));
+  hazeGeometry.setAttribute('color', new THREE.Float32BufferAttribute(haze.colors, 3));
   const soft = paintedOnce('soft-disc', () => {
     const canvas = makeCanvas(128, 128);
     const g = canvas.getContext('2d');
@@ -1702,9 +1731,8 @@ function buildWeather(factory) {
     return texture;
   });
   const cone = new THREE.Mesh(hazeGeometry, new THREE.MeshBasicMaterial({
-    map: soft, color: torchColor.clone().multiplyScalar(0.02), transparent: true,
-    // no depth test: where a patch meets the road it would otherwise be cut along a straight line
-    blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+    map: soft, color: torchColor.clone().multiplyScalar(0.012), transparent: true, vertexColors: true,
+    blending: THREE.AdditiveBlending, depthWrite: false,
   }));
   cone.material.name = 'ch1:torch-haze';
   cone.userData.dynamic = true;
@@ -2244,6 +2272,7 @@ export class Ch1Props extends PropSet {
     ch1_car_lights: Ch1Props.carLights,
     ch1_cone: Ch1Props.cone,
     ch1_sign: Ch1Props.sign,
+    ch1_beacon: Ch1Props.beacon,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -2989,6 +3018,14 @@ export class Ch1Props extends PropSet {
     const { group } = Ch1Props.carOf(ctx, {
       color: carColor(factory, 1), shape: 'hatch', doors: [1.1, 1.25, 0.9, 1.05], trunkUp: true, flat: 2,
     });
+    // with the doors open the cabin lamp stays on: a small warm point, and its light on the road around the car
+    const dome = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.03, 0.1), lampMaterial(factory, 'ch1Dome', '#ffd6a0'));
+    dome.position.set(0, 1.27, 0.2);
+    group.add(dome);
+    const spill = new QuadSheet().floor(MARK.soft, 0, 0.2, 7.5, 8.5, 0, 0.058);
+    const spillMesh = spill.mesh(glowSheetMaterial(factory, 'ch1Dome', '#ffd6a0', 0.03));
+    spillMesh.renderOrder = 7;
+    group.add(spillMesh);
     const r = (salt) => hash01(prop, salt);
     for (let i = 0; i < 4; i++) { // cases, one burst open
       const open = i === 0;
@@ -3037,6 +3074,14 @@ export class Ch1Props extends PropSet {
     const marks = sheet.mesh(markMaterial(factory));
     marks.renderOrder = 6;
     group.add(marks);
+    // somebody emptied a magazine from behind the open door
+    const brass = new THREE.CylinderGeometry(0.006, 0.006, 0.024, 5);
+    brass.rotateZ(Math.PI / 2);
+    const cases = seeded(4411);
+    group.add(scatter(brass, factory.material('ch1Brass'), 14, (o) => {
+      o.position.set(-built.half - 0.4 - cases() * 1.6, 0.045, -1.2 + cases() * 1.8);
+      o.rotation.set(0, cases() * 6.28, 0);
+    }));
     return group;
   }
 
@@ -3159,5 +3204,21 @@ export class Ch1Props extends PropSet {
     const placed = new THREE.Group();
     placed.add(sign);
     return placed;
+  }
+
+  /** Road-works warning lamp left standing by a barrier: a slow amber blink low down in the fog. */
+  static beacon(ctx) {
+    const { factory } = ctx;
+    const beacon = new THREE.Group();
+    beacon.add(part(factory, 'ch1Cone', 0.3, 0.06, 0.3, 0, 0, 0));
+    beacon.add(stick(factory, 'ch1Pole', new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0.9, 0), 0.025, 5));
+    const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.12, 8), lampMaterial(factory, 'ch1Hazard', '#ff9a2a', blink));
+    lamp.position.y = 0.96;
+    beacon.add(lamp);
+    const pool = new QuadSheet().floor(MARK.soft, 0, 0, 5, 5, 0, 0.06);
+    const light = pool.mesh(glowSheetMaterial(factory, 'ch1Hazard', '#ff9a2a', 0.05, blink));
+    light.renderOrder = 7;
+    beacon.add(light);
+    return beacon;
   }
 }

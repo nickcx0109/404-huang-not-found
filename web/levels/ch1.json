@@ -1237,7 +1237,9 @@
     {"name": "ch1_sign", "x": -4.9, "y": 0, "z": -66, "rotY": 180},
     {"name": "ch1_sign", "x": 40, "y": 0, "z": -104.6, "rotY": 90},
     {"name": "ch1_sign", "x": 94.6, "y": 0, "z": -112, "rotY": 180},
-    {"name": "ch1_sign", "x": 85.4, "y": 0, "z": -152, "rotY": 180}
+    {"name": "ch1_sign", "x": 85.4, "y": 0, "z": -152, "rotY": 180},
+    {"name": "ch1_beacon", "x": 78.7, "y": 0, "z": -96.4},
+    {"name": "ch1_beacon", "x": 3.4, "y": 0, "z": -24.2}
   ],
 
   "spawns": {

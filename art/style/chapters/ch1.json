@@ -89,6 +89,8 @@
     "ch1CarColors": ["#4a5356", "#5a4f48", "#3c4440", "#57595a", "#44464d", "#5c5348"],
     "ch1EscapeCar": "#7a8386",
     "ch1Cone": "#7a4326",
+    "ch1Brass": "#6d5a2c",
+    "ch1Dome": { "color": "#ffd6a0", "intensity": 2.2 },
 
     "surfaces": {
       "ch1Barrier": { "texture": "concrete", "metres": [2, 1] },
