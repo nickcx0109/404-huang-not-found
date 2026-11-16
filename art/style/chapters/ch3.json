@@ -3,7 +3,8 @@
     "Chapter 3, rescue at headquarters. This file is the palette block \"ch3\" (levels pick it with \"palette\": \"ch3\").",
     "Look: close to pitch black inside an office tower with the power out, and on its roof. The tower is three levels, one file each: web/levels/ch3.json (ground floor), ch3_2f.json (first floor up) and ch3_roof.json. It starts from the chosen mood (heavy) and changes what that look needs; every difference is explained in the PR description.",
     "Almost nothing shows outside the flashlight beam. The guide colour is the orange of the fuel barrels; red emergency lamps pulse on the walls.",
-    "greybox.ch3Fire / ch3Lamp are the warm emitters built by web/js/props/Ch3Props.js: color and intensity of the glowing surface (above 1 feeds the bloom), light = the point light that reaches a few metres around it, flicker = how much the fire wavers. ch3Led is the small cold glow of the server racks."
+    "greybox.ch3Fire / ch3Lamp are the warm emitters built by web/js/props/Ch3Props.js: color and intensity of the glowing surface (above 1 feeds the bloom), light = the point light that reaches a few metres around it, flicker = how much the fire wavers. ch3Led is the small cold glow of the server racks.",
+    "Dynamic lights: flashlight + bin fire + work lamp + one emergency beacon (alarm.light.count 1) = 4, the limit. That is why the moon and the barrel glow light are switched off here."
   ],
   "extends": "mood/heavy",
 
@@ -62,6 +63,11 @@
       "intensity": 6,
       "light": { "intensity": 2.0, "distance": 8, "decay": 2, "height": 1.2 },
       "flicker": { "base": 0.82, "slow": 0.12, "fast": 0.06 }
+    },
+    "ch3Lamp": {
+      "color": "#ffb468",
+      "intensity": 5,
+      "light": { "intensity": 1.9, "distance": 9, "decay": 2 }
     },
     "ch3Led": { "color": "#52ff86", "intensity": 2.4 },
 

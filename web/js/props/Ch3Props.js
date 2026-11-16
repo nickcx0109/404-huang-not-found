@@ -127,6 +127,7 @@ export class Ch3Props extends PropSet {
     ch3_debris: Ch3Props.debris,
     ch3_fire_bin: Ch3Props.fireBin,
     ch3_emergency_light: Ch3Props.emergencyLight,
+    ch3_work_lamp: Ch3Props.workLamp,
   };
 
   /**
@@ -396,6 +397,28 @@ export class Ch3Props extends PropSet {
     if (rig) {
       rig.position.set(0, h * 0.7, -d);
       lamp.add(rig);
+    }
+    return lamp;
+  }
+
+  /** Battery work lamp on a tripod, pointing toward the front (-Z). Warm light 2 of 2. */
+  static workLamp(ctx) {
+    const { factory, size } = ctx;
+    const h = size.h;
+    const lamp = new THREE.Group();
+    const top = v3(0, h * 0.86, 0);
+    for (let i = 0; i < 3; i++) {
+      const turn = (i / 3) * Math.PI * 2 + 0.5;
+      lamp.add(stick(factory, 'ch3Chair', v3(Math.cos(turn) * size.w * 0.5, 0, Math.sin(turn) * size.w * 0.5), top, 0.02, 4));
+    }
+    lamp.add(part(factory, 'ch3Chair', 0.42, 0.26, 0.1, 0, h * 0.84, 0));
+    const face = glowing(new THREE.BoxGeometry(0.36, 0.2, 0.02), glowMaterial(factory, 'ch3Lamp'));
+    face.position.set(0, h * 0.84 + 0.13, -0.06);
+    lamp.add(face);
+    const light = warmLight(factory, 'ch3Lamp');
+    if (light) {
+      light.position.set(0, h * 0.9, -1.2);
+      lamp.add(light);
     }
     return lamp;
   }
