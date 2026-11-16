@@ -1675,7 +1675,40 @@ function buildWeather(factory) {
 
   // ---- the flashlight in the fog: a faint cone and damp specks that only show inside it -----------
   const torchColor = emitterColor(factory, 'ch1Torch', '#cfd8d2');
-  const cone = lightCone(torchColor, 16, 4.6, 0.016);
+  // Seen from behind the torch a cone would show its rim, so the beam is built from soft round
+  // patches standing across it, one behind the other, each as wide as the beam is there.
+  const haze = { positions: [], uvs: [] };
+  [2.2, 3.6, 5.2, 7, 9, 11.5, 14.5].forEach((ahead) => {
+    const r = Math.tan(17 * DEG) * ahead * 1.3;
+    [[-r, -r, 0, 0], [r, -r, 1, 0], [r, r, 1, 1], [-r, -r, 0, 0], [r, r, 1, 1], [-r, r, 0, 1]].forEach(([x, y, u, v]) => {
+      haze.positions.push(x, y, -ahead);
+      haze.uvs.push(u, v);
+    });
+  });
+  const hazeGeometry = new THREE.BufferGeometry();
+  hazeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(haze.positions, 3));
+  hazeGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(haze.uvs, 2));
+  const soft = paintedOnce('soft-disc', () => {
+    const canvas = makeCanvas(128, 128);
+    const g = canvas.getContext('2d');
+    const glow = g.createRadialGradient(64, 64, 0, 64, 64, 62);
+    glow.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    glow.addColorStop(0.5, 'rgba(255, 255, 255, 0.45)');
+    glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    g.fillStyle = glow;
+    g.fillRect(0, 0, 128, 128);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.encoding = THREE.sRGBEncoding;
+    return texture;
+  });
+  const cone = new THREE.Mesh(hazeGeometry, new THREE.MeshBasicMaterial({
+    map: soft, color: torchColor.clone().multiplyScalar(0.02), transparent: true,
+    // no depth test: where a patch meets the road it would otherwise be cut along a straight line
+    blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+  }));
+  cone.material.name = 'ch1:torch-haze';
+  cone.userData.dynamic = true;
+  cone.renderOrder = 20;
   cone.frustumCulled = false;
   cone.matrixAutoUpdate = false;
   weather.add(cone);
@@ -1758,7 +1791,7 @@ function buildWeather(factory) {
     const lit = torch && torch.intensity > 0 ? 1 : 0;
     cone.visible = lit === 1;
     // tip a little below the eye, where the hand holding the torch is
-    cone.matrixWorld.copy(camera.matrixWorld).multiply(aim.makeTranslation(0.1, -0.12, -0.3));
+    cone.matrixWorld.copy(camera.matrixWorld);
     speckMaterial.uniforms.uTime.value = state.time;
     speckMaterial.uniforms.uBeam.value = lit;
     speckMaterial.uniforms.uCell.value.copy(eye);

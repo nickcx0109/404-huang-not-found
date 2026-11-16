@@ -14,11 +14,11 @@
   "flashlight": { "intensity": 2.9, "angle": 17, "penumbra": 0.3, "distance": 26, "decay": 1.4 },
   "post": {
     "exposure": 0.72,
-    "saturation": 0.68,
-    "vignette": { "strength": 0.92, "start": 0.2, "end": 0.95 },
-    "grain": 0.075,
+    "saturation": 0.56,
+    "vignette": { "strength": 0.95, "start": 0.18, "end": 0.95 },
+    "grain": 0.085,
     "chromaticAberration": 0.0025,
-    "bloom": { "enabled": true, "threshold": 0.85, "knee": 0.5, "strength": 0.8, "levels": 3 }
+    "bloom": { "enabled": true, "threshold": 0.8, "knee": 0.5, "strength": 0.9, "levels": 3 }
   },
   "accent": {
     "color": "#ff3b2f",
