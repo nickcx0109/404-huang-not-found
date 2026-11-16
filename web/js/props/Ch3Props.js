@@ -141,6 +141,7 @@ export class Ch3Props extends PropSet {
     ch3_desk_flipped: Ch3Props.deskFlipped,
     ch3_partition_broken: Ch3Props.partitionBroken,
     ch3_ceiling_fallen: Ch3Props.ceilingFallen,
+    ch3_cables: Ch3Props.cables,
   };
 
   /**
@@ -725,6 +726,24 @@ export class Ch3Props extends PropSet {
       const drop = h * (0.4 + 0.6 * hash01(prop, 30 + i));
       group.add(stick(factory, 'ch3Cable', v3(x, 0, z), v3(x + (hash01(prop, 40 + i) - 0.5) * 0.5, -drop, z), 0.012, 3));
     }
+    return group;
+  }
+
+  /** Loose cables hanging from the ceiling. The origin is at the ceiling. */
+  static cables(ctx) {
+    const { factory, size, prop } = ctx;
+    const group = new THREE.Group();
+    const count = 3 + Math.floor(hash01(prop, 1) * 4);
+    for (let i = 0; i < count; i++) {
+      const x = (hash01(prop, 10 + i) - 0.5) * size.w;
+      const z = (hash01(prop, 20 + i) - 0.5) * size.d;
+      const drop = size.h * (0.35 + 0.65 * hash01(prop, 30 + i));
+      const sway = (hash01(prop, 40 + i) - 0.5) * 0.6;
+      const mid = v3(x + sway * 0.5, -drop * 0.55, z);
+      group.add(stick(factory, 'ch3Cable', v3(x, 0, z), mid, 0.011, 3));
+      group.add(stick(factory, 'ch3Cable', mid, v3(x + sway, -drop, z + sway * 0.4), 0.011, 3));
+    }
+    group.traverse((object) => { object.castShadow = false; });
     return group;
   }
 }
