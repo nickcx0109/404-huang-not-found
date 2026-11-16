@@ -1,6 +1,6 @@
 # 程式架構與擴充方式
 
-目前是場景與未來玩法的基礎，不包含武器、敵人、商店或連線實作。玩法資料與外觀保持分離，替換模型不能改變碰撞。
+預設仍是場景展示；`?play=1` 才動態載入單人玩法骨架，各提供一個武器、敵人與商品範例，尚無連線。玩法資料與外觀保持分離，替換模型不能改變碰撞。契約、設計模式與組員擴充步驟見 [GAMEPLAY.md](GAMEPLAY.md)。
 
 ## 啟動與版本
 
@@ -17,7 +17,7 @@
 | `App`、`AppOptions` | 解析網址參數並組合場景、氣氛、控制器與 HUD；每個 App 擁有一個 `events` |
 | `LevelData`、`LevelError` | 讀取、驗證、正規化關卡 JSON，提供 collider／bookmark／marker 查詢；不依賴 Three.js 或 DOM |
 | `CollisionWorld`、`Aabb` | 只依關卡 colliders 建立碰撞，處理移動與滑牆；不讀外觀 |
-| `PathFinder` | 依碰撞網格尋路，供關卡可達性檢查與既有替身展示；不是敵人 AI |
+| `PathFinder` | 展示用 findPath 維持既有行為；玩法另用預配置 buffer 的 createRoute／findPathInto，Brain 決定何時重算 |
 | `SceneBuilder`、`BuiltLevel` | 將資料組成碰撞與場景，整合工廠、靜態合併、模型實例化與除錯標記 |
 | `PropFactory` | 名稱到外觀：已載入模型 → 已註冊替身 → 灰色方塊；保留所有權重複警告 |
 | `props/PropSet` | 以繼承統一道具 builders 與模型 extras 的註冊，不依賴 Three.js 執行期 |
@@ -27,6 +27,11 @@
 | `Atmosphere`、`Flashlight`、`PostFX` | 霧、環境光、手電筒與後製；數值仍由 palette 決定 |
 | `PlayerController`、`Hud` | 既有走動／滑鼠鎖定控制，以及 DOM 提示、錯誤與效能資訊 |
 | `core/` | 不需 Three.js、DOM 或外部套件的 Observer、物件池與 State pattern |
+| `game/`、`game/states/` | App 擁有 GameSession，GameContext 傳遞依賴；四種 State、WaveDirector、集中事件常數。installGameplay 是唯一跨模組具體範例組合點 |
+| `entities/` | 純邏輯 Entity、Damageable 組合、DamageInfo 值物件與 DamagePipeline 責任鏈 |
+| `weapons/`、`player/` | Weapon 模板、HitscanFire 策略、Pistol 範例、WeaponHolder、玩家戰鬥與瀏覽器輸入；PlayerBody 是共用尺寸來源 |
+| `enemies/`、`enemies/behaviour/` | Enemy 基底、Brain 策略、最小行為樹、Walker 範例、註冊 Factory 與 ObjectPool |
+| `economy/`、`ui/` | Wallet、Economy、ShopItem 與唯一補彈範例；GameplayHud 繼承既有 Hud，不替換錯誤面板 |
 
 原有檔名及類別名保留；同檔原本公開的輔助類別（例如 `Aabb`、`LevelError`、`AppOptions`、`BuiltLevel`）也用具名 export 匯出。
 
@@ -54,7 +59,7 @@
 
 `emit(event, ...args)` 同步依註冊順序傳送，回傳呼叫筆數。傳送中新增的訂閱留到下次；已取消的訂閱不再呼叫。`once` 在呼叫前移除，所以遞迴 emit 不會重複觸發。回呼錯誤直接往外拋，後續回呼不繼續執行。
 
-App 目前只建立並公開 `app.events`，尚未發送或訂閱玩法事件：
+App 建立並公開 `app.events`；只有 play 模式會由玩法模組發送／訂閱 `game/events.js` 的事件。一般事件使用方式：
 
 ```js
 const unsubscribe = app.events.on('preview-ready', (detail) => console.log(detail));
@@ -66,13 +71,13 @@ unsubscribe();
 
 `new ObjectPool(factory, reset)` 延遲建立物件；`acquire()` 優先取最後釋放的物件，沒有才呼叫 factory。`release(object)` 先執行 reset 再歸還，可用 `activeCount`、`availableCount` 觀察數量；reset 可省略。
 
-只能釋放自己從此池借出的物件，重複或外來物件會拋錯；factory 不能回傳仍借出的同一個物件。reset 失敗時物件仍屬於借出狀態，可修復後重試。此類別尚未接到任何場景或玩法系統。
+只能釋放自己從此池借出的物件，重複或外來物件會拋錯；factory 不能回傳仍借出的同一個物件。reset 失敗時物件仍屬於借出狀態，可修復後重試。play 模式的 EnemyFactory 每種類型持有一個池，死亡後隱藏並歸還。
 
 ### State 與 StateMachine：State pattern
 
 繼承 `State`，只覆寫需要的 `enter(context, previous)`、`exit(context, next)`、`update(dt, context)`。`new StateMachine(context)` 起初沒有狀態，`change(state)` 先退出舊狀態再進入新狀態；同一實例不重進，`change(null)` 停止。`update(dt)` 只更新目前狀態，dt 單位為秒。
 
-可在 update 要求轉換，不可在 enter／exit 遞迴 change。生命週期錯誤會往外拋；exit 失敗保留舊狀態，enter 失敗則保留已切換的新狀態，轉換鎖都會解除。狀態機尚未接到 App 更新迴圈。
+可在 update 要求轉換，不可在 enter／exit 遞迴 change。生命週期錯誤會往外拋；exit 失敗保留舊狀態，enter 失敗則保留已切換的新狀態，轉換鎖都會解除。play 模式由 App → GameSession → StateMachine 更新；未鎖定滑鼠時暫停玩法時鐘。
 
 ## 驗證與工具介面
 
@@ -80,4 +85,4 @@ unsubscribe();
 - `node tools/art/assets.mjs check` 不需 Blender；`all --all` 還會建置、預覽，需 Blender 4.2 LTS。失敗時先對照主分支，不能為重構順便改美術。
 - 截圖維持 `node tools/art/shots.mjs --level ch2 --out <目錄>`；可用 `--format png` 與預先拍下的同機位影像逐像素比較。走動模式另外確認沒有 console error。
 - `?level`、`?shot`、`?t`、`?debug`、`?perf`、`?models` 等既有參數不變。`window.__ready`、`window.__error`、`window.__stats`、`window.__app` 保留給工具；它們不是舊式的類別命名空間。
-- 既有已知問題仍以 [KNOWN_ISSUES.md](KNOWN_ISSUES.md) 為準，本次不改關卡、材質、燈光或那些行為。
+- 已知問題以 [KNOWN_ISSUES.md](KNOWN_ISSUES.md) 為準；#1 起始重疊瞬移與 #2 出生點尺寸檢查已各自修復及加測試。沒有改關卡、材質、palette 或既有燈光；mood 新增一個正確的出生點重疊警告。
