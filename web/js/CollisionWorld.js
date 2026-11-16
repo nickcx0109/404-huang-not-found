@@ -1,6 +1,7 @@
 // CollisionWorld: axis-aligned boxes built from LevelData.colliders.
 // Knows nothing about meshes, so visuals can change without touching collision.
 const SKIN = 0.001; // keeps a resolved body from touching the face it was pushed out of
+const RAY_AXES = [['x', 'minX', 'maxX'], ['y', 'minY', 'maxY'], ['z', 'minZ', 'maxZ']];
 
 export class Aabb {
   constructor(minX, minY, minZ, maxX, maxY, maxZ, id) {
@@ -29,6 +30,27 @@ export class Aabb {
       z + r > this.minZ && z - r < this.maxZ &&
       y1 > this.minY && y0 < this.maxY
     );
+  }
+
+  rayDistance(origin, direction, maxDistance) {
+    let near = 0;
+    let far = maxDistance;
+    for (const axis of RAY_AXES) {
+      const start = origin[axis[0]];
+      const delta = direction[axis[0]];
+      const minimum = this[axis[1]];
+      const maximum = this[axis[2]];
+      if (Math.abs(delta) < 1e-10) {
+        if (start < minimum || start > maximum) return Infinity;
+      } else {
+        const entry = (minimum - start) / delta;
+        const exit = (maximum - start) / delta;
+        near = Math.max(near, Math.min(entry, exit));
+        far = Math.min(far, Math.max(entry, exit));
+        if (near > far) return Infinity;
+      }
+    }
+    return near;
   }
 }
 
@@ -64,17 +86,44 @@ export class CollisionWorld {
     return null;
   }
 
+  raycast(origin, direction, maxDistance) {
+    let distance = Infinity;
+    for (const box of this.boxes) distance = Math.min(distance, box.rayDistance(origin, direction, maxDistance));
+    return distance;
+  }
+
   /**
    * Moves a column (half-size r, spanning y0..y1) from (x, z) by (dx, dz), sliding along boxes.
    * Axes are resolved one at a time, and long moves are split so thin walls cannot be skipped.
    * @returns {{x:number, z:number, hitX:boolean, hitZ:boolean}}
    */
-  move(x, z, dx, dz, r, y0, y1) {
+  move(x, z, dx, dz, r, y0, y1, result = {}) {
     const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dz)) / r));
     const sx = dx / steps;
     const sz = dz / steps;
     let hitX = false;
     let hitZ = false;
+
+    for (let pass = 0; pass < this.boxes.length; pass++) {
+      let resolved = false;
+      for (const box of this.boxes) {
+        if (!box.overlapsColumn(x, z, r, y0, y1)) continue;
+        const left = x - box.minX + r;
+        const right = box.maxX - x + r;
+        const front = z - box.minZ + r;
+        const back = box.maxZ - z + r;
+        const depth = Math.min(left, right, front, back);
+        if (depth === left || depth === right) {
+          x = depth === left ? box.minX - r - SKIN : box.maxX + r + SKIN;
+          hitX = true;
+        } else {
+          z = depth === front ? box.minZ - r - SKIN : box.maxZ + r + SKIN;
+          hitZ = true;
+        }
+        resolved = true;
+      }
+      if (!resolved) break;
+    }
 
     for (let s = 0; s < steps; s++) {
       if (sx !== 0) {
@@ -107,6 +156,10 @@ export class CollisionWorld {
       x = cx;
       z = cz;
     }
-    return { x, z, hitX, hitZ };
+    result.x = x;
+    result.z = z;
+    result.hitX = hitX;
+    result.hitZ = hitZ;
+    return result;
   }
 }

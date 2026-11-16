@@ -9,6 +9,25 @@ function worldWithBounds() {
   return world;
 }
 
+test('PathFinder gameplay routes reuse typed buffers and never cut blocked corners', () => {
+  const world = worldWithBounds();
+  world.add(new Aabb(4.5, 0, 3, 5.5, 3, 7));
+  const finder = new PathFinder(world);
+  const route = finder.createRoute();
+  const points = route.points;
+  assert.equal(finder.findPathInto(1.25, 5.25, 8.25, 5.25, route), true);
+  assert.equal(route.points[0], 1.25);
+  assert.equal(route.points[(route.length - 1) * 2], 8.25);
+  for (let index = 0; index < route.length; index++) {
+    assert.equal(world.hit(points[index * 2], points[index * 2 + 1], finder.radius, 0, finder.height), null);
+  }
+  assert.equal(finder.findPathInto(-100, -100, 8, 8, route), false);
+  assert.equal(route.length, 0);
+  assert.equal(finder.findPathInto(1.25, 5.25, 1.25, 5.25, route), true);
+  assert.equal(route.length, 1);
+  assert.equal(route.points, points);
+});
+
 test('PathFinder finds a repeatable walkable route around an obstacle', () => {
   const world = worldWithBounds();
   world.add(new Aabb(4.5, 0, 3, 5.5, 3, 7));

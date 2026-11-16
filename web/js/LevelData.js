@@ -1,6 +1,8 @@
 // LevelData: loads web/levels/<name>.json, validates it and exposes a normalised,
 // read-only description of a level. Gameplay data only: no meshes, no colours.
 // Format reference: web/levels/README.md
+import { PLAYER_BODY } from './player/PlayerBody.js';
+
 const NAME_PATTERN = /^[A-Za-z0-9_-]+$/;
 const RAD2DEG = 180 / Math.PI;
 
@@ -367,10 +369,12 @@ export class LevelData {
   }
 
   _checkSpawnsAreFree(v) {
-    const inside = (s, c) =>
-      c.y < 1.8 &&
-      Math.abs(s.x - c.x) < c.w / 2 &&
-      Math.abs(s.z - c.z) < c.d / 2;
+    const inside = (spawn, collider) => {
+      if (collider.y >= PLAYER_BODY.height || collider.y + collider.h <= 0) return false;
+      const dx = Math.max(0, Math.abs(spawn.x - collider.x) - collider.w / 2);
+      const dz = Math.max(0, Math.abs(spawn.z - collider.z) - collider.d / 2);
+      return dx * dx + dz * dz < PLAYER_BODY.radius * PLAYER_BODY.radius;
+    };
     const check = (list, path) =>
       list.forEach((s, i) => {
         const hit = this.colliders.find((c) => inside(s, c));

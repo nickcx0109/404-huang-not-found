@@ -4,8 +4,8 @@
 
 | # | 嚴重度 | 位置 | 問題 | 會發生什麼 | 修法方向 |
 |---|---|---|---|---|---|
-| 1 | 🔴 先修 | `web/js/CollisionWorld.js:88`（Z 軸在 :98） | `move()` 用「移動方向」決定往哪邊推出去，而不是用「陷進去多深」 | 玩家一開始就跟箱子重疊（例如出生點離箱子不到 0.35 m），往遠離箱子的方向走時，會被推到箱子另一邊（瞬移穿牆） | 依兩側的穿透深度選最短的推出方向；或先把起始重疊解開再移動 |
-| 2 | 🟠 | `web/js/LevelData.js:336` `_checkSpawnsAreFree` | 只檢查出生點的中心點，沒有算玩家半徑 0.35 m；身高 1.8 m 是寫死的，抄自 PlayerController | 出生點離牆 0.2 m 不會警告，第一步就會觸發第 1 項 | 用玩家的圓柱（半徑＋身高）檢查，數值從同一個地方讀 |
+| 1 | ✅ 已修復 | `web/js/CollisionWorld.js` | 起始重疊先按最小穿透深度解開，再分軸移動 | 四個方向、原地重疊與滑牆皆有回歸測試 | `fix(collision): depenetrate overlapping bodies before movement` |
+| 2 | ✅ 已修復 | `web/js/LevelData.js`、`player/PlayerBody.js` | 出生點以玩家圓柱檢查（含角落、上下高度） | `PlayerController` 與驗證器共用 `PLAYER_BODY` | `fix(level): validate spawns against shared player dimensions` |
 | 3 | 🟠 | `web/levels/mood.json:81`、`web/js/PropFactory.js:52-54` | 綁了 collider 的道具，旋轉或縮放後，外觀會超出碰撞盒 | mood 的 `car_wreck` 轉 28°，玩家可以走進車角約 0.18 m | LevelData 驗證時發出警告；或讓碰撞盒依旋轉後的外框計算 |
 | 4 | 🟡 | `tools/serve.mjs:63` | 隱藏檔過濾只擋開頭是 `.` 的路徑；Windows 的 8.3 短檔名（如 `GIT~1`）可以繞過 | 用 `HOST=0.0.0.0` 開放給區網時，別人可能讀到 `.git/config`、`.env` | 解析成真實路徑後再檢查，或只開放 `web/`、`art/` 等白名單資料夾 |
 | 5 | 🟡 | `web/js/PostFX.js:305` | `bloom.levels \|\| 3` 會把 0 當成沒有設定 | palette 設 `levels: 0` 想省效能，結果變成 3 層 | 改用 `??` 或明確判斷 undefined，再限制最小值 1 |

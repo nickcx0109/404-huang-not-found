@@ -1,11 +1,10 @@
 import * as THREE from 'three';
+import { PLAYER_BODY } from './player/PlayerBody.js';
 
 // PlayerController: first-person walking. Pointer-lock mouse look + WASD,
 // eye height 1.7 m, AABB collision against the level's CollisionWorld.
 const DEFAULTS = Object.freeze({
-  eyeHeight: 1.7,   // m
-  height: 1.8,      // m, collision column
-  radius: 0.35,     // m, half-size of the collision column
+  ...PLAYER_BODY,
   walkSpeed: 4.5,   // m/s
   sprintSpeed: 7.0, // m/s, hold Shift
   acceleration: 14, // how quickly velocity follows the keys (1/s)
@@ -43,6 +42,7 @@ export class PlayerController {
     /** Keys only move the player while enabled (pointer locked). */
     this.enabled = false;
     this.onLockChange = null;
+    this._movement = { x: 0, z: 0, hitX: false, hitZ: false };
 
     this._keys = { forward: false, back: false, left: false, right: false, sprint: false };
     this.camera.rotation.order = 'YXZ';
@@ -112,7 +112,7 @@ export class PlayerController {
       const moved = this.collision.move(
         this.x, this.z,
         this.velocityX * dt, this.velocityZ * dt,
-        o.radius, 0, o.height
+        o.radius, 0, o.height, this._movement
       );
       this.x = moved.x;
       this.z = moved.z;

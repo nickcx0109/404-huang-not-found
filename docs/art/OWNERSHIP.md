@@ -6,7 +6,20 @@
 - **共用檔案**：改之前先跟組長說，由一個人改、大家再更新。
 - **別章的檔案**：不要改。需要別章的東西，請那一章的人做。
 
-## 每章自己的檔案
+## 玩法模組分工（獨立於章節美術）
+
+玩法契約與操作步驟見 [GAMEPLAY.md](../tech/GAMEPLAY.md)。這次只交共用骨架與 Pistol／Walker／AmmoRefillItem 各一個範例；其他具體內容由各組員自己實作、測試並提交自己的 commit。
+
+| 負責人 | 主要範圍 | 起點 |
+|---|---|---|
+| A | `web/js/weapons/`、玩家戰鬥 `player/CombatPlayer.js`／`player/PlayerCombat.js` | Weapon、Pistol、WeaponHolder；test/Weapon.test.js |
+| B | `web/js/enemies/`、`game/WaveDirector.js` 的波次內容 | Enemy、Walker、Brain、EnemyFactory；test/Enemy.test.js |
+| C | `web/js/game/states/`、`web/js/economy/`、`web/js/ui/` | 四種 State、ShopItem、AmmoRefillItem、GameplayHud；GameSession／Economy／GameplayHud 測試 |
+| 共用：A、B、C 都必須同意 | `web/js/entities/`、`game/GameContext.js`／`GameSession.js`／`events.js`／`installGameplay.js`、`core/`、`player/PlayerBody.js`，以及原有引擎 | 事件 schema、生命週期、傷害／勝負權威、組合註冊與共用尺寸不可單方面修改 |
+
+新增模組用自己的新檔與對應測試，避免三人同時改同一個範例。需要在共享組合入口註冊時，先協調由一人整合；各自功能 commit 保留本人紀錄。波次與狀態的**內容**分別歸 B／C，Session 核心與事件**契約**仍屬共用。這不改變下方的美術／關卡所有權。
+
+## 每章自己的檔案清單
 
 把 `N` 換成自己的章（1、2、3）。
 

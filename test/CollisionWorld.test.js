@@ -2,6 +2,30 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Aabb, CollisionWorld } from '../web/js/CollisionWorld.js';
 
+test('CollisionWorld depenetrates the nearest face before moving away or standing still', () => {
+  const world = new CollisionWorld();
+  world.add(new Aabb(-1, 0, -1, 1, 3, 1));
+  for (const [startX, startZ, dx, dz, axis, sign] of [
+    [-1.2, 0, -0.1, 0, 'x', -1], [1.2, 0, 0.1, 0, 'x', 1],
+    [0, -1.2, 0, -0.1, 'z', -1], [0, 1.2, 0, 0.1, 'z', 1],
+    [-1.2, 0, 0, 0, 'x', -1], [0.9, 0, -0.05, 0, 'x', 1],
+  ]) {
+    const moved = world.move(startX, startZ, dx, dz, 0.35, 0, 1.8);
+    assert.ok(moved[axis] * sign > 1.35);
+    assert.equal(world.hit(moved.x, moved.z, 0.35, 0, 1.8), null);
+  }
+});
+
+test('CollisionWorld resolves shallow corner penetration without losing wall sliding', () => {
+  const world = new CollisionWorld();
+  world.add(new Aabb(-1, 0, -4, 1, 3, 4));
+  const moved = world.move(-1.2, 0, 0, 2, 0.35, 0, 1.8);
+  assert.ok(moved.x < -1.35);
+  assert.ok(Math.abs(moved.z - 2) < 1e-9);
+  assert.equal(moved.hitX, true);
+  assert.equal(moved.hitZ, false);
+});
+
 test('Aabb maps base-centred colliders and uses strict column overlap on every axis', () => {
   const box = Aabb.fromCollider({ id: 'raised', x: 2, y: 2, z: 3, w: 4, h: 3, d: 6 });
   assert.deepEqual([box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ], [0, 2, 0, 4, 5, 6]);
