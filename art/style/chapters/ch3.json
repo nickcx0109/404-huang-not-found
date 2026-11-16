@@ -9,6 +9,7 @@
   "fog": { "color": "#0c0f0e", "density": 0.07 },
   "hemisphere": { "sky": "#384446", "ground": "#040605", "intensity": 0.055 },
   "moon": { "intensity": 0 },
+  "flashlight": { "intensity": 3.0, "angle": 18, "penumbra": 0.3, "distance": 26, "decay": 1.4 },
   "accent": {
     "color": "#ffb020"
   }
