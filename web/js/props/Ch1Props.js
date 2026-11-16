@@ -128,6 +128,8 @@ export class Ch1Props extends PropSet {
     ch1_campfire: Ch1Props.campfire,
     ch1_cabin: Ch1Props.cabin,
     ch1_bulb_string: Ch1Props.bulbString,
+    ch1_turn_sign_right: Ch1Props.turnSignRight,
+    ch1_turn_sign_left: Ch1Props.turnSignLeft,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -514,5 +516,43 @@ export class Ch1Props extends PropSet {
       string.add(light);
     }
     return string;
+  }
+
+  /** Bend warning board whose chevrons point to the right of someone facing it. */
+  static turnSignRight(ctx) {
+    return Ch1Props._turnSign(ctx, -1);
+  }
+
+  /** Bend warning board whose chevrons point to the left of someone facing it. */
+  static turnSignLeft(ctx) {
+    return Ch1Props._turnSign(ctx, 1);
+  }
+
+  /**
+   * A dark board on two posts with three faintly glowing chevrons (palette greybox.ch1Sign).
+   * It has no light of its own: it is a marker to walk toward, not a lamp. Front toward -Z;
+   * `direction` is +1 when the chevrons point toward +X, -1 toward -X.
+   */
+  static _turnSign(ctx, direction) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const boardHeight = Math.min(0.55, h * 0.34);
+    const sign = new THREE.Group();
+    [-1, 1].forEach((side) => sign.add(part(factory, 'ch1Pole', 0.07, h, 0.07, side * w * 0.36, 0, d / 2)));
+    sign.add(part(factory, 'ch1Pole', w, boardHeight, d, 0, h - boardHeight, 0));
+
+    const paint = warmMaterial(factory, 'ch1Sign');
+    const centreY = h - boardHeight / 2;
+    const arm = boardHeight * 0.3;
+    const bar = new THREE.BoxGeometry(arm * 2 * Math.SQRT2 * 0.5 + 0.05, 0.06, 0.02);
+    [-1, 0, 1].forEach((slot) => {
+      [-1, 1].forEach((half) => {
+        const stroke = glowing(bar, paint);
+        stroke.position.set(slot * w * 0.28, centreY + half * arm * 0.5, -d / 2 - 0.012);
+        stroke.rotation.z = -half * direction * (Math.PI / 4);
+        sign.add(stroke);
+      });
+    });
+    return sign;
   }
 }
