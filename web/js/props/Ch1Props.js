@@ -6,7 +6,10 @@ import { PropSet } from './PropSet.js';
 // Same contract as CommonProps.js: each builder gets { prop, size, factory } and returns an
 // Object3D around the origin — metres, +Y up, front toward -Z, origin at bottom centre.
 // Colours come from the palette. Use names that say "chapter 1" or are clearly its own
-// (tree, guardrail, escape_car); a name may only be registered by one file.
+// (tree, guardrail, escape_car, ch1_*); a name may only be registered by one file.
+//
+// The chapter's three warm lights (camp fire, cabin window, string of bulbs) are built here.
+// Their colours and strengths are the palette's greybox.ch1Fire / ch1Window / ch1Bulb.
 //
 // Chapter 1 files only; shared stand-ins belong in CommonProps.js.
 /** Deterministic 0..1 number from a prop's position: a level looks the same on every load. */
@@ -14,6 +17,9 @@ function hash01(prop, salt) {
   const s = Math.sin(prop.x * 127.1 + prop.z * 311.7 + salt * 74.7) * 43758.5453;
   return s - Math.floor(s);
 }
+
+const DEG = Math.PI / 180;
+
 export class Ch1Props extends PropSet {
   static id = 'ch1';
 
@@ -22,25 +28,38 @@ export class Ch1Props extends PropSet {
     escape_car: Ch1Props.escapeCar,
   };
 
-  /** Bare dead tree: a tapered trunk with a few leafless branches. */
+  /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
   static tree(ctx) {
     const { factory, size, prop } = ctx;
     const tree = new THREE.Group();
-    tree.add(factory.cylinder(size, 'tree', 6, 0.2));
+    const trunk = factory.cylinder(size, 'tree', 6, 0.2);
+    trunk.rotation.z = (hash01(prop, 2) - 0.5) * 8 * DEG;
+    trunk.rotation.x = (hash01(prop, 3) - 0.5) * 8 * DEG;
+    tree.add(trunk);
 
     const trunkRadius = Math.min(size.w, size.d) / 2;
-    const branches = 2 + Math.floor(hash01(prop, 1) * 3);
+    const branches = 3 + Math.floor(hash01(prop, 1) * 3);
     for (let i = 0; i < branches; i++) {
-      const length = size.h * (0.22 + 0.2 * hash01(prop, 10 + i));
-      const geometry = new THREE.CylinderGeometry(0.02, trunkRadius * 0.28, length, 4);
+      const length = size.h * (0.24 + 0.22 * hash01(prop, 10 + i));
+      const geometry = new THREE.CylinderGeometry(0.02, trunkRadius * 0.3, length, 4);
       geometry.translate(0, length / 2, 0);
       const branch = new THREE.Mesh(geometry, factory.material('tree'));
       branch.castShadow = true;
       branch.receiveShadow = true;
-      branch.position.y = size.h * (0.45 + 0.4 * hash01(prop, 20 + i));
+      branch.position.y = size.h * (0.4 + 0.45 * hash01(prop, 20 + i));
       branch.rotation.order = 'YXZ';
       branch.rotation.y = hash01(prop, 30 + i) * Math.PI * 2;
-      branch.rotation.z = THREE.MathUtils.degToRad(30 + 35 * hash01(prop, 40 + i));
+      branch.rotation.z = (32 + 38 * hash01(prop, 40 + i)) * DEG;
+
+      // One twig forking off each branch breaks up the silhouette against the fog.
+      const twigLength = length * 0.5;
+      const twigGeometry = new THREE.CylinderGeometry(0.012, trunkRadius * 0.12, twigLength, 3);
+      twigGeometry.translate(0, twigLength / 2, 0);
+      const twig = new THREE.Mesh(twigGeometry, factory.material('tree'));
+      twig.castShadow = true;
+      twig.position.y = length * 0.55;
+      twig.rotation.z = -(35 + 25 * hash01(prop, 50 + i)) * DEG;
+      branch.add(twig);
       tree.add(branch);
     }
     return tree;
