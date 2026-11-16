@@ -82,6 +82,13 @@
     "ch1Mist": { "color": "#34423f", "intensity": 1 },
     "ch1Torch": { "color": "#cfd8d2", "intensity": 1 },
     "ch1Lamp": { "color": "#ffd9a0", "intensity": 3.2 },
+    "ch1Hazard": { "color": "#ff9a2a", "intensity": 4 },
+    "ch1Headlamp": { "color": "#ffe2b0", "intensity": 1.5 },
+    "ch1TailGlow": { "color": "#ff3b2f", "intensity": 1 },
+    "ch1Smoke": { "color": "#4a4f4e", "intensity": 1 },
+    "ch1CarColors": ["#4a5356", "#5a4f48", "#3c4440", "#57595a", "#44464d", "#5c5348"],
+    "ch1EscapeCar": "#7a8386",
+    "ch1Cone": "#7a4326",
 
     "surfaces": {
       "ch1Barrier": { "texture": "concrete", "metres": [2, 1] },
