@@ -40,6 +40,7 @@
     "ch1BarrierStripe": "#7a2f24",
     "ch1Trash": "#2d2c26",
     "ch1TrashPale": "#69665a",
+    "ch1Weed": "#232b1c",
 
     "surfaces": {
       "ground": { "texture": "stone", "metres": [5, 5], "roughness": 0.9 },

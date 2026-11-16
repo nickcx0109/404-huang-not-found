@@ -38,6 +38,7 @@ export class Ch1Props extends PropSet {
     ch1_barrier_fallen: Ch1Props.barrierFallen,
     ch1_car_flipped: Ch1Props.carFlipped,
     ch1_trash: Ch1Props.trash,
+    ch1_weeds: Ch1Props.weeds,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -196,5 +197,25 @@ export class Ch1Props extends PropSet {
       pile.add(piece);
     }
     return pile;
+  }
+
+  /** Clump of tall dry weeds: thin blades leaning away from the middle. */
+  static weeds(ctx) {
+    const { factory, size, prop } = ctx;
+    const clump = new THREE.Group();
+    const blades = 9 + Math.floor(hash01(prop, 1) * 7);
+    for (let i = 0; i < blades; i++) {
+      const height = size.h * (0.45 + 0.55 * hash01(prop, 10 + i));
+      const geometry = new THREE.ConeGeometry(0.035, height, 3);
+      geometry.translate(0, height / 2, 0);
+      const blade = new THREE.Mesh(geometry, factory.material('ch1Weed'));
+      blade.receiveShadow = true;
+      const turn = hash01(prop, 20 + i) * Math.PI * 2;
+      const out = hash01(prop, 30 + i);
+      blade.position.set(Math.cos(turn) * out * size.w * 0.5, 0, Math.sin(turn) * out * size.d * 0.5);
+      blade.rotation.set(Math.sin(turn) * out * 0.5, 0, -Math.cos(turn) * out * 0.5);
+      clump.add(blade);
+    }
+    return clump;
   }
 }
