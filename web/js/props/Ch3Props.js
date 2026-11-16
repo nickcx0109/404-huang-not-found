@@ -135,6 +135,9 @@ export class Ch3Props extends PropSet {
     ch3_parapet: Ch3Props.parapet,
     ch3_stairs: Ch3Props.stairs,
     ch3_stair_hole: Ch3Props.stairHole,
+    ch3_blood_pool: Ch3Props.bloodPool,
+    ch3_blood_trail: Ch3Props.bloodTrail,
+    ch3_blood_smear: Ch3Props.bloodSmear,
   };
 
   /**
@@ -595,5 +598,84 @@ export class Ch3Props extends PropSet {
       });
     }
     return hole;
+  }
+
+  // ---- wreckage: what the building looks like after it was overrun ----------------------
+
+  /** Dried blood on the floor: one pool with smaller spots flung out from it. */
+  static bloodPool(ctx) {
+    const { factory, size, prop } = ctx;
+    const pool = new THREE.Group();
+    const blot = (radius, x, z, lift) => {
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 0.006, 9), factory.material('ch3Blood'));
+      disc.position.set(x, 0.004 + lift, z);
+      disc.scale.z = 0.6 + 0.8 * hash01(prop, Math.round(radius * 1000) + Math.round(x * 100));
+      disc.rotation.y = hash01(prop, Math.round(z * 100) + 5) * Math.PI;
+      disc.receiveShadow = true;
+      pool.add(disc);
+    };
+    const reach = Math.min(size.w, size.d) / 2;
+    blot(reach * 0.55, 0, 0, 0);
+    blot(reach * 0.4, reach * 0.3, reach * 0.2, 0.001);
+    const spots = 6 + Math.floor(hash01(prop, 1) * 7);
+    for (let i = 0; i < spots; i++) {
+      const turn = hash01(prop, 10 + i) * Math.PI * 2;
+      const out = reach * (0.5 + 0.7 * hash01(prop, 30 + i));
+      blot(0.03 + 0.09 * hash01(prop, 50 + i), Math.cos(turn) * out, Math.sin(turn) * out, 0.002);
+    }
+    return pool;
+  }
+
+  /** Something was dragged across the floor: broken streaks along the longer side of `size`. */
+  static bloodTrail(ctx) {
+    const { factory, size, prop } = ctx;
+    const alongZ = size.d >= size.w;
+    const length = alongZ ? size.d : size.w;
+    const width = alongZ ? size.w : size.d;
+    const trail = new THREE.Group();
+    const pieces = Math.max(4, Math.round(length / 0.7));
+    for (let i = 0; i < pieces; i++) {
+      if (hash01(prop, 10 + i) < 0.18) continue;
+      const along = -length / 2 + (length * (i + 0.5)) / pieces;
+      const across = (hash01(prop, 30 + i) - 0.5) * width * 0.5;
+      const streakLength = (length / pieces) * (0.7 + 0.5 * hash01(prop, 50 + i));
+      const streakWidth = width * (0.25 + 0.4 * hash01(prop, 70 + i));
+      const streak = alongZ
+        ? part(factory, 'ch3Blood', streakWidth, 0.005, streakLength, across, 0.003, along)
+        : part(factory, 'ch3Blood', streakLength, 0.005, streakWidth, along, 0.003, across);
+      streak.castShadow = false;
+      trail.add(streak);
+    }
+    return trail;
+  }
+
+  /**
+   * Blood on a wall: a smeared patch with runs dripping from it and a hand print or two.
+   * It lies in the plane of the wall; the front (-Z) is the side people see.
+   */
+  static bloodSmear(ctx) {
+    const { factory, size, prop } = ctx;
+    const { w, h } = size;
+    const smear = new THREE.Group();
+    const flat = (pw, ph, x, y) => {
+      const piece = part(factory, 'ch3Blood', pw, ph, 0.006, x, y, 0);
+      piece.castShadow = false;
+      smear.add(piece);
+      return piece;
+    };
+    flat(w * 0.6, h * 0.22, (hash01(prop, 1) - 0.5) * w * 0.2, h * 0.62).rotation.z = (hash01(prop, 2) - 0.5) * 0.5;
+    const runs = 4 + Math.floor(hash01(prop, 3) * 5);
+    for (let i = 0; i < runs; i++) {
+      const length = h * (0.15 + 0.5 * hash01(prop, 10 + i));
+      flat(0.025 + 0.03 * hash01(prop, 20 + i), length, (hash01(prop, 30 + i) - 0.5) * w * 0.7, h * 0.66 - length);
+    }
+    const hands = hash01(prop, 4) < 0.5 ? 1 : 2;
+    for (let i = 0; i < hands; i++) {
+      const x = (i === 0 ? -1 : 1) * w * (0.28 + 0.1 * hash01(prop, 40 + i));
+      const y = h * (0.78 + 0.1 * hash01(prop, 44 + i));
+      flat(0.1, 0.1, x, y);
+      for (let finger = 0; finger < 4; finger++) flat(0.018, 0.09, x - 0.045 + finger * 0.03, y + 0.1);
+    }
+    return smear;
   }
 }
