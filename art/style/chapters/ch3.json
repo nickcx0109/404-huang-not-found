@@ -45,6 +45,9 @@
     "ch3Cabinet": "#33383a",
     "ch3Barrel": "#3b3a34",
     "ch3BarrelBand": "#15161a",
+    "ch3Lift": "#2a2e30",
+    "ch3LiftDark": "#0d0e0f",
+    "ch3Hazard": "#7d6a25",
 
     "ch3Led": { "color": "#52ff86", "intensity": 2.4 },
 

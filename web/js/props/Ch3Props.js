@@ -105,6 +105,7 @@ export class Ch3Props extends PropSet {
   static builders = {
     fuel_barrel: Ch3Props.fuelBarrel,
     server_rack: Ch3Props.serverRack,
+    freight_elevator: Ch3Props.freightElevator,
     ch3_ceiling: Ch3Props.ceiling,
     ch3_ceiling_lamp: Ch3Props.ceilingLamp,
     ch3_desk: Ch3Props.desk,
@@ -160,6 +161,41 @@ export class Ch3Props extends PropSet {
       rack.add(lamp);
     }
     return rack;
+  }
+
+  /**
+   * Freight lift standing open: back and side walls, a lintel, doors slid aside, a hazard
+   * strip on the sill and a call panel whose little screen still glows. It carries the fuel
+   * barrels from the ground floor to the roof; people take the stairs. Opening toward -Z.
+   */
+  static freightElevator(ctx) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const lift = new THREE.Group();
+    const t = 0.14;
+    lift.add(part(factory, 'ch3Lift', w, h, t, 0, 0, d / 2 - t / 2));
+    [-1, 1].forEach((side) => {
+      lift.add(part(factory, 'ch3Lift', t, h, d, side * (w / 2 - t / 2), 0, 0));
+      // Door leaves pushed back into the walls, leaving the middle open.
+      lift.add(part(factory, 'ch3LiftDark', w * 0.16, h * 0.82, 0.07, side * (w / 2 - w * 0.08 - t), 0, -d / 2 + 0.06));
+    });
+    lift.add(part(factory, 'ch3Lift', w, h * 0.18, t * 1.5, 0, h * 0.82, -d / 2 + t * 0.75));
+    lift.add(part(factory, 'ch3Lift', w, t, d, 0, h - t, 0));
+    lift.add(part(factory, 'ch3LiftDark', w - t * 2, 0.03, d - t, 0, 0.005, 0));
+    lift.add(part(factory, 'ch3Hazard', w * 0.66, 0.035, 0.28, 0, 0.006, -d / 2 + 0.16));
+
+    // Mesh gate folded against the left wall.
+    for (let i = 0; i < 7; i++) {
+      const z = -d / 2 + 0.5 + i * 0.13;
+      lift.add(stick(factory, 'ch3LiftDark', v3(-w / 2 + t + 0.06, 0.05, z), v3(-w / 2 + t + 0.06, h * 0.8, z), 0.015, 4));
+    }
+
+    // Call panel on the right door post: where the "3/10" barrel count will be shown.
+    lift.add(part(factory, 'ch3LiftDark', 0.34, 0.5, 0.06, w / 2 - 0.32, 1.1, -d / 2 - 0.03));
+    const screen = glowing(new THREE.BoxGeometry(0.22, 0.14, 0.02), factory.emitters.screenMaterial());
+    screen.position.set(w / 2 - 0.32, 1.44, -d / 2 - 0.07);
+    lift.add(screen);
+    return lift;
   }
 
   /** Ceiling slab; the level places it at ceiling height with a "size". */
