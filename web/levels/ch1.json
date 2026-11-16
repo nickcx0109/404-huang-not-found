@@ -1280,6 +1280,14 @@
   ],
 
   "bookmarks": [
-    {"name": "spawn", "pos": [0,1.7,8], "yaw": 0, "pitch": -3}
+    {"name": "spawn", "pos": [0,1.7,8], "yaw": 0, "pitch": -3},
+    {"name": "wreck", "pos": [1.6,1.7,-4], "yaw": 8, "pitch": -4},
+    {"name": "camp", "pos": [1.4,1.7,-29.5], "yaw": 38, "pitch": -6},
+    {"name": "truck", "pos": [-2.6,1.7,-43], "yaw": -14, "pitch": -2},
+    {"name": "bend", "pos": [0.5,1.7,-88], "yaw": -32, "pitch": -3},
+    {"name": "mid", "pos": [34,1.7,-99.4], "yaw": -72, "pitch": -3},
+    {"name": "cabin", "pos": [45.5,1.7,-96.4], "yaw": 10, "pitch": -1},
+    {"name": "last_leg", "pos": [90.6,1.7,-163], "yaw": 2, "pitch": -2},
+    {"name": "end", "pos": [89.4,1.7,-179.5], "yaw": -2, "pitch": -1}
   ]
 }
