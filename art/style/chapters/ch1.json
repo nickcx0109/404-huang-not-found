@@ -38,6 +38,8 @@
     "ch1Rust": "#3f2c20",
     "ch1Barrier": "#6f6a5c",
     "ch1BarrierStripe": "#7a2f24",
+    "ch1Trash": "#2d2c26",
+    "ch1TrashPale": "#69665a",
 
     "surfaces": {
       "ground": { "texture": "stone", "metres": [5, 5], "roughness": 0.9 },

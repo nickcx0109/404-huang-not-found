@@ -37,6 +37,7 @@ export class Ch1Props extends PropSet {
     ch1_barrier: Ch1Props.barrier,
     ch1_barrier_fallen: Ch1Props.barrierFallen,
     ch1_car_flipped: Ch1Props.carFlipped,
+    ch1_trash: Ch1Props.trash,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -172,5 +173,28 @@ export class Ch1Props extends PropSet {
     const group = new THREE.Group();
     group.add(car);
     return group;
+  }
+
+  /** Litter: bags, boxes and loose sheets scattered over the footprint the level gives. */
+  static trash(ctx) {
+    const { factory, size, prop } = ctx;
+    const pile = new THREE.Group();
+    const count = 6 + Math.floor(hash01(prop, 1) * 5);
+    for (let i = 0; i < count; i++) {
+      const pale = hash01(prop, 10 + i) < 0.35;
+      const flat = hash01(prop, 20 + i) < 0.4;
+      const w = flat ? 0.3 + 0.3 * hash01(prop, 30 + i) : 0.25 + 0.45 * hash01(prop, 30 + i);
+      const h = flat ? 0.02 : 0.15 + size.h * 0.6 * hash01(prop, 40 + i);
+      const d = flat ? 0.2 + 0.25 * hash01(prop, 50 + i) : 0.25 + 0.35 * hash01(prop, 50 + i);
+      const piece = part(
+        factory, pale ? 'ch1TrashPale' : 'ch1Trash', w, h, d,
+        (hash01(prop, 60 + i) - 0.5) * size.w, 0, (hash01(prop, 70 + i) - 0.5) * size.d
+      );
+      piece.rotation.y = hash01(prop, 80 + i) * Math.PI;
+      if (!flat) piece.rotation.z = (hash01(prop, 90 + i) - 0.5) * 30 * DEG;
+      piece.castShadow = !flat;
+      pile.add(piece);
+    }
+    return pile;
   }
 }
