@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { EventBus } from '../web/js/core/EventBus.js';
 import { CollisionWorld, Aabb } from '../web/js/CollisionWorld.js';
 import { PathFinder } from '../web/js/PathFinder.js';
@@ -9,6 +10,7 @@ import { Walker } from '../web/js/enemies/Walker.js';
 import { Brain } from '../web/js/enemies/Brain.js';
 import { Node, Action, Condition, Selector, Sequence, STATUS } from '../web/js/enemies/behaviour/Nodes.js';
 import { DamageInfo } from '../web/js/entities/DamageInfo.js';
+import { LevelData } from '../web/js/LevelData.js';
 
 function context() {
   const collision = new CollisionWorld();
@@ -90,4 +92,26 @@ test('Walker clears a tangent low-wall corner without floating-point navigation 
     walker.moveToward(target, 0.05, ctx);
   }
   assert.ok(Math.hypot(walker.position.x, walker.position.z - 15.2) < 0.2);
+});
+
+test('Walker can approach the player from every shipped ch2 zombie spawn area', async () => {
+  const level = new LevelData(JSON.parse(await readFile(new URL('../web/levels/ch2.json', import.meta.url), 'utf8')));
+  const collision = CollisionWorld.fromLevel(level);
+  const ctx = new GameContext({ collision, pathFinder: new PathFinder(collision, { clearance: 0.002 }),
+    events: new EventBus(), level });
+  const home = level.spawns.players[0];
+  const target = { position: { x: home.x, z: home.z }, body: { radius: 0.35 }, damageable: { alive: true } };
+  ctx.players.push(target);
+  const factory = new EnemyFactory(ctx).register('walker', Walker);
+  for (const spawn of level.spawns.zombies) {
+    const walker = factory.create('walker', spawn);
+    for (let frame = 0; frame < 1200; frame++) {
+      ctx.time += 0.05;
+      walker.moveToward(target, 0.05, ctx);
+      if (Math.hypot(walker.position.x - home.x, walker.position.z - home.z) < 1) break;
+    }
+    assert.ok(Math.hypot(walker.position.x - home.x, walker.position.z - home.z) < 1.2, spawn.id);
+    factory.release(walker);
+  }
+  factory.dispose();
 });

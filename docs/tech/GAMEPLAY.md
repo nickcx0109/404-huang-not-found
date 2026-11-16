@@ -200,4 +200,4 @@ Windows 若 npm.ps1 被執行政策擋住，改用 `npm.cmd test`／`npm.cmd run
 
 加 `&debug=1` 才有 `window.__gameDebug`：`start()`、`snapshot()`、`aimAt(enemyId)`、`fire()`、`reload()`、`advance(seconds)`。advance 每次至多 120 秒、內部切成最多 0.05 秒的模擬步；fire 仍走正常命中、遮擋、扣彈、冷卻及 Session 傷害流程，不能直接送錢或殺敵。這不是公開遊戲 API，無 debug 參數不建立它。自動測試若用 advance，先停止一般 rAF，避免同時推進兩個時鐘。
 
-本次驗收：55 個 node:test 全過；素材檢查與 main 輸出相同。ch2 的 8 張、test 的 5 張 shot PNG，以及兩關固定時間的 walk PNG，全部 SHA-256 相同。Playwright 另確認無 debug 時實際滑鼠／R／W 輸入、兩隻敵人在出怪區域產生、命中擊殺 +$25、清完 +$50、整備後第二波 3 隻且重用兩個物件、受到近戰傷害進 GameOver，以及 shot 優先。測試腳本與 PNG 只放 OS temp，不加入版本控制。
+本次驗收：56 個 node:test 全過（含 ch2 四個出怪區都能走到玩家）；素材檢查與 main 輸出相同。ch2 的 8 張、test 的 5 張 shot PNG，以及兩關固定時間的 walk PNG，全部 SHA-256 相同。Playwright 另確認無 debug 時實際滑鼠／R／W 輸入、兩隻敵人在出怪區域產生、命中擊殺 +$25、清完 +$50、整備後第二波 3 隻且重用兩個物件、受到近戰傷害進 GameOver，以及 shot 優先。測試腳本與 PNG 只放 OS temp，不加入版本控制。
