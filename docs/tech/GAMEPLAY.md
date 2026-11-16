@@ -138,6 +138,8 @@ classDiagram
 | `WAVE_STARTED` | `wave.started` | `{wave,count}`；Session 通知 |
 | `WAVE_CLEARED` | `wave.cleared` | `{wave,kills}`；Session 通知，kills 為本局累計 |
 | `GAME_OVER` | `game.over` | `{wave,kills}`；Session 通知 |
+| `PROMPT_CHANGED` | `hud.prompt-changed` | `{id,text,progress}`；任何模組 → HUD，在畫面下方顯示一行提示。`progress` 是 0–1（省略就不畫進度線）；`text` 給 `null` 表示收掉這個 `id` 的提示 |
+| `ANNOUNCED` | `hud.announced` | `{text}`；任何模組 → HUD，在畫面中上顯示一張字卡，約 2 秒後淡出 |
 
 Payload 中的 entity 是同步事件借用的實體參照，不是網路快照。長期保存請複製所需數值與當時 id；物件池會重用該物件。訂閱 `on()` 回傳的取消函式由訂閱者在 dispose 時呼叫。
 
