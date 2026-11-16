@@ -139,6 +139,7 @@ export class Ch3Props extends PropSet {
     ch3_blood_trail: Ch3Props.bloodTrail,
     ch3_blood_smear: Ch3Props.bloodSmear,
     ch3_desk_flipped: Ch3Props.deskFlipped,
+    ch3_partition_broken: Ch3Props.partitionBroken,
   };
 
   /**
@@ -688,6 +689,20 @@ export class Ch3Props extends PropSet {
     desk.position.y = size.w * 0.5;
     const group = new THREE.Group();
     group.add(desk);
+    return group;
+  }
+
+  /** A cubicle partition knocked half over, with a broken-off piece on the floor. */
+  static partitionBroken(ctx) {
+    const { factory, size, prop } = ctx;
+    const { w, h, d } = size;
+    const group = new THREE.Group();
+    const standing = part(factory, 'ch3Partition', w * 0.55, h, d, -w * 0.22, 0, 0);
+    standing.rotation.x = (hash01(prop, 1) - 0.5) * 50 * DEG;
+    group.add(standing);
+    const fallen = part(factory, 'ch3Partition', w * 0.45, d, h * 0.8, w * 0.3, 0, (hash01(prop, 2) - 0.5) * 1.2);
+    fallen.rotation.y = (hash01(prop, 3) - 0.5) * 1.2;
+    group.add(fallen);
     return group;
   }
 }
