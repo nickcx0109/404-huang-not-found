@@ -50,6 +50,7 @@
     {"name": "ch3_parapet", "collider": "parapet_3"},
     {"name": "ch3_ceiling", "x": -12.6, "y": 3.2, "z": -44.1, "size": [7.6,0.12,8.6]},
     {"name": "ch3_stair_hole", "x": -10, "y": 0, "z": -44, "rotY": 180, "size": [1.8,1,4.6]},
+    {"name": "ch3_exit_sign", "x": -12.5, "y": 2.1, "z": -39.82, "rotY": 180, "size": [0.7,0.3,0.06]},
     {"name": "ch3_ceiling", "x": 13.2, "y": 3.2, "z": -44.1, "size": [6.6,0.12,8.6]},
     {"name": "freight_elevator", "x": 13.6, "y": 0, "z": -44.2, "rotY": 90, "size": [3.9,3,4.6]},
     {"name": "launch_pad", "x": 2, "y": 0, "z": -18, "size": [14,15,14]},
