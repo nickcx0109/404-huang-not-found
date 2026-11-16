@@ -32,6 +32,7 @@ export class Ch3Props extends PropSet {
   static builders = {
     ch3_ceiling: Ch3Props.ceiling,
     ch3_chair: Ch3Props.chair,
+    ch3_partition: Ch3Props.partition,
   };
 
   /** Ceiling slab; the level places it at ceiling height with a "size". */
@@ -57,5 +58,15 @@ export class Ch3Props extends PropSet {
     }
     group.add(chair);
     return group;
+  }
+
+  /** Cubicle partition: a thin upholstered panel on a kick plate. */
+  static partition(ctx) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const panel = new THREE.Group();
+    panel.add(part(factory, 'ch3Partition', w, h - 0.1, d, 0, 0.1, 0));
+    panel.add(part(factory, 'ch3Chair', w, 0.1, d * 0.9, 0, 0, 0));
+    return panel;
   }
 }

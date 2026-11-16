@@ -34,6 +34,7 @@
 
     "ch3Ceiling": "#1b1d1d",
     "ch3Chair": "#1c1e20",
+    "ch3Partition": "#3d4344",
 
     "surfaces": {
       "ground": { "texture": "concrete", "metres": [4, 4], "roughness": 0.7 },
