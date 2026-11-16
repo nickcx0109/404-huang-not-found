@@ -61,6 +61,7 @@ export class Ch3Props extends PropSet {
     ch3_desk: Ch3Props.desk,
     ch3_chair: Ch3Props.chair,
     ch3_partition: Ch3Props.partition,
+    ch3_cabinet: Ch3Props.cabinet,
   };
 
   /**
@@ -167,5 +168,22 @@ export class Ch3Props extends PropSet {
     panel.add(part(factory, 'ch3Partition', w, h - 0.1, d, 0, 0.1, 0));
     panel.add(part(factory, 'ch3Chair', w, 0.1, d * 0.9, 0, 0, 0));
     return panel;
+  }
+
+  /** Filing cabinet with drawer gaps; the odd drawer hangs open. */
+  static cabinet(ctx) {
+    const { factory, size, prop } = ctx;
+    const { w, h, d } = size;
+    const cabinet = new THREE.Group();
+    cabinet.add(factory.box(size, 'ch3Cabinet'));
+    const drawers = Math.max(2, Math.round(h / 0.45));
+    for (let i = 0; i < drawers; i++) {
+      const y = (h * i) / drawers;
+      cabinet.add(part(factory, 'ch3Chair', w * 0.94, 0.02, 0.02, 0, y + 0.01, -d / 2 - 0.01));
+      if (hash01(prop, 10 + i) < 0.22) {
+        cabinet.add(part(factory, 'ch3Cabinet', w * 0.9, (h / drawers) * 0.8, d * 0.5, 0, y + 0.04, -d / 2 - d * 0.25));
+      }
+    }
+    return cabinet;
   }
 }
