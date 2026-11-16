@@ -105,7 +105,11 @@
     {"id": "cabinet_6", "x": 14.6, "z": -17, "w": 0.9, "d": 0.6, "h": 1.3},
     {"id": "crate_4", "x": 12.2, "z": -24.4, "w": 1, "d": 1, "h": 0.9},
     {"id": "crate_5", "x": 15, "z": -27.6, "w": 0.8, "d": 0.8, "h": 0.7},
-    {"id": "cabinet_7", "x": 15.2, "z": -23.2, "w": 0.9, "d": 0.6, "h": 1.9}
+    {"id": "cabinet_7", "x": 15.2, "z": -23.2, "w": 0.9, "d": 0.6, "h": 1.9},
+    {"id": "crate_6", "x": -7.4, "z": -46.4, "w": 1.2, "d": 1.2, "h": 1},
+    {"id": "crate_7", "x": -7.2, "z": -44.9, "w": 0.9, "d": 0.9, "h": 0.8},
+    {"id": "crate_8", "x": 0.4, "z": -47, "w": 1, "d": 1, "h": 0.9},
+    {"id": "cabinet_8", "x": -8.4, "z": -42, "w": 0.6, "d": 1.6, "h": 1.9}
   ],
 
   "props": [
@@ -222,7 +226,11 @@
     {"name": "crate", "collider": "crate_4"},
     {"name": "crate", "collider": "crate_5"},
     {"name": "ch3_cabinet", "collider": "cabinet_7"},
-    {"name": "ch3_emergency_light", "x": -12.5, "y": 2.55, "z": -39.8, "rotY": 180, "size": [0.3,0.26,0.18]}
+    {"name": "ch3_emergency_light", "x": -12.5, "y": 2.55, "z": -39.8, "rotY": 180, "size": [0.3,0.26,0.18]},
+    {"name": "crate", "collider": "crate_6"},
+    {"name": "crate", "collider": "crate_7"},
+    {"name": "crate", "collider": "crate_8"},
+    {"name": "ch3_cabinet", "collider": "cabinet_8"}
   ],
 
   "spawns": {
