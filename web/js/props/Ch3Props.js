@@ -142,6 +142,7 @@ export class Ch3Props extends PropSet {
     ch3_partition_broken: Ch3Props.partitionBroken,
     ch3_ceiling_fallen: Ch3Props.ceilingFallen,
     ch3_cables: Ch3Props.cables,
+    ch3_rubble: Ch3Props.rubble,
   };
 
   /**
@@ -745,5 +746,27 @@ export class Ch3Props extends PropSet {
     }
     group.traverse((object) => { object.castShadow = false; });
     return group;
+  }
+
+  /** Heap of broken wall and concrete. */
+  static rubble(ctx) {
+    const { factory, size, prop } = ctx;
+    const heap = new THREE.Group();
+    const count = 7 + Math.floor(hash01(prop, 1) * 6);
+    for (let i = 0; i < count; i++) {
+      const scale = 0.18 + 0.32 * hash01(prop, 10 + i);
+      const chunk = new THREE.Mesh(new THREE.DodecahedronGeometry(scale, 0), factory.material('ch3Debris'));
+      const out = hash01(prop, 20 + i);
+      const turn = hash01(prop, 30 + i) * Math.PI * 2;
+      chunk.position.set(
+        Math.cos(turn) * out * size.w * 0.45, scale * 0.5 + (1 - out) * size.h * 0.6, Math.sin(turn) * out * size.d * 0.45
+      );
+      chunk.rotation.set(hash01(prop, 40 + i) * 3, hash01(prop, 50 + i) * 3, 0);
+      chunk.scale.y = 0.7;
+      chunk.castShadow = true;
+      chunk.receiveShadow = true;
+      heap.add(chunk);
+    }
+    return heap;
   }
 }
