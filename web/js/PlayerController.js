@@ -1,11 +1,10 @@
 import * as THREE from 'three';
+import { PLAYER_BODY } from './player/PlayerBody.js';
 
 // PlayerController: first-person walking. Pointer-lock mouse look + WASD,
 // eye height 1.7 m, AABB collision against the level's CollisionWorld.
 const DEFAULTS = Object.freeze({
-  eyeHeight: 1.7,   // m
-  height: 1.8,      // m, collision column
-  radius: 0.35,     // m, half-size of the collision column
+  ...PLAYER_BODY,
   walkSpeed: 4.5,   // m/s
   sprintSpeed: 7.0, // m/s, hold Shift
   acceleration: 14, // how quickly velocity follows the keys (1/s)

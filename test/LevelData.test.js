@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { LevelData, LevelError } from '../web/js/LevelData.js';
+import { PLAYER_BODY } from '../web/js/player/PlayerBody.js';
 
 function fixture() {
   return {
@@ -57,6 +58,25 @@ test('LevelData reports overlapping spawn centres as warnings, not errors', () =
   raw.spawns.players[0] = { x: 2, z: 3 };
   const level = new LevelData(raw);
   assert.ok(level.warnings.some((warning) => warning.includes('inside collider "box"')));
+});
+
+test('LevelData validates the shared player cylinder at edges, corners and raised boxes', () => {
+  const raw = fixture();
+  raw.spawns.players[0] = { x: 1 - PLAYER_BODY.radius / 2, z: 3 };
+  assert.equal(new LevelData(raw).warnings.length, 1);
+  raw.spawns.players[0] = { x: 0, z: 3 };
+  assert.equal(new LevelData(raw).warnings.length, 0);
+  raw.spawns.players[0] = { x: 0.74, z: -0.26 };
+  assert.equal(new LevelData(raw).warnings.length, 0);
+  raw.spawns.players[0] = { x: 0.8, z: -0.2 };
+  assert.equal(new LevelData(raw).warnings.length, 1);
+  raw.colliders[0].y = PLAYER_BODY.height;
+  assert.equal(new LevelData(raw).warnings.length, 0);
+  raw.colliders[0].y -= 0.01;
+  assert.equal(new LevelData(raw).warnings.length, 1);
+  raw.colliders[0].y = -5;
+  assert.equal(new LevelData(raw).warnings.length, 0);
+  assert.ok(Object.isFrozen(PLAYER_BODY));
 });
 
 test('LevelData loads without a browser and rejects unsafe names before fetching', async (context) => {
