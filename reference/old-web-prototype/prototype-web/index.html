@@ -1,0 +1,189 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>殭屍波次原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="ui/styles.css">
+
+
+<div id="app">
+  <canvas id="c"></canvas>
+  <div id="vig"></div>
+
+  <div id="hud" hidden>
+    <div class="corner tl">
+      <span class="lbl">分數</span>
+      <span id="score" class="num">0</span>
+      <span class="sub"><b id="kills">0</b> 擊殺 · <b id="heads">0</b> 爆頭</span>
+      <div class="wallet"><span id="money" class="num">$0</span><span id="tokens"><i></i><span id="tokenNum">抽獎幣 ×0</span></span></div>
+      <canvas id="mini" width="300" height="300"></canvas>
+    </div>
+    <div class="corner tc">
+      <span class="lbl">波次</span>
+      <span id="waveNo" class="num">01</span>
+      <span id="waveType">普通波</span>
+      <span class="sub" id="waveLine">剩餘 <b id="remain">0</b></span>
+      <span id="storeDir" hidden><svg id="storeArrow" width="16" height="16" viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0 -7 L6 6 L0 2.5 L-6 6 Z" fill="currentColor"/></svg><span id="storeDist">商店 0m</span></span>
+      <div id="bossbar" hidden><span class="lbl">巨型坦克</span><div class="bar"><i id="bossFill"></i></div></div>
+    </div>
+    <div class="corner tr">
+      <div id="log">
+        <header><span class="lbl">EventBus</span><span class="lbl">L 隱藏</span></header>
+        <div id="logLines"></div>
+      </div>
+    </div>
+    <div class="corner bl">
+      <div id="ups"></div>
+      <div class="armorrow" id="armorRow" hidden><span class="lbl">護甲</span><div class="bar"><i id="armorFill"></i></div></div>
+      <span class="lbl">生命</span>
+      <div class="hprow" id="hpRow"><span id="hpNum" class="num">100</span><div class="bar"><i id="hpFill"></i></div></div>
+    </div>
+    <div class="corner br">
+      <div id="slots"></div>
+      <div class="ammo"><span id="mag" class="num">12</span><span class="sep">/</span><span id="res" class="num">∞</span></div>
+      <div id="reload"><i id="reloadFill"></i></div>
+    </div>
+    <div id="cross"><i></i><i></i><i></i><i></i></div>
+    <div id="hitm"><i></i><i></i><i></i><i></i></div>
+    <div id="prompt" hidden></div>
+    <div id="banner"><div id="bTitle"></div><div id="bSub"></div></div>
+    <div id="toast"></div>
+  </div>
+
+  <section id="menu" class="screen">
+    <div class="plate">
+      <div class="stripe"></div>
+      <div class="plate-in">
+        <div class="menu-grid">
+          <div>
+            <span class="eyebrow">AOOP 期末專題 · 灰盒試玩 v0.2</span>
+            <h1>殭屍波次原型</h1>
+            <p>單人、瀏覽器版的玩法草稿。90 × 90 公尺的地圖分成五個區域，中央的便利商店是可以走進去的交易站：波次之間開門營業，用擊殺賺的錢買槍、彈藥、護甲，把抽獎幣投進抽獎機換升級。</p>
+            <div class="touchnote">這個原型需要鍵盤與滑鼠，請用電腦開啟。</div>
+            <div class="actions">
+              <button class="btn" id="startBtn" type="button">開始第 1 波</button>
+              <span class="best" id="bestLine">還沒有紀錄</span>
+            </div>
+            <dl class="keys">
+              <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>移動，<kbd>Shift</kbd> 衝刺，<kbd>Space</kbd> 跳躍</dd>
+              <dt><kbd>滑鼠</kbd></dt><dd>瞄準，左鍵射擊（步槍按住連發）</dd>
+              <dt><kbd>E</kbd></dt><dd>使用櫃台、投抽獎幣</dd>
+              <dt><kbd>R</kbd></dt><dd>換彈</dd>
+              <dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></dt><dd>換槍，也可以用滾輪；步槍和霰彈槍要在商店買</dd>
+              <dt><kbd>G</kbd></dt><dd>交易時間提早開始下一波</dd>
+              <dt><kbd>L</kbd></dt><dd>顯示或隱藏事件紀錄</dd>
+              <dt><kbd>Esc</kbd></dt><dd>暫停與設定（滑鼠靈敏度），在交易站裡按會離開櫃台</dd>
+            </dl>
+          </div>
+          <div>
+            <h2>原型裡對應提案的類別</h2>
+            <div class="scroll-x">
+              <table class="map">
+                <thead><tr><th>類別</th><th>模式</th></tr></thead>
+                <tbody>
+                  <tr><td>Weapon → Pistol / Rifle / Shotgun</td><td>Template Method</td></tr>
+                  <tr><td>IFireMode → HitscanFire</td><td>Strategy</td></tr>
+                  <tr><td>BTNode → Selector / Sequence / Condition / Action / Cooldown</td><td>Composite</td></tr>
+                  <tr><td>ZombieFactory + ObjectPool</td><td>Factory、Object Pool</td></tr>
+                  <tr><td>EventBus、Economy、TokenDropper</td><td>Observer</td></tr>
+                  <tr><td>DamageChain + IDamageModifier</td><td>責任鏈</td></tr>
+                  <tr><td>GameState → Lobby / Playing / WaveBreak / GameOver</td><td>State</td></tr>
+                  <tr><td>ShopItem → WeaponItem / AmmoItem / ArmorItem …</td><td>Command</td></tr>
+                  <tr><td>IInteractable → TraderCounter / GachaMachine</td><td>介面與多型</td></tr>
+                  <tr><td>LootTable（稀有度權重抽選）</td><td>Strategy</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="note">跟正式版的差別：沒有連線，所以倒地救援和支援流派升級還沒放。殭屍尋路先用格狀 flow field 代替 NavMesh，美術都是方塊。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="shop" class="screen" hidden>
+    <div class="plate">
+      <div class="stripe guide"></div>
+      <div class="plate-in">
+        <div class="plate-head">
+          <div><span class="eyebrow guide">Zombie Mart · 交易站</span><h2>波次之間營業，剩 <span id="shopTime">0</span> 秒</h2></div>
+          <div style="justify-items:end"><span class="lbl">持有金錢</span><span class="shopmoney" id="shopMoney">$0</span></div>
+        </div>
+        <div class="shopgrid" id="shopItems"></div>
+        <div class="actions"><button class="btn ghost" id="shopClose" type="button">離開櫃台</button><span class="best">按 <kbd>1</kbd>–<kbd>7</kbd> 購買，<kbd>E</kbd> 或 <kbd>Esc</kbd> 離開。待在商店畫面時倒數會暫停</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pick" class="screen" hidden>
+    <div class="plate">
+      <div class="stripe"></div>
+      <div class="plate-in">
+        <div style="display:grid;gap:8px">
+          <span class="eyebrow" id="pickEyebrow">抽獎機</span>
+          <h2>抽到三個升級，選一個帶走，只在這一局有效</h2>
+        </div>
+        <div class="cards" id="cards"></div>
+        <div class="actions"><button class="btn ghost" id="skipBtn" type="button">都不要</button><span class="best">按 <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 選擇。放棄不會退回抽獎幣</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="over" class="screen" hidden>
+    <div class="plate">
+      <div class="stripe"></div>
+      <div class="plate-in">
+        <div style="display:grid;gap:8px">
+          <span class="eyebrow">GameOver</span>
+          <h1>你倒下了</h1>
+          <p class="muted" id="overSub"></p>
+        </div>
+        <div class="stats">
+          <div><span class="lbl">撐過波數</span><span class="num" id="oWave">0</span></div>
+          <div><span class="lbl">擊殺</span><span class="num" id="oKills">0</span></div>
+          <div><span class="lbl">爆頭率</span><span class="num" id="oHead">0%</span></div>
+          <div><span class="lbl">分數</span><span class="num" id="oScore">0</span></div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="againBtn" type="button">再來一局</button>
+          <button class="btn ghost" id="menuBtn" type="button">回到選單</button>
+          <span class="best" id="overBest"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pause" class="screen" hidden>
+    <div class="plate" style="width:min(460px,100%)">
+      <div class="stripe"></div>
+      <div class="plate-in">
+        <div style="display:grid;gap:8px"><span class="eyebrow">Esc · 設定</span><h2>已暫停</h2></div>
+        <div class="setting">
+          <div class="setting-head"><label for="sensRange">滑鼠靈敏度</label><output id="sensOut" for="sensRange">1.00×</output></div>
+          <input type="range" id="sensRange" min="0.2" max="3" step="0.05" value="1">
+          <div class="scale"><span>慢</span><span>快</span></div>
+          <button class="btn ghost small" id="sensReset" type="button">恢復預設</button>
+        </div>
+        <p class="muted">設定會自動儲存。按繼續回到遊戲，滑鼠會重新鎖定在畫面上。</p>
+        <div class="actions"><button class="btn" id="resumeBtn" type="button">繼續</button><button class="btn ghost" id="quitBtn" type="button">結束這局</button></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="shared/shared.js"></script>
+<script src="core/audio.js"></script>
+<script src="core/world.js"></script>
+<script src="enemy/flow-field.js"></script>
+<script src="core/effects.js"></script>
+<script src="ui/store-guide.js"></script>
+<script src="player/player.js"></script>
+<script src="enemy/enemy.js"></script>
+<script src="core/shop.js"></script>
+<script src="core/game.js"></script>
+<script src="ui/hud.js"></script>
+<script src="core/input.js"></script>
+<script src="core/net.js"></script>
+<script src="core/main.js"></script>
