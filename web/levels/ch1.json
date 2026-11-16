@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "name": "ch1",
+  "title": "Chapter 1: find the car",
+  "palette": "ch1",
+  "manifests": ["common","ch1"],
+
+  "bounds": {"x":45,"z":-96.5,"w":110,"d":220},
+
+  "colliders": [
+    {"id": "wall_back", "x": 0, "z": 12.25, "w": 17.5, "d": 0.5, "h": 3, "visible": false},
+    {"id": "wall_a_west", "x": -8.75, "z": -48.25, "w": 0.5, "d": 121.5, "h": 3, "visible": false},
+    {"id": "wall_a_east", "x": 8.75, "z": -39.5, "w": 0.5, "d": 104, "h": 3, "visible": false},
+    {"id": "wall_b_north", "x": 36.25, "z": -108.75, "w": 90.5, "d": 0.5, "h": 3, "visible": false},
+    {"id": "wall_b_south", "x": 53.75, "z": -91.25, "w": 90.5, "d": 0.5, "h": 3, "visible": false},
+    {"id": "wall_c_east", "x": 98.75, "z": -148.25, "w": 0.5, "d": 114.5, "h": 3, "visible": false},
+    {"id": "wall_c_west", "x": 81.25, "z": -157.25, "w": 0.5, "d": 96.5, "h": 3, "visible": false},
+    {"id": "wall_end", "x": 90, "z": -205.25, "w": 18, "d": 0.5, "h": 3, "visible": false}
+  ],
+
+  "props": [
+    {"name": "road", "x": 0, "y": 0, "z": -42.25, "size": [7,0.04,108.5]},
+    {"name": "road", "x": 45, "y": 0, "z": -100, "size": [97,0.04,7]},
+    {"name": "road", "x": 90, "y": 0, "z": -154.25, "size": [7,0.04,101.5]}
+  ],
+
+  "spawns": {
+    "players": [
+      {"x": 0, "z": 8, "yaw": 0},
+      {"x": -2.2, "z": 9.4, "yaw": 0},
+      {"x": 2.2, "z": 9.4, "yaw": 0}
+    ],
+    "zombies": [
+
+    ]
+  },
+
+  "markers": [
+
+  ],
+
+  "bookmarks": [
+    {"name": "spawn", "pos": [0,1.7,8], "yaw": 0, "pitch": -3}
+  ]
+}
