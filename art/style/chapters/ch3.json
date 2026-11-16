@@ -1,6 +1,12 @@
 {
-  "_about": "Chapter 3, rescue at headquarters. This file is the palette block \"ch3\" (levels pick it with \"palette\": \"ch3\"). It starts from the chosen mood (heavy); only the guide colour is set so far (the orange of the fuel barrels). Still to do here: the black of a power cut, red emergency lighting, the green LED wall of the server room.",
+  "_about": [
+    "Chapter 3, rescue at headquarters. This file is the palette block \"ch3\" (levels pick it with \"palette\": \"ch3\").",
+    "Look: close to pitch black inside an office tower with the power out, and on its roof. The tower is three levels, one file each: web/levels/ch3.json (ground floor), ch3_2f.json (first floor up) and ch3_roof.json. It starts from the chosen mood (heavy) and changes what that look needs; every difference is explained in the PR description.",
+    "Almost nothing shows outside the flashlight beam. The guide colour is the orange of the fuel barrels; red emergency lamps pulse on the walls."
+  ],
   "extends": "mood/heavy",
+
+  "fog": { "color": "#0c0f0e", "density": 0.07 },
   "accent": {
     "color": "#ffb020"
   }
