@@ -391,7 +391,7 @@
 .hud-damage__low {
   opacity: 0;
   background: radial-gradient(ellipse 72% 72% at 50% 50%,
-    rgba(122, 26, 18, 0) 50%, rgba(122, 26, 18, 0.5) 84%, rgba(70, 12, 8, 0.85) 100%);
+    rgba(122, 26, 18, 0) 52%, rgba(122, 26, 18, 0.42) 86%, rgba(70, 12, 8, 0.75) 100%);
   -webkit-mask: var(--grain) 0 0 / 240px 240px;
   mask: var(--grain) 0 0 / 240px 240px;
   transition: opacity 1.2s ease-out;
@@ -565,10 +565,11 @@
 
 /* ---- motion ------------------------------------------------------------- */
 
+/* Never down to nothing: dried red alone is too dark to read on a dark picture. */
 @keyframes hud-throb {
-  0%, 100% { opacity: 0; }
-  18% { opacity: 0.9; }
-  45% { opacity: 0.15; }
+  0%, 100% { opacity: 0.45; }
+  18% { opacity: 0.95; }
+  45% { opacity: 0.5; }
 }
 
 /* Hard cut, like a lamp with a loose wire. */
