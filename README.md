@@ -2,6 +2,8 @@
 
 AOOP 期末專題（第 8 組）：網頁版第一人稱殭屍生存遊戲。
 
+舊專案的網頁原型放在 [`reference/`](reference/README.md)，只供參考。
+
 ## Commit 統計（暫時）
 
 > 統計到 2026-11-16，`origin/main`（commit `af3466f`）。行數不含 `package-lock.json` 和二進位檔（圖片、GLB）。
