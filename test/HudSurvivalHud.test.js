@@ -36,8 +36,8 @@ function setup() {
   const session = { state: 'playing', wave: 2, canMove: true,
     context: { time: 0, enemies: [{ id: 'z1', position: { x: 4, y: 0, z: 0 } }], players: [player] } };
   const hud = SurvivalHud.standard(root, events, 'me');
-  const [damage, health, ammo, line, crosshair] = hud.widgets;
-  return { elements, doc, events, weapon, player, session, hud, damage, health, ammo, line, crosshair };
+  const [damage, health, ammo, line, crosshair, prompt] = hud.widgets;
+  return { elements, doc, events, weapon, player, session, hud, damage, health, ammo, line, crosshair, prompt };
 }
 
 test('SurvivalHud keeps the viewer error display and draws health, ammunition and the status line', () => {
@@ -215,5 +215,30 @@ test('DamageOverlay shows the side a hit came from, fades, and marks low health'
   hud.updateGame(0, session);
   assert.equal(damage.el.classList.contains('is-low'), false);
   assert.equal(damage.el.classList.contains('is-dead'), true);
+  hud.dispose();
+});
+
+test('PromptWidget shows, updates and hides a prompt sent as an event', () => {
+  const { events, hud, prompt } = setup();
+  const has = name => prompt.el.classList.contains(name);
+  assert.equal(has('is-on'), false);
+
+  events.emit(EVENTS.PROMPT_CHANGED, { id: 'door', text: 'HOLD E   CLEAR THE WAY', progress: 0 });
+  assert.equal(has('is-on'), true);
+  assert.equal(has('has-line'), true);
+  assert.equal(prompt.text.textContent, 'HOLD E   CLEAR THE WAY');
+  assert.equal(prompt.fill.style.transform, 'scaleX(0.0000)');
+
+  events.emit(EVENTS.PROMPT_CHANGED, { id: 'door', text: 'HOLD E   CLEAR THE WAY', progress: 1.4 });
+  assert.equal(prompt.fill.style.transform, 'scaleX(1.0000)', 'progress stays inside the line');
+
+  events.emit(EVENTS.PROMPT_CHANGED, { id: 'shop', text: null });
+  assert.equal(has('is-on'), true, 'somebody else cannot hide it');
+  events.emit(EVENTS.PROMPT_CHANGED, { id: 'door', text: null });
+  assert.equal(has('is-on'), false);
+
+  events.emit(EVENTS.PROMPT_CHANGED, { id: 'shop', text: 'E   BUY AMMO' });
+  assert.equal(has('is-on'), true);
+  assert.equal(has('has-line'), false, 'no progress, no line');
   hud.dispose();
 });

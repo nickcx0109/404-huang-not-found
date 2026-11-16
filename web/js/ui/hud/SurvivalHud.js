@@ -6,6 +6,7 @@ import { AmmoWidget } from './AmmoWidget.js';
 import { StatusLine } from './StatusLine.js';
 import { CrosshairWidget } from './CrosshairWidget.js';
 import { DamageOverlay } from './DamageOverlay.js';
+import { PromptWidget } from './PromptWidget.js';
 
 /**
  * The in-game HUD: a composite of HudWidget objects on one layer above the 3D view.
@@ -44,7 +45,8 @@ export class SurvivalHud extends Hud {
       .add(new HealthWidget(doc))
       .add(new AmmoWidget(doc))
       .add(new StatusLine(doc))
-      .add(new CrosshairWidget(doc));
+      .add(new CrosshairWidget(doc))
+      .add(new PromptWidget(doc));
   }
 
   add(widget) {

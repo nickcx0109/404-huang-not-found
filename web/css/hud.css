@@ -424,6 +424,54 @@
   50% { opacity: 1; }
 }
 
+/* ---- prompt, bottom centre ------------------------------------------------ */
+
+.hud-prompt {
+  left: 0;
+  right: 0;
+  bottom: 20%;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+
+.hud-prompt.is-on {
+  opacity: 1;
+  transition-duration: 0.2s;
+}
+
+.hud-prompt__text {
+  font-family: var(--type);
+  font-size: 1em;
+  letter-spacing: 0.16em;
+  white-space: pre;
+  -webkit-text-stroke: 0.04em rgba(8, 6, 5, 0.6);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+}
+
+/* Thin progress line under the text; only there while the action takes time. */
+.hud-prompt__line {
+  width: 9em;
+  height: max(1px, 0.09em);
+  margin: 0.65em auto 0;
+  background: var(--ash);
+  box-shadow: 0 0 0 1px rgba(8, 6, 5, 0.5);
+  opacity: 0;
+}
+
+.hud-prompt.has-line .hud-prompt__line {
+  opacity: 1;
+}
+
+.hud-prompt__fill {
+  display: block;
+  height: 100%;
+  background: var(--bone);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
 /* ---- motion ------------------------------------------------------------- */
 
 @keyframes hud-throb {
