@@ -19,7 +19,9 @@
     "bloom": { "enabled": true, "threshold": 0.85, "knee": 0.5, "strength": 0.85, "levels": 3 }
   },
   "accent": {
-    "color": "#ffb020"
+    "color": "#ffb020",
+    "intensity": 3.2,
+    "light": { "intensity": 0 }
   },
 
   "greybox": {
@@ -35,6 +37,8 @@
     "ch3Ceiling": "#1b1d1d",
     "ch3Chair": "#1c1e20",
     "ch3Partition": "#3d4344",
+    "ch3Barrel": "#3b3a34",
+    "ch3BarrelBand": "#15161a",
 
     "surfaces": {
       "ground": { "texture": "concrete", "metres": [4, 4], "roughness": 0.7 },
