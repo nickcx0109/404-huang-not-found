@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PropSet } from './PropSet.js';
+import { Palette } from '../Palette.js';
 
 // Ch3Props: greybox stand-ins for chapter 3 (the blacked-out office tower, server room and
 // rooftop launch pad).
@@ -20,6 +21,53 @@ function hash01(prop, salt) {
 }
 
 const DEG = Math.PI / 180;
+
+/**
+ * Settings of a glowing emitter. When the level is viewed with a palette block that does not
+ * define it (e.g. ?palette=blockout), it falls back to that block's accent colour, unlit.
+ */
+function glowSpec(factory, key) {
+  const spec = factory.greybox[key];
+  if (spec && typeof spec.color === 'string') return spec;
+  const accent = factory.emitters.accent;
+  return { color: accent.color, intensity: accent.intensity, light: null };
+}
+
+/** Glowing materials of this chapter's emitters, one set per PropFactory. */
+const glowMaterials = new WeakMap();
+
+/**
+ * Self-lit material for an emitter (palette greybox.<key>): brighter than 1, so it reads
+ * through the haze and feeds the bloom. `levelAt(time)` (optional) animates its brightness.
+ */
+function glowMaterial(factory, key, levelAt) {
+  let cache = glowMaterials.get(factory);
+  if (!cache) {
+    cache = new Map();
+    glowMaterials.set(factory, cache);
+  }
+  let material = cache.get(key);
+  if (!material) {
+    const spec = glowSpec(factory, key);
+    const base = Palette.color(spec.color).multiplyScalar(spec.intensity);
+    material = new THREE.MeshBasicMaterial({ color: base.clone() });
+    material.name = 'glow:' + key;
+    cache.set(key, material);
+    if (levelAt) animate(factory, (time) => material.color.copy(base).multiplyScalar(levelAt(time)));
+  }
+  return material;
+}
+
+/**
+ * Runs `step(time)` every frame together with the level's other emitters, so a still frame
+ * (?shot=, fixed time) always shows the same state. Emitters has no public hook for this yet;
+ * if its animation list ever goes away the lights simply stop flickering.
+ */
+function animate(factory, step) {
+  step(0);
+  const list = factory.emitters && factory.emitters._animations;
+  if (Array.isArray(list)) list.push(step);
+}
 
 /**
  * A glowing mesh: not part of the shadow pass. It can still be batched with the others of its
@@ -56,6 +104,7 @@ export class Ch3Props extends PropSet {
 
   static builders = {
     fuel_barrel: Ch3Props.fuelBarrel,
+    server_rack: Ch3Props.serverRack,
     ch3_ceiling: Ch3Props.ceiling,
     ch3_ceiling_lamp: Ch3Props.ceilingLamp,
     ch3_desk: Ch3Props.desk,
@@ -92,6 +141,25 @@ export class Ch3Props extends PropSet {
     lid.position.y = size.h + 0.011;
     barrel.add(lid);
     return barrel;
+  }
+
+  /** Server rack, dead except for a few status LEDs on its front (-Z). */
+  static serverRack(ctx) {
+    const { factory, size, prop } = ctx;
+    const { w, h, d } = size;
+    const rack = new THREE.Group();
+    rack.add(factory.box(size, 'ch3Rack'));
+    rack.add(part(factory, 'ch3RackTrim', w * 1.02, 0.06, d * 1.02, 0, h, 0));
+    rack.add(part(factory, 'ch3RackTrim', w * 0.9, h * 0.9, 0.03, 0, h * 0.05, -d / 2 - 0.015));
+    const led = glowMaterial(factory, 'ch3Led');
+    const rows = Math.max(3, Math.floor(h / 0.3));
+    for (let i = 0; i < rows; i++) {
+      if (hash01(prop, 10 + i) < 0.62) continue;
+      const lamp = glowing(new THREE.BoxGeometry(0.035, 0.02, 0.02), led);
+      lamp.position.set((hash01(prop, 30 + i) - 0.5) * w * 0.7, h * 0.12 + (i / rows) * h * 0.8, -d / 2 - 0.04);
+      rack.add(lamp);
+    }
+    return rack;
   }
 
   /** Ceiling slab; the level places it at ceiling height with a "size". */
