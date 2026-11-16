@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { EVENTS } from '../game/events.js';
+import { WeaponTrigger } from '../weapons/WeaponTrigger.js';
 
 export class PlayerCombat {
   constructor(controller, camera, ctx, ownerId, purchaseItemId) {
@@ -11,11 +12,17 @@ export class PlayerCombat {
     this._direction = new THREE.Vector3();
     this._ownerRequest = Object.freeze({ ownerId });
     this._purchaseRequest = Object.freeze({ ownerId, itemId: purchaseItemId });
+    this.trigger = new WeaponTrigger(ctx, ownerId);
     this._onMouseDown = event => {
       if (event.button === 0 && this.controller.locked) {
         this.updateAim();
-        ctx.events.emit(EVENTS.FIRE_REQUESTED, this._ownerRequest);
+        this.trigger.press();
       }
+    };
+    this._onMouseUp = event => { if (event.button === 0) this.trigger.release(); };
+    this._onBlur = () => this.trigger.release();
+    this._onPointerLockChange = () => {
+      if (!document.pointerLockElement) this.trigger.release();
     };
     this._onKeyDown = event => {
       if (event.repeat || !this.controller.locked) return;
@@ -26,6 +33,9 @@ export class PlayerCombat {
       }
     };
     window.addEventListener('mousedown', this._onMouseDown);
+    window.addEventListener('mouseup', this._onMouseUp);
+    window.addEventListener('blur', this._onBlur);
+    document.addEventListener('pointerlockchange', this._onPointerLockChange);
     window.addEventListener('keydown', this._onKeyDown);
   }
 
@@ -41,8 +51,18 @@ export class PlayerCombat {
     aim.direction.z = this._direction.z;
   }
 
+  update() {
+    this.updateAim();
+    if (this.controller.locked) this.trigger.update();
+    else this.trigger.release();
+  }
+
   dispose() {
+    this.trigger.release();
     window.removeEventListener('mousedown', this._onMouseDown);
+    window.removeEventListener('mouseup', this._onMouseUp);
+    window.removeEventListener('blur', this._onBlur);
+    document.removeEventListener('pointerlockchange', this._onPointerLockChange);
     window.removeEventListener('keydown', this._onKeyDown);
   }
 }
