@@ -35,6 +35,7 @@
     "screen": { "color": "#9fb4bd", "intensity": 0.9 },
 
     "ch3Ceiling": "#1b1d1d",
+    "ch3Desk": "#3a362f",
     "ch3Chair": "#1c1e20",
     "ch3Partition": "#3d4344",
     "ch3Barrel": "#3b3a34",

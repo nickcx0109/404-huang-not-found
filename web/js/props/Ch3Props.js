@@ -58,6 +58,7 @@ export class Ch3Props extends PropSet {
     fuel_barrel: Ch3Props.fuelBarrel,
     ch3_ceiling: Ch3Props.ceiling,
     ch3_ceiling_lamp: Ch3Props.ceilingLamp,
+    ch3_desk: Ch3Props.desk,
     ch3_chair: Ch3Props.chair,
     ch3_partition: Ch3Props.partition,
   };
@@ -113,6 +114,31 @@ export class Ch3Props extends PropSet {
     fixture.castShadow = false;
     lamp.add(fixture);
     return lamp;
+  }
+
+  /** Office desk with side panels; some still carry a monitor and a few a lit screen. */
+  static desk(ctx) {
+    const { factory, size, prop } = ctx;
+    const { w, h, d } = size;
+    const desk = new THREE.Group();
+    desk.add(part(factory, 'ch3Desk', w, 0.05, d, 0, h - 0.05, 0));
+    [-1, 1].forEach((side) => desk.add(part(factory, 'ch3Desk', 0.04, h - 0.05, d * 0.94, side * (w / 2 - 0.03), 0, 0)));
+    desk.add(part(factory, 'ch3Desk', w * 0.96, h * 0.45, 0.03, 0, h * 0.4, d / 2 - 0.05));
+    if (hash01(prop, 1) < 0.6) {
+      const tilt = (hash01(prop, 2) - 0.5) * 50 * DEG;
+      const monitor = new THREE.Group();
+      monitor.add(part(factory, 'ch3Chair', 0.5, 0.32, 0.03, 0, 0.12, 0));
+      monitor.add(part(factory, 'ch3Chair', 0.06, 0.12, 0.06, 0, 0, 0.02));
+      if (hash01(prop, 3) < 0.25) {
+        const screen = glowing(new THREE.BoxGeometry(0.44, 0.26, 0.01), factory.emitters.screenMaterial());
+        screen.position.set(0, 0.28, -0.021);
+        monitor.add(screen);
+      }
+      monitor.position.set((hash01(prop, 4) - 0.5) * w * 0.4, h, d * 0.15);
+      monitor.rotation.y = tilt;
+      desk.add(monitor);
+    }
+    return desk;
   }
 
   /** Office chair; about half of them have been knocked over. */
