@@ -1,4 +1,85 @@
 {
-  "_about": "Chapter 1, find the car. This file is the palette block \"ch1\" (levels pick it with \"palette\": \"ch1\"). It starts from the chosen mood (heavy), which was tuned on a foggy mountain road with red tail lights as the guide colour, so nothing is changed yet. Add only what chapter 1 needs to differ.",
-  "extends": "mood/heavy"
+  "_about": [
+    "Chapter 1, find the car. This file is the palette block \"ch1\" (levels pick it with \"palette\": \"ch1\").",
+    "Look: a realistic, dark night on a mountain road. It starts from the chosen mood (heavy) and changes what that look needs; every difference is explained in the PR description.",
+    "Fog is brighter than the things standing in it, so trees, wrecks and zombies read as dark silhouettes; the only warm colours are three small lights (camp fire, cabin window, a string of bulbs).",
+    "greybox.ch1Fire / ch1Window / ch1Bulb are the warm emitters built by web/js/props/Ch1Props.js: color and intensity of the glowing surface (above 1 feeds the bloom), light = the point light that reaches a few metres around it, flicker = how much the fire wavers.",
+    "Dynamic lights: flashlight + these three = 4, the limit. That is why the moon and the tail-light glow are switched off here."
+  ],
+  "extends": "mood/heavy",
+
+  "fog": { "color": "#121716", "density": 0.066 },
+  "hemisphere": { "sky": "#3d4a4c", "ground": "#050706", "intensity": 0.09 },
+  "moon": { "intensity": 0 },
+  "flashlight": { "intensity": 2.9, "angle": 17, "penumbra": 0.3, "distance": 26, "decay": 1.4 },
+  "post": {
+    "exposure": 0.72,
+    "saturation": 0.68,
+    "vignette": { "strength": 0.92, "start": 0.2, "end": 0.95 },
+    "grain": 0.075,
+    "chromaticAberration": 0.0025,
+    "bloom": { "enabled": true, "threshold": 0.85, "knee": 0.5, "strength": 0.8, "levels": 3 }
+  },
+  "accent": {
+    "color": "#ff3b2f",
+    "intensity": 5,
+    "light": { "intensity": 0 }
+  },
+
+  "greybox": {
+    "ground": "#161a15",
+    "grid": "#161a15",
+    "collider": "#3c413d",
+    "road": "#282b2d",
+    "tree": "#080a07",
+    "car": "#2a2f30",
+    "tire": "#101211",
+    "truck": "#30373a",
+    "crate": "#4a4234",
+    "metal": "#24282a",
+    "roughness": 0.92,
+    "groundRoughness": 0.85,
+
+    "ch1RoadLine": "#8a8672",
+    "ch1Rail": "#555b5b",
+    "ch1Rust": "#3f2c20",
+    "ch1Barrier": "#6f6a5c",
+    "ch1BarrierStripe": "#7a2f24",
+    "ch1Trash": "#2d2c26",
+    "ch1TrashPale": "#69665a",
+    "ch1Weed": "#232b1c",
+    "ch1Rock": "#2b2f2b",
+    "ch1Tent": "#3f4232",
+    "ch1Log": "#231c15",
+    "ch1Cabin": "#2a2520",
+    "ch1CabinRoof": "#181715",
+    "ch1CabinDark": "#0c0b0a",
+    "ch1Pole": "#1f1d1a",
+    "ch1Ember": "#1a1512",
+
+    "ch1Fire": {
+      "color": "#ff8428",
+      "intensity": 6,
+      "light": { "intensity": 2.2, "distance": 8, "decay": 2, "height": 0.7 },
+      "flicker": { "base": 0.82, "slow": 0.12, "fast": 0.06 }
+    },
+    "ch1Window": {
+      "color": "#ff9a3c",
+      "intensity": 3.4,
+      "light": { "intensity": 1.5, "distance": 7, "decay": 2 }
+    },
+    "ch1Bulb": {
+      "color": "#ffc478",
+      "intensity": 5,
+      "light": { "intensity": 1.4, "distance": 8, "decay": 2 }
+    },
+    "ch1Sign": { "color": "#ffb23a", "intensity": 1.6 },
+
+    "surfaces": {
+      "ground": { "texture": "stone", "metres": [5, 5], "roughness": 0.9 },
+      "road": { "texture": "asphalt", "metres": [6, 2.2], "roughness": 0.8 },
+      "ch1Barrier": { "texture": "concrete", "metres": [2, 1] },
+      "ch1Cabin": { "texture": "stucco", "metres": [2.5, 2.5] }
+    }
+  }
 }

@@ -64,10 +64,6 @@
 
 開工前讀 [docs/art/CHAPTER_FILES.md](docs/art/CHAPTER_FILES.md)、[docs/art/ADDING_AN_ASSET.md](docs/art/ADDING_AN_ASSET.md)、[art/style/STYLE_GUIDE.md](art/style/STYLE_GUIDE.md)、[docs/tech/PERFORMANCE_PLAN.md](docs/tech/PERFORMANCE_PLAN.md) 第 3.1 節，以及 `docs/story/` 裡那一章的故事。資產要跑 `node tools/art/assets.mjs all --chapter <章>` 通過才能 commit；截圖 JPEG 品質 85、1280×720。回報 draw call 和三角面數。
 
-- [~] **S1 第一章灰盒** `web/levels/ch1.json`（進行中：@kyle614，分支 feat/scene-ch1）
-  - 內容：約 300 m 的山路，分 3 段、2 個檢查點；兩旁用濃霧和樹牆擋住；每隔一段有一個小景（翻倒的車、空帳篷）；終點是車，紅色尾燈 `#ff3b2f` 一路當引導。3 個玩家出生點、出怪區、6～8 個機位。氣氛以 heavy 為基準，寫在 `art/style/chapters/ch1.json`。
-  - 注意：KNOWN_ISSUES 的「尾燈超過約 45 m 會消失」和 #9「StaticBatcher 不能剔除」，300 m 的路會遇到。
-  - 完成：從起點走得到終點（PathFinder 驗證），機位截圖存在 `art/style/refs/ch1-greybox/`。
 - [ ] **S2 第一章資產**（`art/manifest/ch1.json`）：`road_segment`（直線、彎道、坡道）、`guardrail`、`guardrail_broken`、`escape_car`（尾燈自發光）、`tree`。
 - [ ] **S3 第一章擺模型和打光**（等 S1、S2）：霧的流動、遠景剪影；重拍所有機位，和灰盒截圖比較。
 - [ ] **S4 第二章剩下的資產**（`art/manifest/ch2.json`）：`mvidia_sign`（標誌自己設計，不要仿真實公司的 logo）、`sandbags`、`hq_wall`。
@@ -95,6 +91,7 @@
 - [ ] **B9** `mood.json` 的 `spawns.zombies[1]` 和 `tree_56` 重疊（出生點檢查變嚴格後才出現的警告）
 - [ ] **B10** 抗鋸齒：沒有 MSAA 也沒有 FXAA
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
+- [ ] **B12** `Emitters` 沒有公開的方法讓章節道具登記每幀動畫；`Ch1Props.js` 的營火閃爍暫時直接用內部的 `_animations` 陣列（欄位改名的話火只是不閃，不會壞）
 
 ## 其他
 
@@ -107,3 +104,4 @@
 格式：`代號 標題（PR #編號）`。
 
 - 遊戲骨架：武器、敵人、狀態、商店各一個範例，修好碰撞 #1、#2（PR #6）
+- S1 第一章灰盒（PR #8）
