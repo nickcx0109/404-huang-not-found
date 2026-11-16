@@ -24,6 +24,8 @@ export class PlayerStatus {
     this.yaw = 0;
     /** Enemies as plain records { id, x, z }, so a widget can tell where a hit came from. */
     this.threats = [];
+    /** The other players as plain records { id, name, health, maxHealth, down }. */
+    this.mates = [];
   }
 
   /**
@@ -58,6 +60,21 @@ export class PlayerStatus {
       threat.z = enemies[index].position.z;
     }
     this.threats.length = enemies.length;
+    let count = 0;
+    for (const other of context.players) {
+      if (other === player) continue;
+      const mate = this.mates[count] ?? (this.mates[count] = { id: null, name: '', health: 0, maxHealth: 1, down: false });
+      if (mate.id !== other.id) {
+        mate.id = other.id;
+        mate.name = String(other.name ?? other.id).toUpperCase().slice(0, 12);
+      }
+      mate.health = other.damageable.health;
+      mate.maxHealth = other.damageable.maxHealth;
+      // Until downed-and-revive exists (TODO G7), a player without health counts as down.
+      mate.down = other.downed ?? other.damageable.health <= 0;
+      count++;
+    }
+    this.mates.length = count;
     return this;
   }
 }
