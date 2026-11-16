@@ -39,6 +39,7 @@ export class Ch1Props extends PropSet {
     ch1_car_flipped: Ch1Props.carFlipped,
     ch1_trash: Ch1Props.trash,
     ch1_weeds: Ch1Props.weeds,
+    ch1_rock: Ch1Props.rock,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -217,5 +218,19 @@ export class Ch1Props extends PropSet {
       clump.add(blade);
     }
     return clump;
+  }
+
+  /** Angular boulder filling the size the level gives. */
+  static rock(ctx) {
+    const { factory, size, prop } = ctx;
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5, 0), factory.material('ch1Rock'));
+    rock.scale.set(size.w, size.h * 1.3, size.d);
+    rock.position.y = size.h * 0.4;
+    rock.rotation.set(hash01(prop, 1) * 0.6, hash01(prop, 2) * Math.PI * 2, hash01(prop, 3) * 0.6);
+    rock.castShadow = true;
+    rock.receiveShadow = true;
+    const group = new THREE.Group();
+    group.add(rock);
+    return group;
   }
 }
