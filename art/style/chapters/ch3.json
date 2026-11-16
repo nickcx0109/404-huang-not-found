@@ -15,7 +15,8 @@
     "saturation": 0.66,
     "vignette": { "strength": 0.92, "start": 0.2, "end": 0.95 },
     "grain": 0.075,
-    "chromaticAberration": 0.0025
+    "chromaticAberration": 0.0025,
+    "bloom": { "enabled": true, "threshold": 0.85, "knee": 0.5, "strength": 0.85, "levels": 3 }
   },
   "accent": {
     "color": "#ffb020"
