@@ -20,5 +20,21 @@
   },
   "accent": {
     "color": "#ffb020"
+  },
+
+  "greybox": {
+    "ground": "#1c1f1e",
+    "grid": "#1c1f1e",
+    "collider": "#232726",
+    "crate": "#4a4234",
+    "metal": "#22262a",
+    "roughness": 0.9,
+    "groundRoughness": 0.7,
+    "screen": { "color": "#9fb4bd", "intensity": 0.9 },
+
+    "surfaces": {
+      "ground": { "texture": "concrete", "metres": [4, 4], "roughness": 0.7 },
+      "collider": { "texture": "stucco", "metres": [3, 3] }
+    }
   }
 }
