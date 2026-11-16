@@ -107,6 +107,18 @@
       const depth = b.d + GROUND_MARGIN * 2;
       const geometry = new THREE.PlaneGeometry(width, depth);
       geometry.rotateX(-Math.PI / 2);
+      if (this.props.surface('ground')) {
+        // A real road surface (palette greybox.surfaces.ground) instead of the 1 m grid.
+        const material = this.props.material('ground');
+        const [mu, mv] = material.userData.metres;
+        const uv = geometry.attributes.uv;
+        for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * width) / mu, (uv.getY(i) * depth) / mv);
+        const ground = new THREE.Mesh(geometry, material);
+        ground.position.set(b.x, 0, b.z);
+        ground.receiveShadow = true;
+        ground.name = 'ground';
+        return ground;
+      }
       const texture = this._gridTexture();
       texture.repeat.set(width, depth);
       // Shift the texture so that grid lines fall on whole metres of level space.

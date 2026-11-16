@@ -1,0 +1,21 @@
+{
+  "_about": [
+    "Tiling surface textures for walls, buildings and the ground: web/assets/textures/<id>.jpg.",
+    "Built from downloaded packs (outside the repo, in ../asset_drop or $ASSET_DROP) by",
+    "  node tools/art/assets.mjs textures     (needs Blender; repaints larger and seamless).",
+    "crop (optional): [left, top, right, bottom] as fractions of the source image.",
+    "generator (instead of source): painted from scratch by tools/art/build_textures.py.",
+    "Which prop uses which texture, and how many metres one tile covers, is set in the palette: greybox.surfaces.",
+    "SHARED: talk to the team lead before changing an existing entry."
+  ],
+  "textures": [
+    { "id": "asphalt", "source": "urban/URBAN/textures/road2.png", "crop": [0, 0.13, 1, 0.87], "notes": "road surface between the yellow lines; PSX urban stacked pack (valsekamerplant, CC0)" },
+    { "id": "sidewalk", "source": "urban/URBAN/textures/sidewalk.jpg", "notes": "paving slabs; PSX urban stacked pack (CC0)" },
+    { "id": "brick", "source": "urban/URBAN/textures/brick_wall.jpg", "notes": "brick wall; PSX urban stacked pack (CC0)" },
+    { "id": "concrete", "source": "urban/URBAN/textures/concrete_bare.jpg", "notes": "bare concrete; PSX urban stacked pack (CC0)" },
+    { "id": "stucco", "source": "urban/URBAN/textures/sctucco.jpg", "notes": "plaster; PSX urban stacked pack (CC0)" },
+    { "id": "stone", "source": "urban/URBAN/textures/stonewall.jpg", "notes": "stone wall; PSX urban stacked pack (CC0)" },
+    { "id": "sandbags", "generator": "sandbags", "notes": "sandbag wall, painted by the tool (2 rows of bags per tile)" },
+    { "id": "metal", "source": "urban/URBAN/textures/metal_bare_2.png", "notes": "bare metal; PSX urban stacked pack (CC0)" }
+  ]
+}

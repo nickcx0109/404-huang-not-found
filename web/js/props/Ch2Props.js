@@ -55,7 +55,20 @@
         .register('shop_terminal', Ch2Props.shopTerminal)
         .register('sandbags', Ch2Props.sandbags)
         .register('barricade', Ch2Props.barricade)
-        .register('warning_light', Ch2Props.warningLight);
+        .register('warning_light', Ch2Props.warningLight)
+        .register('warning_beacon', Ch2Props.warningLight); // same, without a pole (on a roof)
+
+      // The models carry the glowing lens; the moving red light is added here, at the lens.
+      const beaconLight = (lensHeight) => (ctx) => {
+        const rig = ctx.factory.emitters.alarmLight();
+        if (rig) {
+          rig.position.y = lensHeight;
+          ctx.object.add(rig);
+        }
+      };
+      factory
+        .registerExtras('warning_light', beaconLight(2.6))
+        .registerExtras('warning_beacon', beaconLight(0.2));
     }
 
     /** Locked double gate: two posts, a lintel and two leaves with cross bars. */

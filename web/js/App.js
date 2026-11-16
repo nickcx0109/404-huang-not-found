@@ -11,6 +11,7 @@
     levelsUrl: 'levels/',
     manifestUrl: '../art/manifest/',
     modelsUrl: 'assets/models/',
+    texturesUrl: 'assets/textures/',
     defaultLevel: 'test',
     maxPixelRatio: 1.5, // PERFORMANCE_PLAN 3.2-5
     minPixelRatio: 0.5,
@@ -95,9 +96,14 @@
         ? new Game.ModelLibrary(CONFIG.manifestUrl, CONFIG.modelsUrl)
         : Game.ModelLibrary.none();
       await this.models.load(options.models ? level.manifests : [], level.props.map((p) => p.name));
-      this.propFactory = new Game.PropFactory(this.style, this.models);
+      this.propFactory = new Game.PropFactory(
+        this.style,
+        this.models,
+        options.models ? CONFIG.texturesUrl : null // ?models=0 keeps the flat greybox look
+      );
       this.builder = new Game.SceneBuilder(this.propFactory, this.style.greybox);
       this.built = this.builder.build(level, { debug: options.debug, dummies: options.dummies });
+      await this.propFactory.texturesLoaded(); // so the first frame (and screenshots) has them
       this.scene.add(this.built.root);
       if (this.built.debug) this.scene.add(this.built.debug);
       if (this.built.dummies) this.scene.add(this.built.dummies);

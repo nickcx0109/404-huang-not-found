@@ -7,12 +7,16 @@ every asset looks like part of the same set.
 """
 
 import math
+import os
+import zlib
 
 import bmesh
 import bpy
+import numpy as np
 from mathutils import Euler, Matrix, Vector, noise
 
-from .palette import AssetPalette
+from .palette import REPO_ROOT, AssetPalette
+from .texture import repaint
 
 COLOR_LAYER = "Col"
 BASE_MATERIAL = "vertex_color"
@@ -21,6 +25,11 @@ BASE_MATERIAL = "vertex_color"
 GLOW_PREFIX = "glow_"
 PIPELINE_NAME = "404-build_assets"
 PIPELINE_VERSION = 1
+
+
+def asset_drop_dir():
+    """Where downloaded asset packs live: $ASSET_DROP, or <repo>/../asset_drop."""
+    return os.environ.get("ASSET_DROP") or os.path.normpath(os.path.join(REPO_ROOT, "..", "asset_drop"))
 
 
 class AssetError(Exception):
@@ -43,7 +52,8 @@ class Asset:
 
     # ---- shapes ------------------------------------------------------------------------
 
-    def box(self, name, size, at=(0, 0, 0), color=None, glow=None, rot=(0, 0, 0), taper=1.0):
+    def box(self, name, size, at=(0, 0, 0), color=None, glow=None, rot=(0, 0, 0), taper=1.0,
+            surface=None, metres=2.0):
         """Box of size (x, y, z) standing on the point `at` (its bottom centre).
 
         rot: degrees around X, Y, Z, turning about `at`.
@@ -60,10 +70,11 @@ class Asset:
             (0, 3, 2, 1), (4, 5, 6, 7),
             (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7),
         ]
-        return self.mesh(name, verts, faces, at=at, color=color, glow=glow, rot=rot)
+        return self.mesh(name, verts, faces, at=at, color=color, glow=glow, rot=rot,
+                         surface=surface, metres=metres)
 
     def cylinder(self, name, radius, height, at=(0, 0, 0), color=None, glow=None,
-                 segments=12, radius_top=None, rot=(0, 0, 0)):
+                 segments=12, radius_top=None, rot=(0, 0, 0), surface=None, metres=2.0):
         """Upright cylinder (or cone, with radius_top) standing on the point `at`."""
         top = radius if radius_top is None else radius_top
         ring = [2.0 * math.pi * i / segments for i in range(segments)]
@@ -73,15 +84,24 @@ class Asset:
         for i in range(segments):
             j = (i + 1) % segments
             faces.append((i, j, segments + j, segments + i))
-        return self.mesh(name, verts, faces, at=at, color=color, glow=glow, rot=rot)
+        return self.mesh(name, verts, faces, at=at, color=color, glow=glow, rot=rot,
+                         surface=surface, metres=metres)
 
-    def mesh(self, name, verts, faces, at=(0, 0, 0), color=None, glow=None, rot=(0, 0, 0)):
-        """Any shape: vertices around the origin, faces counter-clockwise seen from outside."""
+    def mesh(self, name, verts, faces, at=(0, 0, 0), color=None, glow=None, rot=(0, 0, 0),
+             surface=None, metres=2.0):
+        """Any shape: vertices around the origin, faces counter-clockwise seen from outside.
+
+        Give exactly one of: color= (vertex colour, gets the grime), glow= (glowing part), or
+        surface= (one of the tiling textures in web/assets/textures/, e.g. "concrete", laid on
+        every face at real size, one tile per `metres` metres; build them first with
+        node tools/art/assets.mjs textures).
+        """
         if self._finished:
             raise AssetError("%s: shapes cannot be added after finish()" % self.id)
-        if (color is None) == (glow is None):
+        if sum(x is not None for x in (color, glow, surface)) != 1:
             raise AssetError(
-                "%s: part %r needs either color=asset.color(...) or glow=\"accent\"" % (self.id, name)
+                "%s: part %r needs one of color=asset.color(...), glow=\"accent\" or surface=\"concrete\""
+                % (self.id, name)
             )
         turn = Euler([math.radians(a) for a in rot], "XYZ").to_matrix().to_4x4()
         matrix = Matrix.Translation(Vector(at)) @ turn
@@ -89,7 +109,10 @@ class Asset:
         data = bpy.data.meshes.new("%s.%s" % (self.id, name))
         data.from_pydata([tuple(matrix @ Vector(v)) for v in verts], [], [tuple(f) for f in faces])
         data.update()
-        if glow is None:
+        if surface is not None:
+            self._box_uvs(data, metres)
+            data.materials.append(self._surface_material(surface))
+        elif glow is None:
             layer = data.color_attributes.new(COLOR_LAYER, "FLOAT_COLOR", "CORNER")
             rgba = (color[0], color[1], color[2], 1.0)
             for corner in layer.data:
@@ -102,6 +125,79 @@ class Asset:
         bpy.context.scene.collection.objects.link(part)
         self._parts.append(part)
         return part
+
+    def import_model(self, path, at=(0, 0, 0), rot=(0, 0, 0), length=None, scale=1.0, wear=1.0,
+                     exposure=1.0):
+        """Brings in a model from a downloaded asset pack (.glb, .gltf, .obj, .fbx or .blend).
+
+        path: relative to the asset drop folder, which lives OUTSIDE the repo (packs are big
+            and only the built GLB is committed). Default <repo>/../asset_drop; set the
+            ASSET_DROP environment variable to use another folder.
+        rot: degrees around X, Y, Z (Blender axes), to turn the model's front toward -Y.
+        length: if given, scales the model evenly so that its longest side on the ground
+            (X or Y) is this many metres. Otherwise `scale` is used as is.
+        at: where the model's bottom centre goes.
+        wear: how much dirt is painted on (1 = normal, 2 = abandoned for months).
+        exposure: extra darkening of its textures (1 = as the palette style says).
+
+        The model keeps its own textures (made greyer and darker by the palette's style, so it
+        sits with the rest of the set); it does not get the vertex-colour grime.
+        """
+        if self._finished:
+            raise AssetError("%s: models cannot be imported after finish()" % self.id)
+        full = os.path.join(asset_drop_dir(), path)
+        if not os.path.isfile(full):
+            raise AssetError("%s: no file %s (download the pack into %s)" % (self.id, full, asset_drop_dir()))
+
+        before = set(bpy.data.objects)
+        ext = os.path.splitext(full)[1].lower()
+        if ext in (".glb", ".gltf"):
+            bpy.ops.import_scene.gltf(filepath=full)
+        elif ext == ".obj":
+            bpy.ops.wm.obj_import(filepath=full)
+        elif ext == ".fbx":
+            bpy.ops.import_scene.fbx(filepath=full)
+        elif ext == ".blend":
+            # every mesh object of the file, as placed there (e.g. a car body with its wheels)
+            with bpy.data.libraries.load(full, link=False) as (source, target):
+                target.objects = list(source.objects)
+            for obj in target.objects:
+                if obj is not None and obj.type == "MESH":
+                    bpy.context.scene.collection.objects.link(obj)
+        else:
+            raise AssetError("%s: cannot import %s files" % (self.id, ext))
+        new = [o for o in bpy.data.objects if o not in before]
+        bpy.context.view_layer.update()  # so matrix_world includes parents
+
+        others = [o for o in new if o.type != "MESH"]
+        parts = []
+        for obj in new:
+            if obj.type != "MESH":
+                continue
+            world = obj.matrix_world.copy()
+            obj.parent = None
+            obj.data = obj.data.copy()
+            obj.data.transform(world)
+            obj.matrix_world = Matrix.Identity(4)
+            parts.extend(self._split_by_material(obj))
+        for obj in others:
+            bpy.data.objects.remove(obj)
+        if not parts:
+            raise AssetError("%s: %s has no meshes" % (self.id, path))
+
+        low, high = self._bounds(parts)
+        if length:
+            scale = length / max(high.x - low.x, high.y - low.y)
+        centre = Matrix.Translation(Vector((-(low.x + high.x) / 2.0, -(low.y + high.y) / 2.0, -low.z)))
+        turn = Euler([math.radians(a) for a in rot], "XYZ").to_matrix().to_4x4()
+        matrix = Matrix.Translation(Vector(at)) @ turn @ Matrix.Scale(scale, 4) @ centre
+        for part in parts:
+            part.data.transform(matrix)
+            part.data.update()
+        for material in {p.data.materials[0] for p in parts if p.data.materials}:
+            self._weather_textures(material, wear, exposure)
+        self._parts.extend(parts)
+        return parts
 
     def align_bottom_center(self):
         """Moves everything so that the asset stands on z = 0, centred on x = y = 0."""
@@ -173,7 +269,7 @@ class Asset:
             export_yup=True,
             export_normals=True,
             export_tangents=False,
-            export_texcoords=False,
+            export_texcoords=True,  # imported pack models keep their textures
             export_materials="EXPORT",
             export_vertex_color="MATERIAL",
             export_cameras=False,
@@ -212,6 +308,132 @@ class Asset:
             shader.inputs["Emission Color"].default_value = (rgb[0], rgb[1], rgb[2], 1.0)
             shader.inputs["Emission Strength"].default_value = 1.0
         return material
+
+    @staticmethod
+    def _box_uvs(data, metres):
+        """Box-projected UVs at real size: each face uses the two axes it lies along."""
+        layer = data.uv_layers.new(name="UVMap")
+        for polygon in data.polygons:
+            n = polygon.normal
+            ax = max(range(3), key=lambda i: abs(n[i]))
+            u_axis, v_axis = {0: (1, 2), 1: (0, 2), 2: (0, 1)}[ax]
+            for index in polygon.loop_indices:
+                co = data.vertices[data.loops[index].vertex_index].co
+                layer.data[index].uv = (co[u_axis] / metres, co[v_axis] / metres)
+
+    def _surface_material(self, surface):
+        """Material showing web/assets/textures/<surface>.jpg, darkened for the night palette."""
+        name = "surface_" + surface
+        material = bpy.data.materials.get(name)
+        if material is not None:
+            return material
+        path = os.path.join(REPO_ROOT, "web", "assets", "textures", surface + ".jpg")
+        if not os.path.isfile(path):
+            raise AssetError("%s: no texture %s; run: node tools/art/assets.mjs textures" % (self.id, path))
+        source = bpy.data.images.load(path)
+        w, h = source.size
+        pixels = np.empty(w * h * 4, dtype=np.float32)
+        source.pixels.foreach_get(pixels)
+        pixels = pixels.reshape(h, w, 4)
+        pixels[..., :3] *= self.palette.style.get("importExposure", 0.55)
+        image = bpy.data.images.new("%s_%s" % (self.id, surface), w, h)
+        image.pixels.foreach_set(pixels.ravel())
+        image.filepath_raw = os.path.join(bpy.app.tempdir, "%s_%s.jpg" % (self.id, surface))
+        image.file_format = "JPEG"
+        image.save()
+
+        material = bpy.data.materials.new(name)
+        material.use_backface_culling = True
+        material.use_nodes = True
+        nodes = material.node_tree.nodes
+        shader = nodes["Principled BSDF"]
+        node = nodes.new("ShaderNodeTexImage")
+        node.image = image
+        node.interpolation = "Linear"
+        material.node_tree.links.new(node.outputs["Color"], shader.inputs["Base Color"])
+        shader.inputs["Roughness"].default_value = self.palette.style.get("roughness", 0.9)
+        shader.inputs["Metallic"].default_value = 0.0
+        material["_weathered"] = True  # already weathered by build_textures
+        return material
+
+    def _split_by_material(self, obj):
+        """One object per material, so that finish() can group parts by material."""
+        data = obj.data
+        if len(data.materials) == 0:
+            data.materials.append(self._base_material())
+            layer = data.color_attributes.new(COLOR_LAYER, "FLOAT_COLOR", "CORNER")
+            grey = (0.35, 0.35, 0.35)
+            for corner in layer.data:
+                corner.color = (grey[0], grey[1], grey[2], 1.0)
+        if len(data.materials) == 1:
+            return [obj]
+        pieces = []
+        for index, material in enumerate(data.materials):
+            mesh = bmesh.new()
+            mesh.from_mesh(data)
+            drop = [f for f in mesh.faces if f.material_index != index]
+            bmesh.ops.delete(mesh, geom=drop, context="FACES")
+            if not mesh.faces:
+                mesh.free()
+                continue
+            for face in mesh.faces:
+                face.material_index = 0
+            piece_data = bpy.data.meshes.new("%s.%d" % (data.name, index))
+            mesh.to_mesh(piece_data)
+            mesh.free()
+            piece_data.materials.append(material)
+            piece = bpy.data.objects.new(piece_data.name, piece_data)
+            bpy.context.scene.collection.objects.link(piece)
+            pieces.append(piece)
+        bpy.data.objects.remove(obj)
+        return pieces
+
+    def _weather_textures(self, material, wear=1.0, exposure=1.0):
+        """Greys and darkens a pack's textures with the palette style (desaturate, grime)."""
+        if not material.use_nodes or material.get("_weathered"):
+            return
+        material["_weathered"] = True
+        style = self.palette.style
+        desaturate = style.get("desaturate", 0.0)
+        # pack textures are painted for daylight; bring them down to the night palette
+        darken = (1.0 - 0.5 * style.get("grime", 0.0)) * style.get("importExposure", 0.55)
+        for node in material.node_tree.nodes:
+            image = getattr(node, "image", None)
+            if node.type != "TEX_IMAGE" or image is None:
+                continue
+            # Packs often ask for nearest-pixel sampling (the retro "PS1" look); smooth it.
+            node.interpolation = "Linear"
+            if image.get("_weathered"):
+                continue
+            image["_weathered"] = True
+            node.image = self._repaint(image, desaturate, darken * exposure, node.outputs["Alpha"].is_linked, wear)
+
+    def _repaint(self, image, desaturate, darken, uses_alpha, wear=1.0):
+        """A sharper, larger copy of a pack texture with painted-in wear.
+
+        Low-resolution pack textures (often 128 px) look blocky or blurry up close. This
+        scales them up (TEXTURE_UPSCALE times, at most TEXTURE_MAX px), sharpens the edges
+        back, and paints fine detail that the small original could not hold: film-like grain,
+        blotchy stains at several sizes and faint vertical rain streaks. Then the palette
+        style greys and darkens it. Shapes and UVs stay as the pack made them.
+        """
+        w, h = image.size
+        src = np.empty(w * h * 4, dtype=np.float32)
+        image.pixels.foreach_get(src)
+        seed = zlib.crc32(("%s|%s" % (self.id, image.name)).encode("utf-8"))  # same every build
+        img = repaint(src.reshape(h, w, 4), seed, desaturate, darken, wear=wear)
+        H, W = img.shape[:2]
+
+        name = "%s_%s" % (self.id, bpy.path.clean_name(image.name))
+        out = bpy.data.images.new(name, W, H, alpha=True)
+        out.colorspace_settings.name = image.colorspace_settings.name
+        out.pixels.foreach_set(img.ravel())
+        # Saved beside Blender's temp files (never into the pack); JPEG keeps the GLB small.
+        opaque = not uses_alpha or bool(np.all(img[..., 3] > 0.99))
+        out.filepath_raw = os.path.join(bpy.app.tempdir, name + (".jpg" if opaque else ".png"))
+        out.file_format = "JPEG" if opaque else "PNG"
+        out.save()
+        return out
 
     @staticmethod
     def _join(name, parts):

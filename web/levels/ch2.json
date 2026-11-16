@@ -3,6 +3,7 @@
   "name": "ch2",
   "title": "Chapter 2: hold the gate (greybox)",
   "palette": "ch2",
+  "manifests": ["common", "ch2"],
 
   "bounds": { "x": 0, "z": -9, "w": 76, "d": 59 },
 
@@ -91,7 +92,7 @@
     { "name": "warning_light", "x": -18, "y": 0, "z": -0.6, "rotY": 90, "size": [0.3, 2.4, 0.3] },
     { "name": "warning_light", "x": 18, "y": 0, "z": 0.4, "rotY": -90, "size": [0.3, 2.4, 0.3] },
     { "name": "warning_light", "x": 0.3, "y": 0, "z": -17.6, "rotY": 0, "size": [0.3, 2.4, 0.3] },
-    { "name": "warning_light", "x": 8, "y": 2.7, "z": 13.2 },
+    { "name": "warning_beacon", "x": 8, "y": 2.7, "z": 13.2 },
     { "name": "car_wreck", "collider": "car_wreck_a", "x": -7, "z": -11, "rotY": 65, "size": [1.8, 1.4, 4.2] },
     { "name": "car_wreck", "collider": "car_wreck_b", "x": 8, "z": -11.5, "rotY": -20, "size": [1.8, 1.4, 4.2] },
     { "name": "car_wreck", "collider": "car_wreck_c", "x": 14, "z": -6.2, "rotY": 40, "size": [1.8, 1.4, 4.2] },

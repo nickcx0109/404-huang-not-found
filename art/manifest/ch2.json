@@ -10,14 +10,15 @@
   ],
   "chapter": "ch2",
   "assets": [
-    { "id": "mvidia_gate", "class": "large_prop", "source": "blender", "status": "planned", "size": [8, 5, 1], "notes": "總部大門" },
+    { "id": "mvidia_gate", "class": "large_prop", "source": "blender", "status": "ready", "size": [8, 5, 1], "notes": "總部大門" },
     { "id": "mvidia_sign", "class": "small_prop", "source": "blender", "status": "planned", "size": [8.4, 2.4, 0.3], "notes": "招牌，自己設計的標誌；字用 glow=\"accent\"，壞掉的字用 glow=\"accent_faulty\"" },
-    { "id": "gate_panel", "class": "small_prop", "source": "blender", "status": "planned", "size": [0.5, 0.7, 0.12], "notes": "門禁面板；螢幕用 glow=\"accent\"" },
-    { "id": "guard_booth", "class": "large_prop", "source": "blender", "status": "planned", "size": [2.6, 2.7, 2.6], "notes": "保全亭，可做翻倒版本" },
-    { "id": "shop_terminal", "class": "small_prop", "source": "blender", "status": "planned", "size": [1.4, 2.1, 0.9], "notes": "商店；螢幕用 glow=\"screen\"" },
+    { "id": "gate_panel", "class": "small_prop", "source": "blender", "status": "ready", "size": [0.52, 0.7, 0.15], "notes": "門禁面板；螢幕用 glow=\"accent\"" },
+    { "id": "guard_booth", "class": "large_prop", "source": "blender", "status": "ready", "size": [2.6, 2.7, 2.6], "notes": "保全亭，可做翻倒版本" },
+    { "id": "shop_terminal", "class": "small_prop", "source": "blender", "status": "ready", "size": [1.4, 2.1, 0.9], "notes": "商店；螢幕用 glow=\"screen\"" },
     { "id": "sandbags", "class": "small_prop", "source": "blender", "status": "planned", "notes": "沙包牆一段" },
-    { "id": "barricade", "class": "small_prop", "source": "blender", "status": "planned", "size": [3.2, 1.15, 0.9], "notes": "拒馬" },
-    { "id": "warning_light", "class": "small_prop", "source": "blender", "status": "planned", "notes": "紅色警示燈的燈罩，用 glow=\"alarm\"；光由程式加" },
+    { "id": "barricade", "class": "small_prop", "source": "blender", "status": "ready", "size": [3.2, 1.47, 1.05], "notes": "水泥護欄；模型來自 PSX urban stacked pack (valsekamerplant, CC0) Jersey_barrier_dirty" },
+    { "id": "warning_light", "class": "small_prop", "source": "blender", "status": "ready", "size": [0.3, 2.71, 0.3], "notes": "紅色警示燈，2.4 m 的桿子上；燈罩 glow=\"alarm\"，會動的紅光由 Ch2Props.js 的 registerExtras 加" },
+    { "id": "warning_beacon", "class": "small_prop", "source": "blender", "status": "ready", "size": [0.24, 0.31, 0.24], "notes": "同上但沒有桿子，放在保全亭屋頂" },
     { "id": "hq_wall", "class": "module", "source": "blender", "status": "planned", "notes": "總部正面的牆" }
   ]
 }
