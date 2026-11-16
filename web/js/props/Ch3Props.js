@@ -114,6 +114,7 @@ export class Ch3Props extends PropSet {
     ch3_cabinet: Ch3Props.cabinet,
     ch3_papers: Ch3Props.papers,
     ch3_debris: Ch3Props.debris,
+    ch3_emergency_light: Ch3Props.emergencyLight,
   };
 
   /**
@@ -325,5 +326,25 @@ export class Ch3Props extends PropSet {
       heap.add(piece);
     }
     return heap;
+  }
+
+  /**
+   * Wall-mounted emergency lamp: its red lens pulses. Only the first few in a level (palette
+   * alarm.light.count) carry a real turning light; the rest only glow. Front toward -Z.
+   */
+  static emergencyLight(ctx) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const lamp = new THREE.Group();
+    lamp.add(part(factory, 'ch3Chair', w, h * 0.45, d, 0, 0, 0));
+    const lens = glowing(new THREE.BoxGeometry(w * 0.8, h * 0.5, d * 0.8), factory.emitters.alarmMaterial());
+    lens.position.set(0, h * 0.7, 0);
+    lamp.add(lens);
+    const rig = factory.emitters.alarmLight();
+    if (rig) {
+      rig.position.set(0, h * 0.7, -d);
+      lamp.add(rig);
+    }
+    return lamp;
   }
 }

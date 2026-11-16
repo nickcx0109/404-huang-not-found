@@ -23,6 +23,12 @@
     "intensity": 3.2,
     "light": { "intensity": 0 }
   },
+  "alarm": {
+    "color": "#ff2a1f",
+    "intensity": 3.5,
+    "pulseMin": 0.3,
+    "light": { "count": 1, "intensity": 2.2, "distance": 14, "angle": 50, "penumbra": 0.8, "decay": 1.4, "rpm": 9, "tilt": -28, "startAngle": 0, "sweep": 0 }
+  },
 
   "greybox": {
     "ground": "#1c1f1e",
