@@ -1,0 +1,11 @@
+{
+  "_about": [
+    "Weapons the player holds. Same rules as the other manifests (see test.json); a weapon is also a normal model, so it can lie in a level as a pickup.",
+    "A weapon's moving pieces (slide, magazine, trigger, hammer) are separate parts of its GLB, made with asset.part() in its script; web/js/weapons/ animates them.",
+    "Colours for weapons are in art/style/chapters/weapons.json."
+  ],
+  "chapter": "weapons",
+  "assets": [
+    { "id": "pistol", "class": "small_prop", "source": "blender", "status": "wip", "size": [0.034, 0.146, 0.2], "notes": "半自動手槍（自己設計，不仿任何真實型號）；可動零件：slide、magazine、trigger、hammer" }
+  ]
+}
