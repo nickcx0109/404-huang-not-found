@@ -60,6 +60,10 @@
 - [ ] **G10 音效**
   - 起點：`reference/old-web-prototype/prototype-web/sfx/`、`core/audio.js`。
   - 內容：開槍、換彈、殭屍、受傷、波次開始的音效，用訂閱事件的方式播放，不寫進武器或敵人的邏輯裡。
+- [~] **G12 遊戲內介面（HUD）重做**（進行中：@kyle614，分支 feat/hud-horror）
+  - 起點：`web/js/ui/GameplayHud.js`、`web/js/game/events.js`，`test/GameplayHud.test.js`。
+  - 內容：寫實、恐怖、資訊克制的介面，沒有方框和面板。每個元件一個類別、一個檔案，放在 `web/js/ui/hud/`：血量、彈藥、準星、受傷效果、提示文字、事件字卡、隊友狀態；用一個組合類別裝起來，取代 `GameplayHud`。
+  - 完成：`play=1` 才載入；沒有 `play=1` 時畫面不變；純邏輯有測試。
 
 ## 場景與美術
 
