@@ -146,6 +146,7 @@ export class Ch3Props extends PropSet {
     ch3_glass: Ch3Props.glass,
     ch3_boards: Ch3Props.boards,
     ch3_barricade: Ch3Props.barricade,
+    ch3_exit_sign: Ch3Props.exitSign,
   };
 
   /**
@@ -835,5 +836,28 @@ export class Ch3Props extends PropSet {
     }
     pile.traverse((object) => { object.userData.dynamic = true; });
     return pile;
+  }
+
+  /**
+   * Emergency exit sign on its own battery: a green plate with a dark arrow, the one thing
+   * still lit that says where the stairs are. It glows but lights nothing. Front toward -Z;
+   * the arrow points down, at the door it hangs over.
+   */
+  static exitSign(ctx) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const sign = new THREE.Group();
+    sign.add(part(factory, 'ch3Chair', w, h, d, 0, 0, 0));
+    const face = glowing(new THREE.BoxGeometry(w * 0.9, h * 0.8, 0.01), glowMaterial(factory, 'ch3Led'));
+    face.position.set(0, h * 0.5, -d / 2 - 0.006);
+    sign.add(face);
+    [-1, 1].forEach((side) => {
+      const stroke = part(factory, 'ch3LiftDark', w * 0.3, h * 0.16, 0.012, 0, 0, 0);
+      stroke.position.set(side * w * 0.1, h * 0.36, -d / 2 - 0.014);
+      stroke.rotation.z = side * 0.75;
+      stroke.castShadow = false;
+      sign.add(stroke);
+    });
+    return sign;
   }
 }
