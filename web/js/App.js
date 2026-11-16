@@ -44,6 +44,7 @@ export class AppOptions {
     this.perf = flag('perf');
     this.flashlight = params.get('flashlight') !== '0';
     this.dummies = flag('dummies');
+    this.play = params.get('play') === '1';
     // ?models=0 shows the greybox stand-ins even where a model exists.
     this.models = params.get('models') !== '0';
     // Seconds on the animation clock for ?shot= (flicker and beacons are functions of time).
@@ -126,6 +127,11 @@ export class App {
     );
     this.player.spawnAt(level.spawns.players[Math.min(options.spawn, level.spawns.players.length - 1)]);
 
+    if (options.play && !options.shot) {
+      const { installGameplay } = await import('./game/installGameplay.js');
+      installGameplay(this);
+    }
+
     this._resize();
     window.addEventListener('resize', () => this._resize());
 
@@ -204,7 +210,10 @@ export class App {
     this.hud.setStartVisible(true);
     this.hud.onStartClick(() => this.player.requestLock());
     canvas.addEventListener('click', () => this.player.requestLock());
-    this.player.onLockChange = (locked) => this.hud.setStartVisible(!locked);
+    this.player.onLockChange = (locked) => {
+      this.hud.setStartVisible(!locked && this.game?.state !== 'game-over');
+      if (locked && this.game) this.game.start();
+    };
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
@@ -258,7 +267,12 @@ export class App {
     this._lastTime = now;
     const dt = Math.min(CONFIG.maxFrameTime, Math.max(0, elapsed));
 
-    this.player.update(dt);
+    if (!this.game || this.game.canMove) this.player.update(dt);
+    if (this.game && this.player.locked) {
+      this.combat.updateAim();
+      this.game.update(dt);
+      this.hud.updateGame(dt, this.game);
+    }
     this.atmosphere.update(dt, now / 1000);
     this.built.update(now / 1000);
     this._render(now / 1000);
