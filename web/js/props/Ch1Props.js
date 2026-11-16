@@ -126,6 +126,7 @@ export class Ch1Props extends PropSet {
     ch1_tire: Ch1Props.tire,
     ch1_tent: Ch1Props.tent,
     ch1_campfire: Ch1Props.campfire,
+    ch1_cabin: Ch1Props.cabin,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -420,5 +421,54 @@ export class Ch1Props extends PropSet {
       fire.add(light);
     }
     return fire;
+  }
+
+  /**
+   * Roadside cabin with the power still on in one room: the window and the gap under the
+   * door glow orange and light the ground in front. Front (door and window) toward -Z.
+   * Warm light 2 of 3.
+   */
+  static cabin(ctx) {
+    const { factory, size } = ctx;
+    const { w, h, d } = size;
+    const wall = h * 0.68;
+    const cabin = new THREE.Group();
+    cabin.add(part(factory, 'ch1Cabin', w, wall, d, 0, 0, 0));
+
+    // Pitched roof: two slabs meeting at the ridge, overhanging the walls.
+    const rise = h - wall;
+    const half = w / 2 + 0.35;
+    const slope = Math.hypot(half, rise);
+    const pitch = Math.atan2(rise, half);
+    [-1, 1].forEach((side) => {
+      const slab = part(factory, 'ch1CabinRoof', slope, 0.12, d + 0.7, 0, 0, 0);
+      slab.position.set(side * half * 0.5, wall + rise * 0.5 - 0.06, 0);
+      slab.rotation.z = -side * pitch;
+      cabin.add(slab);
+    });
+    cabin.add(part(factory, 'ch1Cabin', w * 0.96, rise * 0.55, d * 0.98, 0, wall, 0));
+
+    const front = -d / 2 - 0.02;
+    cabin.add(part(factory, 'ch1CabinDark', 0.95, wall * 0.78, 0.06, -w * 0.22, 0, front));
+    cabin.add(part(factory, 'ch1CabinRoof', w * 0.5, 0.1, 1.1, -w * 0.2, 0, front - 0.55));
+
+    const glow = warmMaterial(factory, 'ch1Window');
+    const windowWidth = Math.min(1.3, w * 0.26);
+    const pane = glowing(new THREE.BoxGeometry(windowWidth, wall * 0.3, 0.04), glow);
+    pane.position.set(w * 0.2, wall * 0.58, front);
+    cabin.add(pane);
+    const gap = glowing(new THREE.BoxGeometry(0.85, 0.03, 0.04), glow);
+    gap.position.set(-w * 0.22, 0.03, front - 0.03);
+    cabin.add(gap);
+    // Window bars: two dark strips across the light.
+    cabin.add(part(factory, 'ch1CabinDark', 0.05, wall * 0.3, 0.05, w * 0.2, wall * 0.43, front - 0.03));
+    cabin.add(part(factory, 'ch1CabinDark', windowWidth, 0.05, 0.05, w * 0.2, wall * 0.56, front - 0.03));
+
+    const light = warmLight(factory, 'ch1Window');
+    if (light) {
+      light.position.set(w * 0.2, wall * 0.5, front - 1.4);
+      cabin.add(light);
+    }
+    return cabin;
   }
 }

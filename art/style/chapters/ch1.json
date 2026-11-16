@@ -45,6 +45,8 @@
     "ch1Rock": "#2b2f2b",
     "ch1Tent": "#3f4232",
     "ch1Log": "#231c15",
+    "ch1Cabin": "#2a2520",
+    "ch1CabinRoof": "#181715",
     "ch1CabinDark": "#0c0b0a",
     "ch1Pole": "#1f1d1a",
     "ch1Ember": "#1a1512",
@@ -55,11 +57,17 @@
       "light": { "intensity": 2.6, "distance": 10, "decay": 2, "height": 0.7 },
       "flicker": { "base": 0.82, "slow": 0.12, "fast": 0.06 }
     },
+    "ch1Window": {
+      "color": "#ff9a3c",
+      "intensity": 3.4,
+      "light": { "intensity": 1.8, "distance": 9, "decay": 2 }
+    },
 
     "surfaces": {
       "ground": { "texture": "stone", "metres": [5, 5], "roughness": 0.9 },
       "road": { "texture": "asphalt", "metres": [6, 2.2], "roughness": 0.8 },
-      "ch1Barrier": { "texture": "concrete", "metres": [2, 1] }
+      "ch1Barrier": { "texture": "concrete", "metres": [2, 1] },
+      "ch1Cabin": { "texture": "stucco", "metres": [2.5, 2.5] }
     }
   }
 }
