@@ -1,4 +1,4 @@
-const FONTS = 'https://fonts.googleapis.com/css2?family=Rock+Salt&family=Special+Elite&family=Stardos+Stencil:wght@700&display=swap';
+const FONTS = 'https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Special+Elite&family=Stardos+Stencil:wght@700&display=swap';
 const STYLESHEET = new URL('../../../css/hud.css', import.meta.url).href;
 
 // Worn print: nudge every edge a little with fine noise, then let larger patches of noise thin the ink.
