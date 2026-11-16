@@ -1,7 +1,92 @@
 {
-  "_about": "Chapter 3, rescue at headquarters. This file is the palette block \"ch3\" (levels pick it with \"palette\": \"ch3\"). It starts from the chosen mood (heavy); only the guide colour is set so far (the orange of the fuel barrels). Still to do here: the black of a power cut, red emergency lighting, the green LED wall of the server room.",
+  "_about": [
+    "Chapter 3, rescue at headquarters. This file is the palette block \"ch3\" (levels pick it with \"palette\": \"ch3\").",
+    "Look: close to pitch black inside an office tower with the power out, and on its roof. The tower is three levels, one file each: web/levels/ch3.json (ground floor), ch3_2f.json (first floor up) and ch3_roof.json. It starts from the chosen mood (heavy) and changes what that look needs; every difference is explained in the PR description.",
+    "Almost nothing shows outside the flashlight beam. The guide colour is the orange of the fuel barrels; red emergency lamps pulse on the walls.",
+    "greybox.ch3Fire / ch3Lamp are the warm emitters built by web/js/props/Ch3Props.js: color and intensity of the glowing surface (above 1 feeds the bloom), light = the point light that reaches a few metres around it, flicker = how much the fire wavers. ch3Led is the small cold glow of the server racks.",
+    "Dynamic lights: flashlight + bin fire + work lamp + one emergency beacon (alarm.light.count 1) = 4, the limit. That is why the moon and the barrel glow light are switched off here."
+  ],
   "extends": "mood/heavy",
+
+  "fog": { "color": "#0c0f0e", "density": 0.07 },
+  "hemisphere": { "sky": "#384446", "ground": "#040605", "intensity": 0.055 },
+  "moon": { "intensity": 0 },
+  "flashlight": { "intensity": 3.0, "angle": 18, "penumbra": 0.3, "distance": 26, "decay": 1.4 },
+  "post": {
+    "exposure": 0.72,
+    "saturation": 0.66,
+    "vignette": { "strength": 0.92, "start": 0.2, "end": 0.95 },
+    "grain": 0.075,
+    "chromaticAberration": 0.0025,
+    "bloom": { "enabled": true, "threshold": 0.85, "knee": 0.5, "strength": 0.85, "levels": 3 }
+  },
   "accent": {
-    "color": "#ffb020"
+    "color": "#ffb020",
+    "intensity": 3.2,
+    "light": { "intensity": 0 }
+  },
+  "alarm": {
+    "color": "#ff2a1f",
+    "intensity": 3.5,
+    "pulseMin": 0.3,
+    "light": { "count": 1, "intensity": 2.2, "distance": 14, "angle": 50, "penumbra": 0.8, "decay": 1.4, "rpm": 9, "tilt": -28, "startAngle": 0, "sweep": 0 }
+  },
+
+  "greybox": {
+    "ground": "#1c1f1e",
+    "grid": "#1c1f1e",
+    "collider": "#232726",
+    "crate": "#4a4234",
+    "metal": "#22262a",
+    "roughness": 0.9,
+    "groundRoughness": 0.7,
+    "screen": { "color": "#9fb4bd", "intensity": 0.9 },
+
+    "ch3Ceiling": "#1b1d1d",
+    "ch3Desk": "#3a362f",
+    "ch3Chair": "#1c1e20",
+    "ch3Partition": "#3d4344",
+    "ch3Paper": "#77756a",
+    "ch3Debris": "#44463f",
+    "ch3Rack": "#131516",
+    "ch3RackTrim": "#2c3033",
+    "ch3Cabinet": "#33383a",
+    "ch3Barrel": "#3b3a34",
+    "ch3BarrelBand": "#15161a",
+    "ch3Bin": "#1a1b1c",
+    "ch3Lift": "#2a2e30",
+    "ch3LiftDark": "#0d0e0f",
+    "ch3Hazard": "#7d6a25",
+    "ch3Rocket": "#5a5f5e",
+    "ch3RocketDark": "#22262a",
+    "ch3Pad": "#2f3231",
+    "ch3Cage": "#15171a",
+    "ch3Vent": "#3d4141",
+    "ch3Parapet": "#252928",
+    "ch3Stair": "#262a2b",
+    "ch3Blood": "#420b08",
+    "ch3Cable": "#0b0c0d",
+    "ch3Glass": "#8a9da0",
+    "ch3Board": "#3b3023",
+
+    "ch3Fire": {
+      "color": "#ff8428",
+      "intensity": 6,
+      "light": { "intensity": 2.0, "distance": 8, "decay": 2, "height": 1.2 },
+      "flicker": { "base": 0.82, "slow": 0.12, "fast": 0.06 }
+    },
+    "ch3Lamp": {
+      "color": "#ffb468",
+      "intensity": 5,
+      "light": { "intensity": 1.9, "distance": 9, "decay": 2 }
+    },
+    "ch3Led": { "color": "#52ff86", "intensity": 2.4 },
+
+    "surfaces": {
+      "ground": { "texture": "concrete", "metres": [4, 4], "roughness": 0.7 },
+      "collider": { "texture": "stucco", "metres": [3, 3] },
+      "ch3Parapet": { "texture": "concrete", "metres": [3, 1.2] },
+      "ch3Pad": { "texture": "metal", "metres": [3, 3] }
+    }
   }
 }
