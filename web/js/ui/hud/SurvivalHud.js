@@ -12,7 +12,7 @@ import { TeamWidget } from './TeamWidget.js';
 
 /**
  * The in-game HUD: a composite of HudWidget objects on one layer above the 3D view.
- * It keeps the viewer's Hud (start prompt, error panel, info text) and replaces GameplayHud.
+ * It extends the viewer's Hud, so the start prompt, the error panel and the info text keep working.
  *
  * To add an element: write a HudWidget subclass in this folder and add one line to `standard()`.
  */

@@ -1,8 +1,8 @@
 import { HudWidget } from './HudWidget.js';
 
 /**
- * One quiet line at the top: wave, money and what the game is waiting for.
- * Temporary home for the text of the old GameplayHud panel until the event card and the prompt widgets exist.
+ * One quiet line at the top: wave, money and what the game is waiting for
+ * (the facts the player looks up now and then; moments are announced by EventCard).
  */
 export class StatusLine extends HudWidget {
   constructor(doc) {
