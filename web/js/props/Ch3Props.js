@@ -134,6 +134,7 @@ export class Ch3Props extends PropSet {
     ch3_vent: Ch3Props.vent,
     ch3_parapet: Ch3Props.parapet,
     ch3_stairs: Ch3Props.stairs,
+    ch3_stair_hole: Ch3Props.stairHole,
   };
 
   /**
@@ -565,5 +566,34 @@ export class Ch3Props extends PropSet {
       }
     });
     return flight;
+  }
+
+  /**
+   * Where a flight of stairs comes up through the floor: a black opening with a rail on
+   * three sides and a hazard strip on the open end (the front, -Z), where people step off.
+   */
+  static stairHole(ctx) {
+    const { factory, size } = ctx;
+    const { w, d } = size;
+    const hole = new THREE.Group();
+    const dark = part(factory, 'ch3LiftDark', w, 0.02, d, 0, 0.005, 0);
+    dark.castShadow = false;
+    hole.add(dark);
+    hole.add(part(factory, 'ch3Hazard', w, 0.025, 0.2, 0, 0.006, -d / 2 - 0.1));
+    const rail = 0.95;
+    const corners = [v3(-w / 2, 0, -d / 2), v3(-w / 2, 0, d / 2), v3(w / 2, 0, d / 2), v3(w / 2, 0, -d / 2)];
+    for (let i = 0; i < 3; i++) {
+      const from = corners[i];
+      const to = corners[i + 1];
+      const posts = Math.max(2, Math.round(from.distanceTo(to) / 1.1) + 1);
+      for (let p = 0; p < posts; p++) {
+        const at = from.clone().lerp(to, p / (posts - 1));
+        hole.add(stick(factory, 'ch3Chair', at, at.clone().setY(rail), 0.018, 4));
+      }
+      [rail, rail * 0.5].forEach((y) => {
+        hole.add(stick(factory, 'ch3Chair', from.clone().setY(y), to.clone().setY(y), 0.022, 4));
+      });
+    }
+    return hole;
   }
 }
