@@ -8,14 +8,14 @@ AOOP 期末專題（第 8 組）：網頁版第一人稱殭屍生存遊戲。
 
 ## Commit 統計（暫時）
 
-> 統計到 2026-11-16，`origin/main`（commit `af3466f`）。行數不含 `package-lock.json` 和二進位檔（圖片、GLB）。
+> 統計到 2026-11-16，`origin/main`（commit `69e899d`）。行數不含 `package-lock.json`、二進位檔（圖片、GLB）和 `reference/`（Liang 匯入舊原型的 29,287 行另外算，不列在表裡）。
 
 | 組員 | GitHub | 一般 commit | Merge（PR 合併） | 合計 | 占比（一般 commit） | 新增行數 | 刪除行數 | 主要內容 |
 |---|---|---:|---:|---:|---:|---:|---:|---|
-| Hsu | big0527 | 37 | 3 | 40 | 74% | 7,972 | 439 | 場景引擎（`web/js/`）、美術工具、第二章灰盒與美術 |
-| kyle614 | kyle614 | 9 | 0 | 9 | 18% | 3,474 | 10 | 故事文件（`docs/story/`）、三章漫畫（`web/comics/`） |
-| Liang Chang | nickcx0109 | 4 | 1 | 5 | 8% | 428 | 2 | 場景流程規劃、效能預算、Fable 建置計畫 |
-| **總計** | | **50** | **4** | **54** | 100% | 11,874 | 451 | |
+| kyle614 | kyle614 | 57 | 2 | 59 | 38% | 5,394 | 63 | 故事文件（`docs/story/`）、三章漫畫（`web/comics/`）、第一章灰盒（S1） |
+| Liang Chang | nickcx0109 | 56 | 5 | 61 | 37% | 6,445 | 3,270 | ES modules 重構、遊戲骨架（武器、敵人、狀態、商店）、碰撞修正、TODO 流程、手槍美術（分支中） |
+| Hsu | big0527 | 37 | 3 | 40 | 25% | 7,943 | 324 | 場景引擎（`web/js/`）、美術工具、第二章灰盒與美術 |
+| **總計** | | **150** | **10** | **160** | 100% | 19,782 | 3,657 | |
 
 重新產生：
 
@@ -23,4 +23,7 @@ AOOP 期末專題（第 8 組）：網頁版第一人稱殭屍生存遊戲。
 git fetch
 git shortlog -sne origin/main --no-merges   # 一般 commit
 git shortlog -sne origin/main --merges      # merge commit
+# 行數（不含 lock 檔和 reference/）
+git log origin/main --no-merges --numstat --format='@%an' -- . ':!package-lock.json' ':!reference' \
+  | awk '/^@/{a=substr($0,2);next} NF==3 && $1!="-"{ad[a]+=$1;de[a]+=$2} END{for(k in ad)print k, ad[k], de[k]}'
 ```
