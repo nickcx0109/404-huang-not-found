@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "name": "ch3_roof",
+  "title": "Chapter 3: headquarters, roof",
+  "palette": "ch3",
+  "manifests": ["common","ch3"],
+
+  "bounds": {"x":0,"z":-20,"w":33,"d":57},
+
+  "colliders": [
+    {"id": "parapet_0", "x": 0, "z": 8.25, "w": 33, "d": 0.5, "h": 1.1},
+    {"id": "parapet_1", "x": -16.25, "z": -15.75, "w": 0.5, "d": 48.5, "h": 1.1},
+    {"id": "parapet_2", "x": 16.25, "z": -15.75, "w": 0.5, "d": 48.5, "h": 1.1},
+    {"id": "parapet_3", "x": 0.5, "z": -48.25, "w": 19, "d": 0.5, "h": 1.1}
+  ],
+
+  "props": [
+    {"name": "ch3_parapet", "collider": "parapet_0"},
+    {"name": "ch3_parapet", "collider": "parapet_1"},
+    {"name": "ch3_parapet", "collider": "parapet_2"},
+    {"name": "ch3_parapet", "collider": "parapet_3"}
+  ],
+
+  "spawns": {
+    "players": [
+      {"x": -12.5, "z": -41.2, "yaw": 180},
+      {"x": -13.2, "z": -38.4, "yaw": 180},
+      {"x": -11.6, "z": -38.2, "yaw": 180}
+    ],
+    "zombies": [
+
+    ]
+  },
+
+  "markers": [
+
+  ],
+
+  "bookmarks": [
+    {"name": "spawn", "pos": [-12.5,1.7,-41.2], "yaw": 180, "pitch": -2}
+  ]
+}
