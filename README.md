@@ -2,6 +2,8 @@
 
 AOOP 期末專題（第 8 組）：網頁版第一人稱殭屍生存遊戲。
 
+沒有固定分工，要做的事都在 [`TODO.md`](TODO.md)：在 repo 根目錄開 Claude Code（或其他 agent），跟它說「讀 TODO.md，挑一項來做」。agent 的規則在 [`AGENTS.md`](AGENTS.md)。
+
 舊專案的網頁原型放在 [`reference/`](reference/README.md)，只供參考。
 
 ## Commit 統計（暫時）
