@@ -58,6 +58,17 @@ function glowMaterial(factory, key, levelAt) {
   return material;
 }
 
+/** Point light of a warm emitter: reaches only a few metres. Null when the palette turns it off. */
+function warmLight(factory, key, levelAt) {
+  const spec = glowSpec(factory, key);
+  const cfg = spec.light;
+  if (!cfg || !(cfg.intensity > 0)) return null;
+  const light = new THREE.PointLight(Palette.color(spec.color), cfg.intensity, cfg.distance, cfg.decay);
+  light.name = key + '-light';
+  if (levelAt) animate(factory, (time) => { light.intensity = cfg.intensity * levelAt(time); });
+  return light;
+}
+
 /**
  * Runs `step(time)` every frame together with the level's other emitters, so a still frame
  * (?shot=, fixed time) always shows the same state. Emitters has no public hook for this yet;
@@ -114,6 +125,7 @@ export class Ch3Props extends PropSet {
     ch3_cabinet: Ch3Props.cabinet,
     ch3_papers: Ch3Props.papers,
     ch3_debris: Ch3Props.debris,
+    ch3_fire_bin: Ch3Props.fireBin,
     ch3_emergency_light: Ch3Props.emergencyLight,
   };
 
@@ -326,6 +338,46 @@ export class Ch3Props extends PropSet {
       heap.add(piece);
     }
     return heap;
+  }
+
+  /**
+   * Steel drum someone lit a fire in. Warm light 1 of 2: the flame and its light share one
+   * flicker, so the walls brighten and darken with the fire.
+   */
+  static fireBin(ctx) {
+    const { factory, size } = ctx;
+    const spec = glowSpec(factory, 'ch3Fire');
+    const radius = Math.min(size.w, size.d) / 2;
+    const bin = new THREE.Group();
+    const shell = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius, radius * 0.92, size.h, 12, 1, true),
+      factory.material('ch3Bin')
+    );
+    shell.material.side = THREE.DoubleSide;
+    shell.position.y = size.h / 2;
+    shell.castShadow = true;
+    bin.add(shell);
+
+    const f = spec.flicker || { base: 1, slow: 0, fast: 0 };
+    const level = (time) => f.base + f.slow * Math.sin(time * 9.7) + f.fast * Math.sin(time * 23.3 + 1.7);
+    const flame = glowMaterial(factory, 'ch3Fire', level);
+    [[0, 0.6, 0.17], [0.09, 0.42, 0.12], [-0.08, 0.36, 0.1]].forEach(([x, height, width]) => {
+      const geometry = new THREE.ConeGeometry(width, height, 5);
+      geometry.translate(0, height / 2, 0);
+      const tongue = glowing(geometry, flame);
+      tongue.position.set(x, size.h * 0.8, x * 0.6);
+      bin.add(tongue);
+    });
+    const embers = glowing(new THREE.CylinderGeometry(radius * 0.85, radius * 0.85, 0.05, 10), flame);
+    embers.position.y = size.h * 0.8;
+    bin.add(embers);
+
+    const light = warmLight(factory, 'ch3Fire', level);
+    if (light) {
+      light.position.set(0, (spec.light && spec.light.height) || size.h + 0.3, 0);
+      bin.add(light);
+    }
+    return bin;
   }
 
   /**

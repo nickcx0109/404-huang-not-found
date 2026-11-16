@@ -2,7 +2,8 @@
   "_about": [
     "Chapter 3, rescue at headquarters. This file is the palette block \"ch3\" (levels pick it with \"palette\": \"ch3\").",
     "Look: close to pitch black inside an office tower with the power out, and on its roof. The tower is three levels, one file each: web/levels/ch3.json (ground floor), ch3_2f.json (first floor up) and ch3_roof.json. It starts from the chosen mood (heavy) and changes what that look needs; every difference is explained in the PR description.",
-    "Almost nothing shows outside the flashlight beam. The guide colour is the orange of the fuel barrels; red emergency lamps pulse on the walls."
+    "Almost nothing shows outside the flashlight beam. The guide colour is the orange of the fuel barrels; red emergency lamps pulse on the walls.",
+    "greybox.ch3Fire / ch3Lamp are the warm emitters built by web/js/props/Ch3Props.js: color and intensity of the glowing surface (above 1 feeds the bloom), light = the point light that reaches a few metres around it, flicker = how much the fire wavers. ch3Led is the small cold glow of the server racks."
   ],
   "extends": "mood/heavy",
 
@@ -51,10 +52,17 @@
     "ch3Cabinet": "#33383a",
     "ch3Barrel": "#3b3a34",
     "ch3BarrelBand": "#15161a",
+    "ch3Bin": "#1a1b1c",
     "ch3Lift": "#2a2e30",
     "ch3LiftDark": "#0d0e0f",
     "ch3Hazard": "#7d6a25",
 
+    "ch3Fire": {
+      "color": "#ff8428",
+      "intensity": 6,
+      "light": { "intensity": 2.0, "distance": 8, "decay": 2, "height": 1.2 },
+      "flicker": { "base": 0.82, "slow": 0.12, "fast": 0.06 }
+    },
     "ch3Led": { "color": "#52ff86", "intensity": 2.4 },
 
     "surfaces": {
