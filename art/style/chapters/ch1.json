@@ -42,6 +42,7 @@
     "ch1TrashPale": "#69665a",
     "ch1Weed": "#232b1c",
     "ch1Rock": "#2b2f2b",
+    "ch1Log": "#231c15",
 
     "surfaces": {
       "ground": { "texture": "stone", "metres": [5, 5], "roughness": 0.9 },

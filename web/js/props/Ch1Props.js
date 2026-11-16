@@ -25,6 +25,21 @@ function part(factory, colorKey, w, h, d, x, y, z) {
   return factory.part(factory.material(colorKey), w, h, d, x, y, z);
 }
 
+/** Stick between two points, for logs, poles and wires. */
+function stick(factory, colorKey, from, to, radius, sides) {
+  const direction = new THREE.Vector3().subVectors(to, from);
+  const length = direction.length();
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius, length, sides || 5),
+    factory.material(colorKey)
+  );
+  mesh.position.copy(from).addScaledVector(direction, 0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
 export class Ch1Props extends PropSet {
   static id = 'ch1';
 
@@ -40,6 +55,7 @@ export class Ch1Props extends PropSet {
     ch1_trash: Ch1Props.trash,
     ch1_weeds: Ch1Props.weeds,
     ch1_rock: Ch1Props.rock,
+    ch1_log: Ch1Props.log,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -232,5 +248,26 @@ export class Ch1Props extends PropSet {
     const group = new THREE.Group();
     group.add(rock);
     return group;
+  }
+
+  /** Fallen trunk lying along the longer side of `size`, with a couple of broken stubs. */
+  static log(ctx) {
+    const { factory, size, prop } = ctx;
+    const alongZ = size.d >= size.w;
+    const length = alongZ ? size.d : size.w;
+    const radius = size.h / 2;
+    const log = new THREE.Group();
+    const v = (a, y, b) => (alongZ ? new THREE.Vector3(b, y, a) : new THREE.Vector3(a, y, b));
+    log.add(stick(factory, 'ch1Log', v(-length / 2, radius, 0), v(length / 2, radius * 0.8, 0), radius, 7));
+    for (let i = 0; i < 3; i++) {
+      const at = (hash01(prop, 10 + i) - 0.5) * length * 0.8;
+      const side = hash01(prop, 20 + i) < 0.5 ? -1 : 1;
+      log.add(stick(
+        factory, 'ch1Log', v(at, radius, 0),
+        v(at + 0.3, radius + 0.5 + hash01(prop, 30 + i) * 0.7, side * (0.4 + hash01(prop, 40 + i) * 0.5)),
+        radius * 0.22, 4
+      ));
+    }
+    return log;
   }
 }
