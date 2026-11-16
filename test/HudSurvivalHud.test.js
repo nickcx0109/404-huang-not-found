@@ -36,8 +36,8 @@ function setup() {
   const session = { state: 'playing', wave: 2, canMove: true,
     context: { time: 0, enemies: [{ id: 'z1', position: { x: 4, y: 0, z: 0 } }], players: [player] } };
   const hud = SurvivalHud.standard(root, events, 'me');
-  const [damage, health, ammo, line, crosshair, prompt, card] = hud.widgets;
-  return { elements, doc, events, weapon, player, session, hud, damage, health, ammo, line, crosshair, prompt, card };
+  const [damage, health, ammo, line, crosshair, prompt, card, team] = hud.widgets;
+  return { elements, doc, events, weapon, player, session, hud, damage, health, ammo, line, crosshair, prompt, card, team };
 }
 
 test('SurvivalHud keeps the viewer error display and draws health, ammunition and the status line', () => {
@@ -269,5 +269,39 @@ test('EventCard announces waves one after another and keeps the game-over card u
   assert.equal(card.text.textContent, 'YOU DIED');
   for (let step = 0; step < 200; step++) hud.updateGame(0.05, session);
   assert.equal(has('is-on'), true, 'game over does not fade');
+  hud.dispose();
+});
+
+test('TeamWidget lists the other players, marks low health and shows who is down', () => {
+  const { session, hud, team } = setup();
+  hud.updateGame(0, session);
+  assert.equal(team.rows.length, 0, 'alone: nothing to show');
+
+  const mate = { id: 'p2', name: 'Mako', position: { x: 0, y: 0, z: 0 }, damageable: { health: 100, maxHealth: 100 }, weapons: { current: null } };
+  session.context.players.push(mate);
+  hud.updateGame(0, session);
+  assert.equal(team.rows.length, 1);
+  const row = team.rows[0];
+  assert.equal(row.el.children[0].textContent, 'MAKO');
+  assert.equal(row.fill.style.transform, 'scaleX(1.0000)');
+  for (let step = 0; step < 100; step++) hud.updateGame(0.05, session);
+  assert.equal(team.el.classList.contains('is-awake'), false);
+
+  mate.damageable.health = 25;
+  hud.updateGame(0, session);
+  assert.equal(team.rows[0], row, 'the row is kept, not rebuilt');
+  assert.equal(row.fill.style.transform, 'scaleX(0.2500)');
+  assert.equal(row.el.classList.contains('is-low'), true);
+  assert.equal(row.el.classList.contains('is-down'), false);
+
+  mate.damageable.health = 0;
+  for (let step = 0; step < 200; step++) hud.updateGame(0.05, session);
+  assert.equal(row.el.classList.contains('is-down'), true);
+  assert.equal(team.el.classList.contains('is-awake'), true, 'a downed teammate stays visible');
+
+  session.context.players.pop();
+  hud.updateGame(0, session);
+  assert.equal(team.rows.length, 0);
+  assert.equal(row.el.removed, true);
   hud.dispose();
 });

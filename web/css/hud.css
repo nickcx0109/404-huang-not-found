@@ -509,6 +509,60 @@
   filter: var(--hud-rough, none);
 }
 
+/* ---- teammates, bottom left above the player's health ---------------------- */
+
+.hud-team {
+  left: 2.8em;
+  bottom: 8.6em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+}
+
+.hud-team__name,
+.hud-team__state {
+  font-family: var(--type);
+  font-size: 0.9em;
+  letter-spacing: 0.14em;
+  -webkit-text-stroke: 0.04em rgba(8, 6, 5, 0.6);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+}
+
+.hud-team__state {
+  margin-left: 0.9em;
+  color: var(--fresh);
+  opacity: 0;
+}
+
+.hud-team__row.is-down .hud-team__name {
+  color: var(--fresh);
+}
+
+.hud-team__row.is-down .hud-team__state {
+  opacity: 1;
+}
+
+.hud-team__bar {
+  width: 6.5em;
+  height: max(2px, 0.15em);
+  margin-top: 0.35em;
+  background: rgba(107, 106, 100, 0.5);
+  box-shadow: 0 0 0 1px rgba(8, 6, 5, 0.5);
+}
+
+.hud-team__fill {
+  display: block;
+  height: 100%;
+  background: var(--bone);
+  transform-origin: left center;
+  transition: transform 0.2s ease-out, background-color 0.4s ease-out;
+}
+
+.hud-team__row.is-low .hud-team__fill {
+  background: var(--dried);
+}
+
 /* ---- motion ------------------------------------------------------------- */
 
 @keyframes hud-throb {
