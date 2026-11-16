@@ -1244,7 +1244,13 @@
     {"name": "crate", "collider": "crate_36"},
     {"name": "ch1_trash", "x": 93.6, "y": 0, "z": -190.6, "rotY": 143, "size": [2,0.5,1.4]},
     {"name": "ch1_barrier", "collider": "barrier_37"},
-    {"name": "escape_car", "collider": "escape_car_38"}
+    {"name": "escape_car", "collider": "escape_car_38"},
+    {"name": "ch1_turn_sign_right", "x": -4.5, "y": 0, "z": -107.9, "rotY": 180, "size": [1.3,1.7,0.08]},
+    {"name": "ch1_turn_sign_right", "x": 0, "y": 0, "z": -107.9, "rotY": 180, "size": [1.3,1.7,0.08]},
+    {"name": "ch1_turn_sign_right", "x": 4.5, "y": 0, "z": -107.9, "rotY": 180, "size": [1.3,1.7,0.08]},
+    {"name": "ch1_turn_sign_left", "x": 97.9, "y": 0, "z": -105, "rotY": 90, "size": [1.3,1.7,0.08]},
+    {"name": "ch1_turn_sign_left", "x": 97.9, "y": 0, "z": -101.5, "rotY": 90, "size": [1.3,1.7,0.08]},
+    {"name": "ch1_turn_sign_left", "x": 97.9, "y": 0, "z": -98, "rotY": 90, "size": [1.3,1.7,0.08]}
   ],
 
   "spawns": {
