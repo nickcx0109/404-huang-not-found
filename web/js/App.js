@@ -10,6 +10,7 @@ import { SceneBuilder } from './SceneBuilder.js';
 import { PlayerController } from './PlayerController.js';
 import { PathFinder } from './PathFinder.js';
 import { Hud } from './Hud.js';
+import { EventBus } from './core/EventBus.js';
 
 // App: wires the modules together.
 //   LevelData -> SceneBuilder (-> PropFactory) -> scene + collision
@@ -67,6 +68,7 @@ export class App {
     this.options = options;
     this.container = container;
     this.hud = hud;
+    this.events = new EventBus();
     this.stats = { fps: 0, frameMs: 0, calls: 0, triangles: 0, lights: 0, pixelRatio: 1 };
     this._lastTime = 0;
     this._infoTimer = 0;
