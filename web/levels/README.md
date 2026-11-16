@@ -131,6 +131,14 @@ node tools/serve.mjs
 
 程式用 `level.markersOfType('shop')` 取。
 
+### 出口與擋路的障礙物（`exit` marker）
+
+一個 marker 的 `type` 是 `exit`、`id` 是 `to_<關卡名稱>` 時，玩家走進它的範圍（`r`）就會載入那一關，例如第三章一樓的 `to_ch3_2f`。到了另一關，玩家會站在指回來的那個出口（`to_<原本的關卡>`）上，面向它的 `yaw`；剛到的出口要先走出去再走回來才會再觸發。
+
+出口前面可以先擋住：放一個 `id` 是 `block_<出口的 id>` 的 collider（例如 `block_to_ch3_2f`），並讓一個道具綁在它上面。這個 collider 還在的時候出口不會動；玩家站在旁邊按住 `E` 約 2.5 秒，collider 會被移除、綁在上面的道具會隱藏。清掉的障礙物在同一個瀏覽器分頁裡會被記住，回到這一關時不會再出現。
+
+程式在 `web/js/level/`：`LevelFlow` 是規則（不依賴 DOM，測試在 `test/LevelFlow.test.js`），`installLevelFlow` 接上按鍵、提示和換關。沒有出口的關卡不受影響。
+
 ### `bounds`（選填）
 
 可活動範圍的矩形（中心 `x`、`z`，大小 `w`、`d`），玩家走不出去。不寫的話，用所有 collider 和出生點的範圍往外加 2 m。地板會比這個範圍多鋪 60 m，邊緣藏在霧後面。
