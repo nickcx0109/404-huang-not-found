@@ -143,6 +143,7 @@ export class Ch3Props extends PropSet {
     ch3_ceiling_fallen: Ch3Props.ceilingFallen,
     ch3_cables: Ch3Props.cables,
     ch3_rubble: Ch3Props.rubble,
+    ch3_glass: Ch3Props.glass,
   };
 
   /**
@@ -768,5 +769,22 @@ export class Ch3Props extends PropSet {
       heap.add(chunk);
     }
     return heap;
+  }
+
+  /** Broken glass scattered on the floor: small pale shards that catch the flashlight. */
+  static glass(ctx) {
+    const { factory, size, prop } = ctx;
+    const shards = new THREE.Group();
+    const count = 14 + Math.floor(hash01(prop, 1) * 12);
+    for (let i = 0; i < count; i++) {
+      const shard = part(
+        factory, 'ch3Glass', 0.05 + 0.14 * hash01(prop, 10 + i), 0.004, 0.03 + 0.1 * hash01(prop, 20 + i),
+        (hash01(prop, 30 + i) - 0.5) * size.w, 0.003, (hash01(prop, 40 + i) - 0.5) * size.d
+      );
+      shard.rotation.y = hash01(prop, 50 + i) * Math.PI;
+      shard.castShadow = false;
+      shards.add(shard);
+    }
+    return shards;
   }
 }
