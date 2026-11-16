@@ -1270,7 +1270,13 @@
   },
 
   "markers": [
-
+    {"id": "checkpoint_1", "type": "checkpoint", "x": 0, "z": -100, "r": 4, "yaw": -90},
+    {"id": "checkpoint_2", "type": "checkpoint", "x": 90, "z": -100, "r": 4, "yaw": 0},
+    {"id": "supply_camp", "type": "supply", "x": -5.2, "z": -36.4, "r": 1.2},
+    {"id": "supply_truck", "type": "supply", "x": 5.2, "z": -56, "r": 1.2},
+    {"id": "supply_cabin", "type": "supply", "x": 50, "z": -103.4, "r": 1.2},
+    {"id": "supply_bulbs", "type": "supply", "x": 87.4, "z": -189.2, "r": 1.2},
+    {"id": "car", "type": "objective", "x": 90, "z": -194.4, "r": 2.5, "yaw": 0}
   ],
 
   "bookmarks": [
