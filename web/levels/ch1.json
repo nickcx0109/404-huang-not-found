@@ -70,7 +70,13 @@
     {"id": "log_31", "x": 93.4, "z": -160, "w": 5.6, "d": 0.6, "h": 0.5},
     {"id": "rock_32", "x": 84.4, "z": -163, "w": 1.8, "d": 1.6, "h": 1.1},
     {"id": "car_wreck_33", "x": 92.6, "z": -171.5, "w": 1.9, "d": 4.3, "h": 1.4},
-    {"id": "guardrail_broken_34", "x": 85.8, "z": -180, "w": 0.25, "d": 9, "h": 0.75}
+    {"id": "guardrail_broken_34", "x": 85.8, "z": -180, "w": 0.25, "d": 9, "h": 0.75},
+    {"id": "bulb_pole_w", "x": 84.2, "z": -188, "w": 0.3, "d": 0.3, "h": 4.2},
+    {"id": "bulb_pole_e", "x": 95.8, "z": -188, "w": 0.3, "d": 0.3, "h": 4.2},
+    {"id": "crate_35", "x": 86, "z": -190.4, "w": 0.9, "d": 0.9, "h": 0.8},
+    {"id": "crate_36", "x": 86.9, "z": -191.3, "w": 0.7, "d": 0.7, "h": 0.6},
+    {"id": "barrier_37", "x": 94.4, "z": -193.4, "w": 2.2, "d": 0.5, "h": 0.9},
+    {"id": "escape_car_38", "x": 90, "z": -197.5, "w": 1.9, "d": 4.3, "h": 1.4}
   ],
 
   "props": [
@@ -1232,7 +1238,13 @@
     {"name": "ch1_rock", "collider": "rock_32"},
     {"name": "car_wreck", "collider": "car_wreck_33"},
     {"name": "ch1_trash", "x": 89.4, "y": 0, "z": -174, "rotY": 89, "size": [2.6,0.5,1.8]},
-    {"name": "guardrail_broken", "collider": "guardrail_broken_34"}
+    {"name": "guardrail_broken", "collider": "guardrail_broken_34"},
+    {"name": "ch1_bulb_string", "x": 90, "y": 0, "z": -188, "size": [11.6,4.2,0.3]},
+    {"name": "crate", "collider": "crate_35"},
+    {"name": "crate", "collider": "crate_36"},
+    {"name": "ch1_trash", "x": 93.6, "y": 0, "z": -190.6, "rotY": 143, "size": [2,0.5,1.4]},
+    {"name": "ch1_barrier", "collider": "barrier_37"},
+    {"name": "escape_car", "collider": "escape_car_38"}
   ],
 
   "spawns": {
