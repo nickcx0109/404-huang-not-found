@@ -11,7 +11,7 @@
   "fog": { "color": "#121716", "density": 0.066 },
   "hemisphere": { "sky": "#3d4a4c", "ground": "#050706", "intensity": 0.09 },
   "moon": { "intensity": 0 },
-  "flashlight": { "intensity": 3.2, "angle": 19, "penumbra": 0.32, "distance": 34, "decay": 1.3 },
+  "flashlight": { "intensity": 2.9, "angle": 17, "penumbra": 0.3, "distance": 26, "decay": 1.4 },
   "post": {
     "exposure": 0.8,
     "saturation": 0.68,
