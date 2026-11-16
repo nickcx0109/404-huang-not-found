@@ -76,6 +76,27 @@ export class CollisionWorld {
     let hitX = false;
     let hitZ = false;
 
+    for (let pass = 0; pass < this.boxes.length; pass++) {
+      let resolved = false;
+      for (const box of this.boxes) {
+        if (!box.overlapsColumn(x, z, r, y0, y1)) continue;
+        const left = x - box.minX + r;
+        const right = box.maxX - x + r;
+        const front = z - box.minZ + r;
+        const back = box.maxZ - z + r;
+        const depth = Math.min(left, right, front, back);
+        if (depth === left || depth === right) {
+          x = depth === left ? box.minX - r - SKIN : box.maxX + r + SKIN;
+          hitX = true;
+        } else {
+          z = depth === front ? box.minZ - r - SKIN : box.maxZ + r + SKIN;
+          hitZ = true;
+        }
+        resolved = true;
+      }
+      if (!resolved) break;
+    }
+
     for (let s = 0; s < steps; s++) {
       if (sx !== 0) {
         x += sx;
