@@ -18,6 +18,12 @@ export class PlayerStatus {
     this.enemies = 0;
     this.breakSeconds = 0;
     this.canMove = false;
+    /** Where the player stands and looks: metres, and radians (0 looks toward -Z, positive turns left). */
+    this.x = 0;
+    this.z = 0;
+    this.yaw = 0;
+    /** Enemies as plain records { id, x, z }, so a widget can tell where a hit came from. */
+    this.threats = [];
   }
 
   /**
@@ -41,6 +47,17 @@ export class PlayerStatus {
     this.enemies = context.enemies.length;
     this.breakSeconds = session.state === 'wave-break' ? Math.max(0, Math.ceil(session.breakEndsAt - context.time)) : 0;
     this.canMove = Boolean(session.canMove);
+    this.x = player ? player.position.x : 0;
+    this.z = player ? player.position.z : 0;
+    this.yaw = player?.controller ? player.controller.yaw : 0;
+    const enemies = context.enemies;
+    for (let index = 0; index < enemies.length; index++) {
+      const threat = this.threats[index] ?? (this.threats[index] = { id: null, x: 0, z: 0 });
+      threat.id = enemies[index].id;
+      threat.x = enemies[index].position.x;
+      threat.z = enemies[index].position.z;
+    }
+    this.threats.length = enemies.length;
     return this;
   }
 }

@@ -31,8 +31,10 @@ function setup() {
   const root = { querySelector: selector => elements[selector], ownerDocument: doc, appendChild() {} };
   const events = new EventBus();
   const weapon = { ammo: 12, magazine: 12, reserve: 60, reloading: false };
-  const player = { id: 'me', damageable: { health: 100, maxHealth: 100 }, wallet: { balance: 50 }, weapons: { current: weapon } };
-  const session = { state: 'playing', wave: 2, canMove: true, context: { time: 0, enemies: [{}], players: [player] } };
+  const player = { id: 'me', position: { x: 0, y: 0, z: 0 }, controller: { yaw: 0 },
+    damageable: { health: 100, maxHealth: 100 }, wallet: { balance: 50 }, weapons: { current: weapon } };
+  const session = { state: 'playing', wave: 2, canMove: true,
+    context: { time: 0, enemies: [{ id: 'z1', position: { x: 4, y: 0, z: 0 } }], players: [player] } };
   const hud = SurvivalHud.standard(root, events, 'me');
   const [health, ammo, line, crosshair] = hud.widgets;
   return { elements, doc, events, weapon, player, session, hud, health, ammo, line, crosshair };
