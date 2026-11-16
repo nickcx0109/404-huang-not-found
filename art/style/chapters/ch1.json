@@ -37,7 +37,7 @@
     "truck": "#30373a",
     "crate": "#4a4234",
     "metal": "#24282a",
-    "roughness": 0.92,
+    "roughness": 0.72,
     "groundRoughness": 0.85,
 
     "ch1RoadLine": "#8a8672",
@@ -75,9 +75,11 @@
     },
     "ch1Sign": { "color": "#ffb23a", "intensity": 1.6 },
 
+    "ch1RoadTint": "#b9bcbc",
+    "ch1GroundTint": "#a9aca6",
+    "ch1Leaf": "#2e2416",
+
     "surfaces": {
-      "ground": { "texture": "stone", "metres": [5, 5], "roughness": 0.9 },
-      "road": { "texture": "asphalt", "metres": [6, 2.2], "roughness": 0.8 },
       "ch1Barrier": { "texture": "concrete", "metres": [2, 1] },
       "ch1Cabin": { "texture": "stucco", "metres": [2.5, 2.5] }
     }
