@@ -1,4 +1,5 @@
 export class WaveDirector {
+  constructor() { this.remaining = 0; }
   start(wave, ctx) { throw new Error('Implement WaveDirector.start'); }
   nextSpawn(ctx, result) { throw new Error('Implement WaveDirector.nextSpawn'); }
 }

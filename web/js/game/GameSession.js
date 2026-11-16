@@ -52,8 +52,12 @@ export class GameSession {
   get state() { return this.machine.current?.name ?? null; }
 
   get canMove() {
-    return (this.state === 'playing' || this.state === 'wave-break') &&
-      this.context.players.some(player => player.damageable.alive);
+    return (this.state === 'playing' || this.state === 'wave-break') && this.anyPlayerAlive;
+  }
+
+  get anyPlayerAlive() {
+    for (const player of this.context.players) if (player.damageable.alive) return true;
+    return false;
   }
 
   start() {
@@ -108,7 +112,7 @@ export class GameSession {
 
   updatePlaying(dt) {
     this.simulate(dt);
-    if (!this.context.players.some(player => player.damageable.alive)) this.changeState(this.states.gameOver);
+    if (!this.anyPlayerAlive) this.changeState(this.states.gameOver);
     else if (this.director.remaining === 0 && this.context.enemies.length === 0) this.changeState(this.states.waveBreak);
   }
 
