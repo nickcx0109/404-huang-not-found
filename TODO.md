@@ -32,7 +32,7 @@
   - 內容：波次不要一次全部出完，改成一段時間內陸續出怪；每一波混合不同種類（等 G2）；波次表寫成資料，不要寫死在程式裡。順便做殭屍互相推開（設計文件 6.1 第 1 點），不然會疊成一點。
   - 完成：有測試證明每波數量、種類、出怪間隔照表走。
 - [ ] **G4 商店介面和更多商品**
-  - 起點：`web/js/economy/`、`web/js/ui/GameplayHud.js`，`test/Economy.test.js`。
+  - 起點：`web/js/economy/`、`web/js/ui/hud/`（照 GAMEPLAY.md「新增 HUD 元件」），`test/Economy.test.js`。
   - 內容：靠近商店按 E 打開一個列出商品的介面，不再是按 E 直接補彈。新增商品：買 G1 的槍、補血、護甲。
   - 完成：每個商品是一個 `ShopItem` 子類，有買不起、條件不符、成功、失敗退費的測試。
 - [ ] **G5 開始、結束、重開畫面**
@@ -46,6 +46,7 @@
 - [ ] **G7 倒地和救援**
   - 內容：生命歸零先倒地，隊友靠近按住 E 數秒救起；全部倒地才 GameOver。先在單人可測的狀態下做好（例如 debug 加一個假隊友）。
   - 完成：倒地、救起、全滅三種情況都有測試。
+  - 介面已經有隊友列（`web/js/ui/hud/TeamWidget.js`）：玩家物件有 `downed` 就照它顯示「DOWN」，沒有就把血量歸零當成倒地。
 - [ ] **G8 區網多人連線**（大項，認領前先拆小）
   - 起點：`GAMEPLAY.md` 的「傷害與行為的邊界」第 5 點；舊原型的 `reference/old-web-prototype/prototype-web/server.mjs`（WebSocket 房間轉送）和 `core/net.js`、`core/coop.js`。
   - 內容：Host 跑 `GameSession`，Client 只送輸入，Host 傳快照；顯示其他玩家；`ChaseBrain` 改成追最近的玩家（現在只追 `ctx.players[0]`）；連線時把第二章的 `alarm.light.count` 降到 1 或 0（動態燈上限）。
@@ -95,6 +96,7 @@
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
 - [ ] **B12** `Emitters` 沒有公開的方法讓章節道具登記每幀動畫；`Ch1Props.js` 的營火閃爍暫時直接用內部的 `_animations` 陣列（欄位改名的話火只是不閃，不會壞）
 - [ ] **G11** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、金錢會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
+- [ ] **B13** `WEAPON_FIRED`、`WEAPON_RELOADED`、`WEAPON_CHANGED` 的 payload 沒有子彈數，也沒有「開始換彈」的事件；補彈（`refill`）也不發事件。HUD 現在靠 `ui/hud/PlayerStatus.js` 每幀從 Session 抄數字。做連線（G8）時要嘛在事件裡帶上數字，要嘛讓快照填 `PlayerStatus`。
 
 ## 其他
 
