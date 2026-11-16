@@ -1,5 +1,5 @@
 {
-  "_about": "Chapter 3, rescue at headquarters. This file is the palette block \"ch3\" (levels pick it with \"palette\": \"ch3\"). It starts from the chosen mood (heavy); only the guide colour is set so far (the orange of the fuel barrels). Still to do here: the black of a power cut, red emergency lighting, the green LED wall of the server room. Owned by the chapter 3 team member.",
+  "_about": "Chapter 3, rescue at headquarters. This file is the palette block \"ch3\" (levels pick it with \"palette\": \"ch3\"). It starts from the chosen mood (heavy); only the guide colour is set so far (the orange of the fuel barrels). Still to do here: the black of a power cut, red emergency lighting, the green LED wall of the server room.",
   "extends": "mood/heavy",
   "accent": {
     "color": "#ffb020"

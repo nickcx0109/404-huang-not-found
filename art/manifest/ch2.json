@@ -5,8 +5,7 @@
     "class sets the triangle limit: small_prop 1500, large_prop 6000, module 3000, landmark 20000. maxTriangles (optional) lowers it.",
     "size is [width X, height Y, depth Z] in metres, in game axes; the built model must match it within 10 %.",
     "status: planned = not made yet (tools skip it), wip = being made (checked when its GLB exists), ready = approved; the game loads a model only when it is ready.",
-    "pivot (optional): \"custom\" when the origin is on the ground but not under the middle of the model (e.g. a lamp post with a long arm).",
-    "Owned by the chapter 2 team member."
+    "pivot (optional): \"custom\" when the origin is on the ground but not under the middle of the model (e.g. a lamp post with a long arm)."
   ],
   "chapter": "ch2",
   "assets": [

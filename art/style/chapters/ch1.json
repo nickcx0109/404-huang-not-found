@@ -1,4 +1,4 @@
 {
-  "_about": "Chapter 1, find the car. This file is the palette block \"ch1\" (levels pick it with \"palette\": \"ch1\"). It starts from the chosen mood (heavy), which was tuned on a foggy mountain road with red tail lights as the guide colour, so nothing is changed yet. Add only what chapter 1 needs to differ. Owned by the chapter 1 team member.",
+  "_about": "Chapter 1, find the car. This file is the palette block \"ch1\" (levels pick it with \"palette\": \"ch1\"). It starts from the chosen mood (heavy), which was tuned on a foggy mountain road with red tail lights as the guide colour, so nothing is changed yet. Add only what chapter 1 needs to differ.",
   "extends": "mood/heavy"
 }
