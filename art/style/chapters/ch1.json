@@ -27,11 +27,11 @@
   },
 
   "greybox": {
-    "ground": "#20251e",
-    "grid": "#20251e",
+    "ground": "#161a15",
+    "grid": "#161a15",
     "collider": "#3c413d",
-    "road": "#34383a",
-    "tree": "#141712",
+    "road": "#282b2d",
+    "tree": "#080a07",
     "car": "#2a2f30",
     "tire": "#101211",
     "truck": "#30373a",
