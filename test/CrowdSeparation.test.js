@@ -82,3 +82,15 @@ test('CrowdSeparation resolves diagonal overlap with different radii and overlap
   assert.ok(Math.abs(a.position.x - b.position.x) >= 0.75 - 1e-9);
   factory.dispose();
 });
+
+test('CrowdSeparation never tunnels a body through a wall of a narrow corridor', () => {
+  const { ctx, factory, a, b, separation } = fixture();
+  ctx.collision.add(new Aabb(-1.5, 0, -4, -0.35025, 3, 4));
+  ctx.collision.add(new Aabb(0.35025, 0, -4, 1.5, 3, 4));
+  for (let tick = 0; tick < 5; tick++) separation.apply(ctx);
+  for (const enemy of [a, b]) {
+    assert.ok(Math.abs(enemy.position.x) < 0.35025, `stays between the walls, x=${enemy.position.x}`);
+  }
+  assertFree(ctx);
+  factory.dispose();
+});

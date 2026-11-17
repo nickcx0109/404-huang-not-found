@@ -39,7 +39,12 @@ export class CrowdSeparation {
       enemy.radius, position.y, position.y + enemy.height, this._movement);
     // Bounds clamping must not push a body into a collider at the edge of the map.
     if (ctx.collision.hit(this._movement.x, this._movement.z, enemy.radius, position.y, position.y + enemy.height)) return 0;
-    const moved = (this._movement.x - position.x) * nx + (this._movement.z - position.z) * nz;
+    const stepX = this._movement.x - position.x;
+    const stepZ = this._movement.z - position.z;
+    const moved = stepX * nx + stepZ * nz;
+    // Collision push-out can teleport a body through a thin wall; a safe push never moves
+    // backwards or farther than requested, so reject anything else and keep the overlap.
+    if (moved < -1e-9 || Math.hypot(stepX, stepZ) > distance + 1e-9) return 0;
     position.x = this._movement.x;
     position.z = this._movement.z;
     return Math.max(0, moved);
