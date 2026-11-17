@@ -12,7 +12,6 @@ import { PathFinder } from './PathFinder.js';
 import { Hud } from './Hud.js';
 import { EventBus } from './core/EventBus.js';
 import { clampFrameTime } from './core/frameTime.js';
-import { LightCountCache } from './core/LightCountCache.js';
 
 // App: wires the modules together.
 //   LevelData -> SceneBuilder (-> PropFactory) -> scene + collision
@@ -72,7 +71,10 @@ export class App {
     this.container = container;
     this.hud = hud;
     this.events = new EventBus();
-    this.stats = { fps: 0, frameMs: 0, calls: 0, triangles: 0, lights: 0, pixelRatio: 1 };
+    const app = this;
+    // lights walks the scene, so it is counted only when read (info text, ?perf, shots.mjs).
+    this.stats = { fps: 0, frameMs: 0, calls: 0, triangles: 0,
+      get lights() { return app._countLights(); }, pixelRatio: 1 };
     this._lastTime = 0;
     this._infoTimer = 0;
     this._frameCount = 0;
@@ -93,7 +95,6 @@ export class App {
 
     this._createRenderer();
     this.scene = new THREE.Scene();
-    this._lightCounts = new LightCountCache(this.scene);
     this.camera = new THREE.PerspectiveCamera(CONFIG.fov, 1, CONFIG.near, 100);
     this.scene.add(this.camera); // the flashlight is a child of the camera
 
@@ -306,12 +307,16 @@ export class App {
     this.postfx.render(this.scene, this.camera, time);
     this.stats.calls = info.render.calls;
     this.stats.triangles = info.render.triangles;
-    this.stats.lights = this._countLights();
     window.__stats = this.stats;
   }
 
+  // Walks the scene; only called when stats.lights is read, never per frame.
   _countLights() {
-    return this._lightCounts.count();
+    let count = 0;
+    this.scene.traverseVisible((o) => {
+      if (o.isLight && !o.isAmbientLight && !o.isHemisphereLight) count++;
+    });
+    return count;
   }
 
   _updateInfo() {

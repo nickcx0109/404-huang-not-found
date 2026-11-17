@@ -11,7 +11,7 @@
 | 5 | ✅ 已修復 | `web/js/PostFX.js`、`core/bloomLevels.js` | 明確的 levels: 0 關閉 bloom，不建立 targets 或執行 bloom pass；缺省為 3，非零層數限制為 1～4 | 純函式測試涵蓋 0、缺省、邊界與無效值 | `fix(postfx): treat bloom.levels 0 as a valid value` |
 | 6 | 🟡 | `tools/art/shots.mjs:150` | `waitForFunction` 逾時時直接丟錯，跳出整個迴圈 | 某一張卡住，後面的截圖全部不拍 | 每張各自 try/catch，算進 `failures`；`--gpu` 的 d3d11 參數只適用於 Windows |
 | 7 | ✅ 已修復 | `web/js/App.js`、`core/frameTime.js` | fps 統計與 dt 共用限制在 0～maxFrameTime 的 elapsed | 第一幀、分頁恢復與時鐘倒退不再累加越界時間 | `fix(app): clamp elapsed time for fps statistics` |
-| 8 | ✅ 已修復 | `web/js/App.js`、`core/LightCountCache.js` | 快取燈光集合；監聽每個節點 add/remove 追蹤巢狀動態燈，提供 invalidate() | 每幀只檢查燈及祖先可見性，不再走訪整個場景；強度 0 仍計數 | `fix(app): cache scene lights across frames` |
+| 8 | ✅ 已修復 | `web/js/App.js` `_countLights` | `stats.lights` 改成 getter，只有被讀到時（資訊文字、`?perf`、`shots.mjs`）才走訪場景，不再每幀數燈 | 讀到的永遠是當下的燈數，動態加入的燈也算得到 | `fix(app): count lights only when stats are read` |
 | 9 | ⚪ 效能 | `web/js/StaticBatcher.js:33` | 同材質的東西整關合併成一個 mesh，邊界球涵蓋整個關卡 | 相機和手電筒陰影都沒辦法剔除，看不到的東西也照畫。**第一章 300 m 的山路會受影響** | 改成按區塊（例如 20 m 一格）合併 |
 | 10 | ✅ 已修復 | `web/js/Flashlight.js` | 設定 shadow.camera.near = 0.2 後立即更新投影矩陣 | 陰影相機投影與 near 一致，避免近處陰影使用舊裁切面 | `fix(flashlight): update shadow camera projection after near changes` |
 
