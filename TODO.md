@@ -23,10 +23,6 @@
   - 起點：`web/js/game/WaveDirector.js`。
   - 內容：波次不要一次全部出完，改成一段時間內陸續出怪；每一波混合不同種類（等 G2）；波次表寫成資料，不要寫死在程式裡。順便做殭屍互相推開（設計文件 6.1 第 1 點），不然會疊成一點。
   - 完成：有測試證明每波數量、種類、出怪間隔照表走。
-- [~] **G4 商店介面和更多商品**（進行中：@nickcx0109，分支 feat/shop-ui）
-  - 起點：`web/js/economy/`、`web/js/ui/hud/`（照 GAMEPLAY.md「新增 HUD 元件」），`test/Economy.test.js`。
-  - 內容：靠近商店按 E 打開一個列出商品的介面，不再是按 E 直接補彈。新增商品：買 G1 的槍、補血、護甲。
-  - 完成：每個商品是一個 `ShopItem` 子類，有買不起、條件不符、成功、失敗退費的測試。
 - [ ] **G5 開始、結束、重開畫面**
   - 起點：`web/js/game/states/`、`GameSession.js`，`test/GameSession.test.js`。
   - 內容：Lobby 顯示開始畫面；GameOver 顯示結算（波次、擊殺）並可以不重新整理就重開（先完整 dispose 再建新的 Session）；新增 Victory 狀態給 G6 用。
@@ -102,3 +98,4 @@
 - G12 遊戲內介面（HUD）重做（PR #14）
 - G1 步槍和霰彈槍（PR #9）
 - G2 更多殭屍種類（PR #10）
+- G4 商店介面和更多商品（PR #16）

@@ -11,9 +11,10 @@ http://localhost:8080/web/index.html?level=ch2&play=1
 
 - 只有 **`play=1`** 開啟玩法；沒有此參數、`play=0`、`play=true` 都仍是原有走動展示。
 - `shot` 優先於 `play`，連 `?level=ch2&play=1&shot=gate_view` 也只拍原場景，不建立玩法實體或 HUD。
-- 點畫面取得滑鼠鎖定才從 Lobby 開始。WASD 移動、Shift 跑步、左鍵開火（步槍按住連射）、R 換彈、1 手槍／2 步槍／3 霰彈槍、F 手電筒。放開左鍵、失去視窗焦點或解除鎖定會停止連射。
+- 點畫面取得滑鼠鎖定才從 Lobby 開始。WASD 移動、Shift 跑步、左鍵開火（步槍按住連射）、R 換彈、數字鍵切換持有武器（1 是手槍，其餘依購買順序）、F 手電筒。開局只有 Pistol；Rifle、Shotgun 需購買。放開左鍵、失去視窗焦點或解除鎖定會停止連射。
 - Esc 解除鎖定會暫停玩法時鐘；重新點畫面繼續。不要用系統時間決定射速或換彈，以免暫停期間偷偷完成。
-- 波次清空後整備 8 秒；靠近關卡 `type: "shop"` marker 按 E，以 $25 補滿目前武器的彈匣與備彈。波次中或離商店太遠不能買。
+- 波次清空後整備 8 秒；靠近關卡 `type: "shop"` marker 按 E 開商店，數字鍵 1–5 或滑鼠點選購買，再按 E 或 Esc 關閉。商店顯示商品名稱、價格、資金／條件不足原因，並停用不能買的按鈕。波次中、死亡或離商店太遠不能買；離開範圍或整備結束立即關店。
+- 開店會解除滑鼠鎖定供點選，停止連射，Session 也拒絕開火；商店開啟時整備時鐘繼續。E 關閉會重新要求鎖定；Esc 或自動關閉則回到點畫面繼續，維持原本解除鎖定的暫停行為。
 - 生命歸零進入 GameOver，凍結戰鬥，重新整理才重開。暫無救援、復活、獲勝／開大門條件，也不實作故事章節目標。
 - 波次範例為 2 → 3 → 4 隻，此後維持 4 隻，不是最終遊戲平衡。單人離線而已，沒有網路協定。
 
@@ -50,6 +51,9 @@ classDiagram
   Damageable ..> DamageInfo
   DamagePipeline o-- DamageRule
   DamageRule <|-- HeadshotRule
+  DamageRule <|-- ArmorRule
+  CombatPlayer *-- Armor
+  ArmorRule --> Armor
   DamageRule --> DamageRule : next
   CombatPlayer *-- WeaponHolder
   WeaponHolder o-- Weapon
@@ -67,6 +71,13 @@ classDiagram
   CombatPlayer *-- Wallet
   Economy --> ShopItem
   ShopItem <|-- AmmoRefillItem
+  ShopItem <|-- RifleItem
+  ShopItem <|-- ShotgunItem
+  ShopItem <|-- HealthItem
+  ShopItem <|-- ArmorItem
+  GameSession *-- ShopCatalog
+  GameSession *-- ShopAccess
+  ShopCatalog o-- ShopItem
   Hud <|-- SurvivalHud
   SurvivalHud o-- HudWidget
   SurvivalHud *-- PlayerStatus
@@ -79,6 +90,7 @@ classDiagram
   HudWidget <|-- EventCard
   HudWidget <|-- TeamWidget
   HudWidget <|-- StatusLine
+  HudWidget <|-- ShopWidget
 ```
 
 ## 檔案與介面
@@ -102,7 +114,8 @@ classDiagram
 | `enemies/Enemy.js` | Entity 子類與 Damageable 組合，持有 Brain、重用路徑、碰撞結果與命中盒；`activate/deactivate` 為物件池生命週期 |
 | `enemies/Brain.js`、`enemies/behaviour/Nodes.js` | Brain Strategy 與最小 reactive 行為樹；Sequence 遇非成功就停止，Selector 遇非失敗就停止，running 會向上傳遞；下次 tick 從首個子節點重新判斷，沒有有記憶的游標 |
 | `enemies/EnemyFactory.js` | `register(type, EnemySubclass)`、`create(type, spawn)`、`release(enemy)`、`dispose()`；每種類型獨立 ObjectPool，拒絕重複註冊與重複歸還 |
-| `economy/` | Wallet 驗證整數金額；Economy 控制交易並在 apply 失敗時退費；ShopItem 的 `canBuy/apply` 以多型擴充，不在 Economy 寫商品 switch |
+| `economy/` | Wallet 驗證整數金額；Economy 控制交易並在 apply 失敗時退費；ShopItem 的 `canBuy/apply` 以多型擴充。ShopCatalog 註冊商品與顯示資料，ShopAccess 封裝範圍與開關條件，全部不依賴 DOM |
+| `entities/Armor.js`、`ArmorRule.js` | Armor 是玩家組合的 50 點傷害緩衝；ArmorRule 經注入的查詢找到目標，接在爆頭倍率之後吸收傷害。不在 Damageable 判斷商品或傷害種類 |
 | `ui/hud/SurvivalHud.js` | 遊戲內介面，繼承既有 Hud（`showError`、`#error`、debug/perf 顯示保留），裡面裝一組 `HudWidget`。只有 `play=1` 才建立；字型、`css/hud.css` 也是這時才加進頁面 |
 | `ui/hud/HudWidget.js` 和各元件 | 每個元件一個類別、一個檔案：血量、彈藥、準星、受傷效果、提示文字、事件字卡、隊友、頂端狀態列。`bind()` 訂閱事件處理「某一刻發生的事」，`sync(status)` 收目前的數字、有變才寫 DOM；元件不持有遊戲物件 |
 | `ui/hud/PlayerStatus.js` | HUD 唯一會讀 Session 的類別，每幀把血量、彈藥、金錢、波次、位置、隊友抄成普通數字。事件沒帶的數字（子彈數、是否換彈中）從這裡來；之後連線時 Client 可以用 Host 的快照填同樣的欄位 |
@@ -124,7 +137,7 @@ classDiagram
 | Strategy | Weapon 注入 fire-mode 物件，Enemy 注入 Brain；可換攻擊／決策而不用改使用者 |
 | State | 四種 State 經由現有 StateMachine 管理；不能在 enter／exit 遞迴切換，要在 update 請 Session 轉換 |
 | Observer | 所有玩法通知及輸入命令名稱統一在 `game/events.js`，用 App 的 EventBus 解耦 |
-| Chain of Responsibility | DamagePipeline 串接 DamageRule.next，先前規則輸出交給下一個；目前只提供爆頭範例 |
+| Chain of Responsibility | DamagePipeline 串接 DamageRule.next，先前規則輸出交給下一個；HeadshotRule 計算倍率，ArmorRule 扣護甲後把溢出傷害交給 Damageable |
 | Object Pool | EnemyFactory 每種類型使用既有 ObjectPool；死亡隱藏、重設、歸還，跨波次重用 mesh 與路徑 buffer |
 | Composite | `SurvivalHud` 裝著一組 `HudWidget`，每幀對每個元件呼叫 `sync` 和 `tick`；加元件不用改其他元件 |
 | Template Method（介面） | `HudWidget.tick` 固定「計時的 class → 子類的 `advance` → 共用的淡入淡出」，子類只覆寫 `bind`、`sync`、`advance` |
@@ -141,6 +154,9 @@ classDiagram
 | `RELOAD_REQUESTED` | `player.reload-requested` | `{ownerId}`；輸入 → Session |
 | `SWITCH_REQUESTED` | `player.switch-requested` | `{ownerId,index}`；輸入 → Session |
 | `PURCHASE_REQUESTED` | `shop.purchase-requested` | `{ownerId,itemId}`；輸入 → Session |
+| `SHOP_TOGGLE_REQUESTED` | `shop.toggle-requested` | `{ownerId}`；輸入 → Session，驗證整備、存活與距離後切換 |
+| `SHOP_CLOSE_REQUESTED` | `shop.close-requested` | `{ownerId}`；輸入 → Session，關閉商店 |
+| `SHOP_CHANGED` | `shop.changed` | `{ownerId,open}`；Session 通知輸入層停止連射／解除鎖定 |
 | `DAMAGE_REQUESTED` | `entity.damage-requested` | `DamageInfo`；攻擊策略 → Session |
 | `ENTITY_DAMAGED` | `entity.damaged` | `{entity,info,amount,health}`；Damageable 通知，amount 為實際扣血 |
 | `ENTITY_DIED` | `entity.died` | 同上；Damageable 通知，單一生命只發一次 |
@@ -165,7 +181,7 @@ Payload 中的 entity 是同步事件借用的實體參照，不是網路快照�
 2. 繼承 Weapon，constructor 呼叫 super，提供唯一 `id`、`magazine`、`reserve`、`reloadSeconds`、`cooldownSeconds`、`fireMode`。子彈數是非負整數、彈匣與時間必須為正值。
 3. 覆寫 `createShot(ctx)`，回傳 `{damage,range}`。固定規格可在模組層 Object.freeze 一次；不要每幀建物件。沿用 HitscanFire，或自行寫 `fire(shot,ctx,ownerId)` Strategy。
 4. 命中時只發 DAMAGE_REQUESTED，不直接讀 Walker 類別、加錢或扣血。視覺／音效用 onFired 或訂閱 WEAPON_FIRED，別把 Three.js 引進純邏輯基底。
-5. 在共用組合入口 `game/installGameplay.js` 匯入新類別，呼叫 `player.weapons.add(new 你的類別())`。WeaponHolder 已支援數字鍵切換，不需改 Enemy 或 Economy。
+5. 在共用組合入口註冊對應的 ShopItem，商品成功時呼叫 `player.weapons.add(new 你的類別())`；只有初始武器直接在 `game/installGameplay.js` 加入。WeaponHolder 已支援依持有順序的數字鍵切換，不需改 Enemy 或 Economy。
 6. 自己補假時鐘測試（射速、空彈、換彈、切槍），用 Conventional Commit 提交，一把武器一組 commit。
 
 ### G1 武器與散布
@@ -189,12 +205,24 @@ Payload 中的 entity 是同步事件借用的實體參照，不是網路快照�
 
 ## 新增商店商品
 
+| 按鍵 | 商品／id | 價格 | 效果與限制 |
+|---|---|---|---|
+| 1 | Ammo refill / `ammo-refill` | $25 | 補滿目前武器彈匣與備彈；已全滿不能買。保留原始 AmmoRefillItem 範例 |
+| 2 | Rifle / `rifle` | $75 | 新增步槍（30／210）；已持有拒絕，不轉成補彈 |
+| 3 | Shotgun / `shotgun` | $100 | 新增霰彈槍（6／36）；已持有拒絕，不轉成補彈 |
+| 4 | First aid / `health` | $25 | 恢復最多 50 HP、不超過上限；滿血或死亡拒絕 |
+| 5 | Armor / `armor` | $50 | 補至 50 點；滿護甲或缺少元件拒絕。每點抵一點所有種類傷害，用完後溢出扣血 |
+
+數值是此版商店平衡。新槍保留目前手持武器，離店後依購買順序以數字鍵切換；店內的數字鍵只用來購買。護甲餘量顯示在生命值旁和商店頂端。
+
 1. 從 `economy/ShopItem.js`、`economy/AmmoRefillItem.js`、`test/Economy.test.js` 開始，新增自己的 ShopItem 子類。
 2. constructor 使用唯一 id 與整數 cost，覆寫 `canBuy(player,ctx)` 時先呼叫 super 檢查資金，再檢查商品條件；判斷過程不可產生副作用。
 3. `apply(player,ctx)` 成功必須回傳 true；拒絕回傳 false。先完整驗證再改狀態，不要改到一半拋錯；Economy 只保證退還金錢，無法回復商品自行改動的其他狀態。
-4. 只呼叫介面或發事件，不依賴 Pistol 或 Walker。商品也不能自行扣錢，成功交易由 Economy 發 ITEM_PURCHASED。
-5. 將實例加入組合入口的 items 陣列；UI 發 `{ownerId,itemId}` 的 PURCHASE_REQUESTED。狀態與距離檢查仍由 Session 執行，現在 E 僅綁定補彈範例。
+4. 只呼叫元件介面或發事件，武器商品可建構自己負責的武器類別，不依賴敵人。商品不能自行扣錢，成功交易由 Economy 發 ITEM_PURCHASED。
+5. 在組合入口呼叫 `catalog.register(item, {name, description, unavailableReason})`；不在 Session 加商品 switch。UI／數字鍵發 `{ownerId,itemId}` 的 PURCHASE_REQUESTED；Session 用 ShopAccess 統一檢查整備、存活、距離（XZ 距離 ≤ marker.r + player.body.radius），並委派 Economy。`buy()` 保留可獨立呼叫的命令介面，不要求 UI 開啟，但同樣驗證交易限制。
 6. 測試買不起、條件不符、成功一次、apply 失敗退費，以及波次中／遠離商店的 Session 拒絕路徑，再提交修改。
+
+`PlayerStatus` 是 HUD 唯一讀 Session 的類別：抄出 `shopOpen`、`shopAvailable`、`armor`，並透過 ShopCatalog 填入可重用的純資料 `shopItems`（id/name/description/cost/available/reason）。ShopWidget 只讀這份快照，不保留商品或玩家參照。ShopAccess 和商品測試不需要 DOM；ShopWidget 沿用 HudWidget、Attention、四種 HUD 色及無面板的字體樣式。
 
 ## 新增狀態
 
@@ -237,4 +265,6 @@ Windows 若 npm.ps1 被執行政策擋住，改用 `npm.cmd test`／`npm.cmd run
 
 加 `&debug=1` 才有 `window.__gameDebug`：`start()`、`snapshot()`、`aimAt(enemyId)`、`fire()`、`reload()`、`advance(seconds)`。advance 每次至多 120 秒、內部切成最多 0.05 秒的模擬步；fire 仍走正常命中、遮擋、扣彈、冷卻及 Session 傷害流程，不能直接送錢或殺敵。這不是公開遊戲 API，無 debug 參數不建立它。自動測試若用 advance，先停止一般 rAF，避免同時推進兩個時鐘。
 
-本次驗收：56 個 node:test 全過（含 ch2 四個出怪區都能走到玩家）；素材檢查與 main 輸出相同。ch2 的 8 張、test 的 5 張 shot PNG，以及兩關固定時間的 walk PNG，全部 SHA-256 相同。Playwright 另確認無 debug 時實際滑鼠／R／W 輸入、兩隻敵人在出怪區域產生、命中擊殺 +$25、清完 +$50、整備後第二波 3 隻且重用兩個物件、受到近戰傷害進 GameOver，以及 shot 優先。測試腳本與 PNG 只放 OS temp，不加入版本控制。
+骨架初版驗收：56 個 node:test 全過（含 ch2 四個出怪區都能走到玩家）；素材檢查與 main 輸出相同。ch2 的 8 張、test 的 5 張 shot PNG，以及兩關固定時間的 walk PNG，全部 SHA-256 相同。Playwright 另確認無 debug 時實際滑鼠／R／W 輸入、兩隻敵人在出怪區域產生、命中擊殺 +$25、清完 +$50、整備後第二波 3 隻且重用兩個物件、受到近戰傷害進 GameOver，以及 shot 優先。測試腳本與 PNG 只放 OS temp，不加入版本控制。
+
+G4 驗收：144 個 node:test 全過（新增 33）；ch2 改前／改後 8 張 shot PNG 全部 SHA-256 相同。Playwright 在 ch2 實際走到商店，以正常射擊清第一波、取得 $50，透過數字鍵補彈與滑鼠補血；驗證 E 關閉重新鎖定、Esc 關閉、店內禁射、未鎖滑鼠時整備倒數仍推進並在第二波自動關店，無 pageerror。固定小步進行自動化時先停 App 一般 rAF，沒有直接加錢或殺敵。PNG／測試腳本只放 OS temp；測試結束關閉瀏覽器與 server。
