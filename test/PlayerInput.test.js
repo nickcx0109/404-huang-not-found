@@ -30,7 +30,7 @@ function fixture(t) {
   player.weapons.add(new Rifle({ fire: () => null }));
   ctx.players.push(player);
   const session = new GameSession(ctx, { factory: { dispose() {} },
-    director: { remaining: 1, start() {}, nextSpawn: () => false }, economy: new Economy() });
+    director: { remaining: 1, start() {}, update() {}, nextSpawn: () => false }, economy: new Economy() });
   const combat = new PlayerCombat(controller, camera, ctx, player.id);
   input.cleanup.push(() => { combat.dispose(); session.dispose(); controller.dispose(); });
   return { ...input, ctx, controller, camera, player, session, combat };

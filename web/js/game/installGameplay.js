@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { GameContext } from './GameContext.js';
 import { GameSession } from './GameSession.js';
-import { ExampleWaveDirector, EXAMPLE_WAVES } from './WaveDirector.js';
+import { TimedWaveDirector } from './TimedWaveDirector.js';
+import { CrowdSeparation } from './CrowdSeparation.js';
+import { SURVIVAL_WAVES } from './waves/survival.js';
 import { EVENTS } from './events.js';
 import { PathFinder } from '../PathFinder.js';
 import { EnemyFactory } from '../enemies/EnemyFactory.js';
@@ -50,9 +52,9 @@ export function installGameplay(app) {
     .register(new ShotgunItem(), { name: 'Shotgun', description: '6 shells / 36 reserve', unavailableReason: 'Already owned' })
     .register(new HealthItem(), { name: 'First aid', description: 'Restore up to 50 HP', unavailableReason: 'Health already full' })
     .register(new ArmorItem(), { name: 'Armor', description: 'Refill to 50 armor', unavailableReason: 'Armor already full' });
-  app.game = new GameSession(ctx, { factory, director: new ExampleWaveDirector(), economy: new Economy(),
+  app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(SURVIVAL_WAVES), economy: new Economy(),
     catalog, damagePipeline: new DamagePipeline([new HeadshotRule(),
-      new ArmorRule(id => ctx.players.find(candidate => candidate.id === id))]), breakSeconds: EXAMPLE_WAVES.breakSeconds });
+      new ArmorRule(id => ctx.players.find(candidate => candidate.id === id))]), separation: new CrowdSeparation() });
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id);
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);

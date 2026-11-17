@@ -11,6 +11,7 @@ import { PlayerController } from './PlayerController.js';
 import { PathFinder } from './PathFinder.js';
 import { Hud } from './Hud.js';
 import { EventBus } from './core/EventBus.js';
+import { clampFrameTime } from './core/frameTime.js';
 
 // App: wires the modules together.
 //   LevelData -> SceneBuilder (-> PropFactory) -> scene + collision
@@ -29,6 +30,7 @@ const CONFIG = Object.freeze({
   fov: 70,
   near: 0.1,
   maxFrameTime: 0.05, // s; a long hitch must not teleport the player
+  maxStatsFrameTime: 0.5, // s; longer gaps (first frame, background tab) are left out of fps stats
   infoInterval: 0.25, // s between info text refreshes
 });
 
@@ -70,7 +72,10 @@ export class App {
     this.container = container;
     this.hud = hud;
     this.events = new EventBus();
-    this.stats = { fps: 0, frameMs: 0, calls: 0, triangles: 0, lights: 0, pixelRatio: 1 };
+    const app = this;
+    // lights walks the scene, so it is counted only when read (info text, ?perf, shots.mjs).
+    this.stats = { fps: 0, frameMs: 0, calls: 0, triangles: 0,
+      get lights() { return app._countLights(); }, pixelRatio: 1 };
     this._lastTime = 0;
     this._infoTimer = 0;
     this._frameCount = 0;
@@ -270,7 +275,7 @@ export class App {
     requestAnimationFrame(this._frame);
     const elapsed = (now - this._lastTime) / 1000;
     this._lastTime = now;
-    const dt = Math.min(CONFIG.maxFrameTime, Math.max(0, elapsed));
+    const dt = clampFrameTime(elapsed, CONFIG.maxFrameTime);
 
     if (!this.game || this.game.canMove) this.player.update(dt);
     if (this.flow) this.flow.update(dt);
@@ -287,9 +292,13 @@ export class App {
     this.built.update(now / 1000);
     this._render(now / 1000);
 
-    this._frameCount++;
-    this._frameTimeSum += elapsed;
-    this._infoTimer += elapsed;
+    // Stats keep real frame times (a 30 fps machine must read 30, not the dt cap), but a
+    // gap longer than maxStatsFrameTime is a pause, not a frame, and is skipped.
+    if (elapsed >= 0 && elapsed <= CONFIG.maxStatsFrameTime) {
+      this._frameCount++;
+      this._frameTimeSum += elapsed;
+      this._infoTimer += elapsed;
+    }
     if (this._infoTimer >= CONFIG.infoInterval) {
       this.stats.frameMs = (this._frameTimeSum / this._frameCount) * 1000;
       this.stats.fps = this.stats.frameMs > 0 ? 1000 / this.stats.frameMs : 0;
@@ -307,10 +316,10 @@ export class App {
     this.postfx.render(this.scene, this.camera, time);
     this.stats.calls = info.render.calls;
     this.stats.triangles = info.render.triangles;
-    this.stats.lights = this._countLights();
     window.__stats = this.stats;
   }
 
+  // Walks the scene; only called when stats.lights is read, never per frame.
   _countLights() {
     let count = 0;
     this.scene.traverseVisible((o) => {

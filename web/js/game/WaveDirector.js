@@ -1,6 +1,7 @@
 export class WaveDirector {
   constructor() { this.remaining = 0; }
   start(wave, ctx) { throw new Error('Implement WaveDirector.start'); }
+  update(dt, ctx) {} // Immediate directors need no clock; timed subclasses override this hook.
   nextSpawn(ctx, result) { throw new Error('Implement WaveDirector.nextSpawn'); }
 }
 

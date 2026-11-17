@@ -13,10 +13,10 @@ http://localhost:8080/web/index.html?level=ch2&play=1
 - `shot` 優先於 `play`，連 `?level=ch2&play=1&shot=gate_view` 也只拍原場景，不建立玩法實體或 HUD。
 - 點畫面取得滑鼠鎖定才從 Lobby 開始。WASD 移動、Shift 跑步、左鍵開火（步槍按住連射）、R 換彈、數字鍵切換持有武器（1 是手槍，其餘依購買順序）、F 手電筒。開局只有 Pistol；Rifle、Shotgun 需購買。放開左鍵、失去視窗焦點或解除鎖定會停止連射。
 - Esc 解除鎖定會暫停玩法時鐘；重新點畫面繼續。不要用系統時間決定射速或換彈，以免暫停期間偷偷完成。
-- 波次清空後整備 8 秒；靠近關卡 `type: "shop"` marker 按 E 開商店，數字鍵 1–5 或滑鼠點選購買，再按 E 或 Esc 關閉。商店顯示商品名稱、價格、資金／條件不足原因，並停用不能買的按鈕。波次中、死亡或離商店太遠不能買；離開範圍或整備結束立即關店。
+- 波次清空後依波次表整備 6～10 秒（`web/js/game/waves/survival.js` 的 `breakSeconds`）；靠近關卡 `type: "shop"` marker 按 E 開商店，數字鍵 1–5 或滑鼠點選購買，再按 E 或 Esc 關閉。商店顯示商品名稱、價格、資金／條件不足原因，並停用不能買的按鈕。波次中、死亡或離商店太遠不能買；離開範圍或整備結束立即關店。
 - 開店會解除滑鼠鎖定供點選，停止連射，Session 也拒絕開火；店內仍可用 WASD／Shift 移動，滑鼠不轉視角，走出範圍會自動關店。商店開啟時整備時鐘繼續。E 關閉會藉該次按鍵手勢重新要求鎖定；若瀏覽器拒絕、按 Esc 或自動關閉，則暫停移動與玩法時鐘，點畫面繼續（重新鎖定需要使用者手勢）。死亡仍停用移動。走動展示模式維持原本鎖定後才能移動的行為。
 - 生命歸零進入 GameOver，凍結戰鬥，重新整理才重開。暫無救援、復活、獲勝／開大門條件，也不實作故事章節目標。
-- 波次範例為 2 → 3 → 4 隻，此後維持 4 隻，不是最終遊戲平衡。單人離線而已，沒有網路協定。
+- 預設使用資料驅動的混合波次，陸續出怪且限制同時在場數量（見下方 G3 波次表）；數值不是最終遊戲平衡。單人離線而已，沒有網路協定。
 
 ## 類別關係
 
@@ -27,6 +27,7 @@ classDiagram
   GameSession *-- GameContext
   GameSession *-- StateMachine
   GameSession --> WaveDirector
+  GameSession --> CrowdSeparation
   GameSession --> EnemyFactory
   GameSession --> Economy
   GameSession --> DamagePipeline
@@ -68,6 +69,8 @@ classDiagram
   Node <|-- Action
   EnemyFactory o-- ObjectPool
   WaveDirector <|-- ExampleWaveDirector
+  WaveDirector <|-- TimedWaveDirector
+  TimedWaveDirector *-- WaveTable
   CombatPlayer *-- Wallet
   Economy --> ShopItem
   ShopItem <|-- AmmoRefillItem
@@ -101,7 +104,10 @@ classDiagram
 | `game/GameContext.js` | `scene`、`collision`、`pathFinder`、`events`、`pools`、`players`、`enemies`、`rng`、`time`、`aim`、`session`；容器不是全域變數 |
 | `game/GameSession.js` | 唯一模擬權威：輸入命令、傷害套用、擊殺獎金、購物限制、波次與 GameOver；App 擁有它並推進時鐘 |
 | `game/states/` | 薄的 State 子類，將生命週期／更新交回 Session，使用現有 `core/StateMachine` |
-| `game/WaveDirector.js` | `start(wave, ctx)` 與 `nextSpawn(ctx, reusableResult)`；`remaining` 是尚未產生的數量。範例只在波次開始出怪，從既有出怪圓形區域抽點，檢查碰撞與邊界 |
+| `game/WaveDirector.js` | `start(wave, ctx)`、`update(dt, ctx)` 與 `nextSpawn(ctx, reusableResult)`；`remaining` 是尚未產生的數量。基底 update 為空操作，ExampleWaveDirector 保留即時出完 2 → 3 → 4 隻 walker 的範例行為 |
+| `game/TimedWaveDirector.js`、`game/WaveTable.js` | 新 director 子類以模擬時鐘控制間隔、在場上限與輪流種類；WaveTable 在建構時驗證並複製資料，依明確規則延伸後續波次 |
+| `game/waves/survival.js` | 純 JS 波次資料模組，供瀏覽器和 Node 直接載入，無需額外 fetch、JSON import assertions 或 build；資料與出怪演算法分開 |
+| `game/CrowdSeparation.js` | 可注入／替換的 Strategy；Session.simulate 後套用，使用兩者半徑相加的距離，透過 ctx.collision.move/hit 防止推入牆與越界，同步外觀和 hitVolume |
 | `entities/Entity.js` | 可辨識的實體，`position` 是普通 `{x,y,z}` 而非 THREE.Vector3；不在匯入時啟動任何事情 |
 | `entities/DamageInfo.js` | 不可變值物件：`amount`、`sourceId`、`targetId`、`hitPart`、`kind`。`withAmount()` 回傳新值，不覆寫原始傷害 |
 | `entities/Damageable.js` | 組合而非多重繼承：`health`、`maxHealth`、`alive`、`takeDamage(info)`、`reset()`；傷害限於剩餘生命，每條生命只發一次死亡事件 |
@@ -134,7 +140,7 @@ classDiagram
 | 模式 | 實際位置與理由 |
 |---|---|
 | Template Method | `Weapon.fire` 固定開火流程，`Pistol.createShot` 提供射擊規格，`onFired` 為選用 hook |
-| Strategy | Weapon 注入 fire-mode 物件，Enemy 注入 Brain；可換攻擊／決策而不用改使用者 |
+| Strategy | Weapon 注入 fire-mode 物件，Enemy 注入 Brain，Session 注入 separation.apply(ctx) 物件；可替換行為而不用改使用者 |
 | State | 四種 State 經由現有 StateMachine 管理；不能在 enter／exit 遞迴切換，要在 update 請 Session 轉換 |
 | Observer | 所有玩法通知及輸入命令名稱統一在 `game/events.js`，用 App 的 EventBus 解耦 |
 | Chain of Responsibility | DamagePipeline 串接 DamageRule.next，先前規則輸出交給下一個；HeadshotRule 計算倍率，ArmorRule 扣護甲後把溢出傷害交給 Damageable |
@@ -167,13 +173,33 @@ classDiagram
 | `WALLET_CHANGED` | `wallet.changed` | `{ownerId,balance,delta}`；Wallet 通知 |
 | `ITEM_PURCHASED` | `shop.purchased` | `{ownerId,itemId,cost}`；Economy 成功通知 |
 | `STATE_CHANGED` | `game.state-changed` | `{state,wave}`；Session 通知，state 是 lobby／playing／wave-break／game-over |
-| `WAVE_STARTED` | `wave.started` | `{wave,count}`；Session 通知 |
+| `WAVE_STARTED` | `wave.started` | `{wave,count}`；Session 通知，count 是整波預計總數（含尚未出生者），在第一隻出生前發送 |
 | `WAVE_CLEARED` | `wave.cleared` | `{wave,kills}`；Session 通知，kills 為本局累計 |
 | `GAME_OVER` | `game.over` | `{wave,kills}`；Session 通知 |
 | `PROMPT_CHANGED` | `hud.prompt-changed` | `{id,text,progress}`；任何模組 → HUD，在畫面下方顯示一行提示。`progress` 是 0–1（省略就不畫進度線）；`text` 給 `null` 表示收掉這個 `id` 的提示 |
 | `ANNOUNCED` | `hud.announced` | `{text}`；任何模組 → HUD，在畫面中上顯示一張字卡，約 2 秒後淡出 |
 
 Payload 中的 entity 是同步事件借用的實體參照，不是網路快照。長期保存請複製所需數值與當時 id；物件池會重用該物件。訂閱 `on()` 回傳的取消函式由訂閱者在 dispose 時呼叫。
+
+## G3 波次資料與群體分離
+
+| 波次 | Walker | Runner | Tank | Exploder | 出怪間隔（秒） | 同時存活上限 | 清波休息（秒） |
+|---|---|---|---|---|---|---|---|
+| 1 | 4 | 0 | 0 | 0 | 1.2 | 3 | 6 |
+| 2 | 4 | 2 | 0 | 0 | 1 | 4 | 7 |
+| 3 | 5 | 2 | 1 | 1 | 0.9 | 6 | 8 |
+| 4 | 6 | 3 | 1 | 2 | 0.75 | 8 | 9 |
+| 5 | 8 | 4 | 2 | 2 | 0.65 | 10 | 10 |
+
+第 `5 + k` 波（k ≥ 1）依資料中的 `overflow.addPerWave` 計算：walker = `8 + 2k`、runner = `4 + k`、tank = `2`、exploder = `2 + k`；間隔、上限及休息時間維持第五波數值。增加的是整波待出怪量，在場上限仍為 10，驗證器允許的最大上限為 40。
+
+每波第一隻立即可出生，其後從最近一次成功出生起等待完整間隔。種類依 walker → runner → tank → exploder 輪流選尚有配額的類型，空配額略過。到上限後暫停出怪；等待期間不累積補發額度，空位出現最多先出一隻，再等完整間隔。出生點沿用關卡圓形區域與碰撞／邊界檢查，32 次嘗試都失敗時這次不出怪、不消耗配額，0.25 秒後（`SPAWN_RETRY_SECONDS`）再試，不會從遊戲迴圈拋錯；完全沒有出生區域仍會在 `start()` 拋錯。
+
+Session.beginWave 只啟動 director、讀取該波 breakSeconds 並要求當下已到期的怪；Playing 每幀模擬、分離，再呼叫 director.update 與 nextSpawn。只有 `director.remaining === 0` 且場上陣列已空，才算過波，出怪間隔中的空場不會提早清波。舊 ExampleWaveDirector 的 update 不等待，因此原有測試與一次出完的範例仍成立。
+
+CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配對修正，重疊距離按兩者半徑總和計算；中心相同時固定沿 X 軸分開。推力先對半分配，一方受牆限制時由另一方補足可移動的距離。每次位移透過 CollisionWorld.move（含薄牆分段和邊界夾限），再以 hit 驗證終點。狹小空間可能仍有重疊，不會為了完全分開而穿牆。每幀重用碰撞結果，不配置陣列、向量或新物件；最後同步 hitVolume 與 mesh。此任務只實作設計文件 6.1 第 1 點，沒有包抄、分流或其他 AI 擴充。
+
+資料錯誤會在 WaveTable 建構時拋出帶欄位路徑的錯誤，例如 `waves[0].counts.runner`。四種數量必須完整、為非負安全整數且總數大於零；未知種類會被拒絕，間隔必須為正有限數、上限為 1～40 整數、休息為非負有限數，overflow 也必須完整指定四種增量。後續波次溢出安全整數範圍亦會明確拒絕。
 
 ## 新增武器
 
@@ -194,7 +220,7 @@ Payload 中的 entity 是同步事件借用的實體參照，不是網路快照�
 
 ## 新增敵人類型
 
-已註冊 `walker`、`runner`、`tank`、`exploder`。Runner：40 HP、速度 3.4、近戰 10；Tank：240 HP、速度 0.8、近戰 30；兩者沿用每秒一次近戰。Exploder：50 HP、速度 1.8，接觸玩家且視線無遮擋時立即自爆；半徑 3 公尺（含玩家身體半徑）內、無牆壁遮擋的存活玩家各受 40 爆炸傷害，再向自己送出致死傷害，全部走 `DAMAGE_REQUESTED` → Session → DamagePipeline。自爆不給擊殺獎金，每次池重生只可自爆一次；被射殺不引爆。數值是此版灰盒平衡，不實作參考文件的波次成長；預設範例波次仍只出 Walker，混合出怪留給 G3。
+已註冊 `walker`、`runner`、`tank`、`exploder`。Runner：40 HP、速度 3.4、近戰 10；Tank：240 HP、速度 0.8、近戰 30；兩者沿用每秒一次近戰。Exploder：50 HP、速度 1.8，接觸玩家且視線無遮擋時立即自爆；半徑 3 公尺（含玩家身體半徑）內、無牆壁遮擋的存活玩家各受 40 爆炸傷害，再向自己送出致死傷害，全部走 `DAMAGE_REQUESTED` → Session → DamagePipeline。自爆不給擊殺獎金，每次池重生只可自爆一次；被射殺不引爆。數值是此版灰盒平衡，不實作參考文件的敵人屬性成長；預設混合出怪使用上方 G3 波次資料。
 
 1. 從 `enemies/Enemy.js`、`enemies/Walker.js`、`enemies/Brain.js`、`test/Enemy.test.js` 開始，新增自己的 Enemy 子類。
 2. constructor 接收 Factory 傳入的 dependencies，呼叫 `super(dependencies,{health,speed,reward,brain})`。所有新生命狀態在 activate 重設；有自訂狀態時覆寫 activate 並先呼叫 super。
@@ -264,6 +290,8 @@ node tools/art/shots.mjs --level test --format png --out <OS-temp>/test
 Windows 若 npm.ps1 被執行政策擋住，改用 `npm.cmd test`／`npm.cmd run serve`，不要改 PowerShell 政策。
 
 加 `&debug=1` 才有 `window.__gameDebug`：`start()`、`snapshot()`、`aimAt(enemyId)`、`fire()`、`reload()`、`advance(seconds)`。advance 每次至多 120 秒、內部切成最多 0.05 秒的模擬步；fire 仍走正常命中、遮擋、扣彈、冷卻及 Session 傷害流程，不能直接送錢或殺敵。這不是公開遊戲 API，無 debug 參數不建立它。自動測試若用 advance，先停止一般 rAF，避免同時推進兩個時鐘。
+
+G3 驗收：126 個 node:test 全過，包含每波數量／種類／間隔／上限、延伸波次、資料錯誤、Session 空場等待／逐波休息，以及重疊敵人分離、薄牆與命中盒同步。修改前後 ch2 共 8 組 shot PNG 的 SHA-256 全部相同（無 play=1）。以 npm run serve 啟動後，瀏覽器在 `?level=ch2&play=1&debug=1` 停止一般 rAF，再使用 start／advance／snapshot：模擬時間 0.05／1.24／1.25／2.45 秒，場上為 1／1／2／3 隻；再前進 10 秒仍為 3 隻、remaining 為 1，符合第一波 1.2 秒間隔與 3 隻上限。PNG 放 OS temp，不加入版本控制；驗收後關閉 server。
 
 骨架初版驗收：56 個 node:test 全過（含 ch2 四個出怪區都能走到玩家）；素材檢查與 main 輸出相同。ch2 的 8 張、test 的 5 張 shot PNG，以及兩關固定時間的 walk PNG，全部 SHA-256 相同。Playwright 另確認無 debug 時實際滑鼠／R／W 輸入、兩隻敵人在出怪區域產生、命中擊殺 +$25、清完 +$50、整備後第二波 3 隻且重用兩個物件、受到近戰傷害進 GameOver，以及 shot 優先。測試腳本與 PNG 只放 OS temp，不加入版本控制。
 
