@@ -1884,6 +1884,8 @@ class Shell {
   constructor() {
     this.parts = new Map();
     this.tint = [1, 1, 1];
+    /** Where a point lands on the texture: along the vehicle and up, so mud stays low and streaks run back. */
+    this.mapUv = (x, y, z) => [z * 0.22 + x * 0.07 + 0.5, y / 1.6];
   }
 
   buffers(key) {
@@ -1901,7 +1903,7 @@ class Shell {
     [a, b, c].forEach((p) => {
       out.positions.push(p[0], p[1], p[2]);
       out.normals.push(nx / length, ny / length, nz / length);
-      out.uvs.push(p[2] * 0.22 + p[0] * 0.07 + 0.5, p[1] / 1.6);
+      out.uvs.push(...this.mapUv(p[0], p[1], p[2]));
       out.colors.push(this.tint[0], this.tint[1], this.tint[2]);
     });
   }
@@ -1957,7 +1959,7 @@ class Shell {
       v.fromBufferAttribute(positions, i);
       if (matrix) v.applyMatrix4(matrix);
       out.positions.push(v.x, v.y, v.z);
-      out.uvs.push(v.z * 0.22 + v.x * 0.07 + 0.5, v.y / 1.6);
+      out.uvs.push(...this.mapUv(v.x, v.y, v.z));
       out.colors.push(this.tint[0], this.tint[1], this.tint[2]);
       v.fromBufferAttribute(normals, i);
       if (normalMatrix) v.applyMatrix3(normalMatrix).normalize();
@@ -1986,8 +1988,8 @@ class Shell {
       geometry.setAttribute('uv', new THREE.Float32BufferAttribute(buffers.uvs, 2));
       geometry.setAttribute('color', new THREE.Float32BufferAttribute(buffers.colors, 3));
       const mesh = new THREE.Mesh(geometry, materials[key]);
-      mesh.castShadow = key === 'paint' || key === 'dark' || key === 'black';
-      mesh.receiveShadow = key === 'paint';
+      mesh.castShadow = key === 'paint' || key === 'dark' || key === 'black' || key === 'steel';
+      mesh.receiveShadow = key === 'paint' || key === 'steel';
       mesh.userData.dynamic = true;
       list.push(mesh);
     });
@@ -2177,6 +2179,99 @@ function tyreTexture() {
   });
 }
 
+/**
+ * Painted sheet metal of a lorry's load box, one image for a whole side (length across, height up):
+ * a faded stripe of old livery scraped half away (no lettering), rust running down from the top seam
+ * and from every line of rivets, more rust creeping up from the bottom edge, mud thrown up from below.
+ */
+function cargoTextures() {
+  return paintedOnce('cargo', () => {
+    const W = 1024;
+    const H = 512;
+    const colour = makeCanvas(W, H);
+    const rough = makeCanvas(W, H);
+    const cg = colour.getContext('2d');
+    const rg = rough.getContext('2d');
+    const broad = cloud(W, H, 6, 3, 4, 901);
+    const fine = cloud(W, H, 96, 48, 2, 902);
+    const scrape = cloud(W, H, 12, 6, 4, 903);
+    const rnd = seeded(904);
+    // how strongly and how far rust runs down at each place along the box
+    const runs = new Float32Array(W);
+    const reach = new Float32Array(W);
+    for (let x = 0; x < W; x++) {
+      const seam = x % 64 < 3 ? 0.75 : 0; // a line of rivets every 30 cm
+      runs[x] = Math.max(seam, rnd() < 0.05 ? 0.4 + rnd() * 0.6 : 0);
+      reach[x] = 0.12 + rnd() * 0.8;
+    }
+    for (let pass = 0; pass < 2; pass++) for (let x = 1; x < W - 1; x++) runs[x] = Math.max(runs[x], (runs[x - 1] + runs[x + 1]) * 0.42);
+    const cd = cg.createImageData(W, H);
+    const rd = rg.createImageData(W, H);
+    for (let y = 0; y < H; y++) {
+      const height = 1 - y / H;
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        let r = 172 + 30 * (broad[i] - 0.5) + 14 * (fine[i] - 0.5);
+        let g = r;
+        let b = r + 2;
+        let dull = 0.42 + 0.12 * fine[i];
+        // the old stripe: it leans a little, and most of it has been scraped off
+        const band = Math.abs(height - 0.5 - (x / W - 0.5) * 0.06) < 0.11;
+        if (band) {
+          const kept = smoothstep(0.44, 0.6, scrape[i]) * 0.85;
+          r += (64 - r) * kept;
+          g += (82 - g) * kept;
+          b += (96 - b) * kept;
+        }
+        const fromTop = runs[x] * clamp01(1 - (1 - height) / reach[x]) * (0.55 + 0.6 * fine[i]);
+        const fromBottom = clamp01((0.09 - height) / 0.09) * (0.5 + 0.9 * broad[i]);
+        const rust = clamp01(Math.max(fromTop, fromBottom));
+        r += (98 * (0.7 + 0.5 * fine[i]) - r) * rust;
+        g += (58 * (0.7 + 0.5 * fine[i]) - g) * rust;
+        b += (36 * (0.7 + 0.5 * fine[i]) - b) * rust;
+        dull += (0.92 - dull) * rust;
+        const mud = clamp01((0.28 - height) / 0.28 + (fine[i] - 0.55) * 1.5) * smoothstep(0.42, 0.1, height);
+        r += (66 * (0.7 + 0.6 * fine[i]) - r) * mud;
+        g += (54 * (0.7 + 0.6 * fine[i]) - g) * mud;
+        b += (38 * (0.7 + 0.6 * fine[i]) - b) * mud;
+        dull += (0.93 - dull) * mud;
+        cd.data[i * 4] = r;
+        cd.data[i * 4 + 1] = g;
+        cd.data[i * 4 + 2] = b;
+        cd.data[i * 4 + 3] = 255;
+        rd.data[i * 4] = rd.data[i * 4 + 1] = rd.data[i * 4 + 2] = 255 * clamp01(dull);
+        rd.data[i * 4 + 3] = 255;
+      }
+    }
+    cg.putImageData(cd, 0, 0);
+    rg.putImageData(rd, 0, 0);
+    cg.lineCap = 'round';
+    for (let n = 0; n < 60; n++) { // scratches, some down to the primer
+      const x = rnd() * W;
+      const y = rnd() * H;
+      const length = 30 + rnd() * 220;
+      cg.strokeStyle = rnd() < 0.5 ? 'rgba(232, 230, 222, 0.5)' : 'rgba(120, 70, 50, 0.55)';
+      cg.lineWidth = 0.8 + rnd() * 1.6;
+      cg.beginPath();
+      cg.moveTo(x, y);
+      cg.lineTo(x + length, y + (rnd() - 0.5) * 40);
+      cg.stroke();
+    }
+    for (let n = 0; n < 10; n++) { // dents
+      const x = rnd() * W;
+      const y = rnd() * H;
+      const radius = 20 + rnd() * 46;
+      const dent = cg.createRadialGradient(x, y, 0, x, y, radius);
+      dent.addColorStop(0, 'rgba(0, 0, 0, 0.4)');
+      dent.addColorStop(0.7, 'rgba(255, 255, 255, 0.1)');
+      dent.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      cg.fillStyle = dent;
+      cg.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+    }
+    return { map: colourTexture(colour), roughnessMap: dataTexture(rough) };
+  });
+}
+
 /** Smooth curve through points [[z, y], ...] sorted by z (cubic, with tangents from the neighbours). */
 function curveThrough(points) {
   const n = points.length;
@@ -2207,6 +2302,13 @@ function curveThrough(points) {
  *   axles:  front and rear wheel centres; wheel: wheel radius; belt: height of the window line
  */
 const CAR_TYPES = {
+  // the cab of a box lorry: flat upright nose, windscreen leaning back about 20 degrees, rounded roof
+  // front, straight back wall; one axle under it; nothing behind the doors
+  cab: {
+    L: 2.0, W: 2.3, belt: 1.55, clearance: 0.5, wheel: 0.45, door: 0.62, axles: [-0.3], twoDoor: true, cabOnly: true, noseY: 0.98,
+    top: [[-1.0, 0.82], [-0.99, 1.15], [-0.97, 1.5], [-0.86, 1.92], [-0.72, 2.3], [-0.55, 2.46], [-0.2, 2.52], [0.6, 2.52], [0.97, 2.5], [1.0, 2.3]],
+    cabin: [-0.97, -0.72, 5, 6],
+  },
   sedan: {
     L: 4.5, W: 1.8, belt: 0.95, clearance: 0.17, wheel: 0.32, door: 0.22, axles: [-1.36, 1.32], trunk: true,
     top: [[-2.25, 0.45], [-2.21, 0.66], [-2.02, 0.77], [-1.5, 0.86], [-0.98, 0.95], [-0.62, 1.2], [-0.28, 1.4], [0.3, 1.45], [0.82, 1.41], [1.2, 1.2], [1.5, 1.02], [2.05, 0.97], [2.2, 0.85], [2.25, 0.55]],
@@ -2278,7 +2380,8 @@ function buildCar(factory, options) {
   const crush = options.crush || 0;
 
   // ---- outline functions ---------------------------------------------------------------------
-  const endFactor = (z) => clamp01((Math.abs(z) - (L / 2 - 0.16)) / 0.16); // 0 along the car, 1 at the very tips
+  // 0 along the car, 1 at the very tips; a lorry cab keeps a straight back wall
+  const endFactor = (z) => (type.cabOnly && z > 0 ? 0 : clamp01((Math.abs(z) - (L / 2 - 0.16)) / 0.16));
   const halfWidth = (z) => (W / 2) * (1 - 0.13 * Math.pow(Math.abs((2 * z) / L), 3.2));
   const bottomAt = (z) => type.clearance + 0.16 * Math.pow(clamp01((Math.abs(z) - (L / 2 - 0.5)) / 0.5), 2);
   const beltAt = (z) => Math.min(type.belt + 0.03 * (z / L), topAt(z) - 0.03);
@@ -2515,7 +2618,7 @@ function buildCar(factory, options) {
   shell.add('interior', new THREE.TorusGeometry(0.17, 0.02, 5, 12), new THREE.Matrix4().makeRotationX(-0.45).setPosition(-W * 0.22, type.belt + 0.02, cowl + 0.55));
 
   // ---- front: grille, lamps set into dark bowls, bumper, plate -------------------------------------------
-  const noseY = topAt(zF + 0.25) - 0.13;
+  const noseY = type.noseY || topAt(zF + 0.25) - 0.13;
   const lampX = halfWidth(zF + 0.15) * 0.68;
   const faceZ = zF + 0.045 + crush * 0.3;
   shell.box('black', 0, noseY - 0.02, faceZ, lampX * 1.25, 0.15, 0.03);
@@ -2529,13 +2632,14 @@ function buildCar(factory, options) {
     const x = side * lampX;
     disc('black', x, noseY, faceZ + 0.03, 0.135, -1);                       // the dark bowl the lamp sits in
     disc('chrome', x, noseY, faceZ + 0.02, 0.1, -1);                        // reflector
-    disc(options.headlamps ? 'head' : 'lensClear', x, noseY, faceZ - 0.012, 0.118, -1); // cover
+    if (options.brokenLamp !== (side > 0 ? 1 : 0)) disc(options.headlamps ? 'head' : 'lensClear', x, noseY, faceZ - 0.012, 0.118, -1); // cover
     shell.box(options.indicators ? 'blink' : 'lensAmber', side * (lampX + 0.2), noseY - 0.01, faceZ + 0.06, 0.1, 0.07, 0.03);
-    // rear lamps and indicators
-    const tailY = Math.min(type.belt, topAt(zR - 0.2)) - 0.12;
-    const tailX = side * halfWidth(zR - 0.15) * 0.66;
-    shell.box(options.taillamps ? 'tail' : 'lensRed', tailX, tailY, zR - 0.035, 0.34, 0.11, 0.03);
-    shell.box(options.indicators ? 'blink' : 'lensAmber', tailX + side * 0.24, tailY, zR - 0.06, 0.1, 0.11, 0.03);
+    if (!type.cabOnly) { // rear lamps and indicators
+      const tailY = Math.min(type.belt, topAt(zR - 0.2)) - 0.12;
+      const tailX = side * halfWidth(zR - 0.15) * 0.66;
+      shell.box(options.taillamps ? 'tail' : 'lensRed', tailX, tailY, zR - 0.035, 0.34, 0.11, 0.03);
+      shell.box(options.indicators ? 'blink' : 'lensAmber', tailX + side * 0.24, tailY, zR - 0.06, 0.1, 0.11, 0.03);
+    }
     // mirrors, handles, the strip under the windows
     shell.box('black', side * (halfWidth(glassFront) * 0.93 + 0.05), type.belt + 0.06, glassFront - 0.02, 0.1, 0.03, 0.05);
     shell.box('black', side * (halfWidth(glassFront) * 0.93 + 0.12), type.belt + 0.08, glassFront - 0.02, 0.07, 0.1, 0.15);
@@ -2546,13 +2650,15 @@ function buildCar(factory, options) {
     shell.box('black', side * 0.3 - 0.1, topAt(cowl + 0.09) + 0.012, cowl + 0.1, 0.5, 0.012, 0.02, new THREE.Matrix4().makeRotationY(side * 0.12));
   });
   shell.box('black', 0, type.clearance + 0.13, zF + 0.07, W * 0.84, 0.13, 0.1);
-  shell.box('black', 0, type.clearance + 0.13, zR - 0.07, W * 0.84, 0.13, 0.1);
+  if (!type.cabOnly) shell.box('black', 0, type.clearance + 0.13, zR - 0.07, W * 0.84, 0.13, 0.1);
   shell.box('black', 0, type.clearance + 0.3, faceZ - 0.01, 0.48, 0.15, 0.015);
   shell.box('plate', 0, type.clearance + 0.3, faceZ - 0.02, 0.42, 0.11, 0.01); // nothing readable on it
-  shell.box('black', 0, type.belt - 0.33, zR - 0.02, 0.48, 0.15, 0.015);
-  shell.box('plate', 0, type.belt - 0.33, zR - 0.012, 0.42, 0.11, 0.01);
-  shell.add('chrome', new THREE.CylinderGeometry(0.03, 0.03, 0.22, 8), new THREE.Matrix4().makeRotationX(Math.PI / 2).setPosition(W * 0.27, type.clearance + 0.04, zR - 0.08));
-  shell.add('black', new THREE.CylinderGeometry(0.004, 0.006, 0.5, 4), new THREE.Matrix4().makeRotationX(-0.3).setPosition(W * 0.3, topAt(roofRear) + 0.2, roofRear + 0.1));
+  if (!type.cabOnly) {
+    shell.box('black', 0, type.belt - 0.33, zR - 0.02, 0.48, 0.15, 0.015);
+    shell.box('plate', 0, type.belt - 0.33, zR - 0.012, 0.42, 0.11, 0.01);
+    shell.add('chrome', new THREE.CylinderGeometry(0.03, 0.03, 0.22, 8), new THREE.Matrix4().makeRotationX(Math.PI / 2).setPosition(W * 0.27, type.clearance + 0.04, zR - 0.08));
+    shell.add('black', new THREE.CylinderGeometry(0.004, 0.006, 0.5, 4), new THREE.Matrix4().makeRotationX(-0.3).setPosition(W * 0.3, topAt(roofRear) + 0.2, roofRear + 0.1));
+  }
 
   shell.meshes(Object.assign({}, materials, { head: options.headlamps, tail: options.taillamps, blink: options.indicators }))
     .forEach((mesh) => car.add(mesh));
@@ -2560,10 +2666,12 @@ function buildCar(factory, options) {
   // ---- wheels: every car uses the same two shapes -----------------------------------------------------
   const wheels = wheelGeometries();
   const flat = options.flat === undefined ? -1 : options.flat;
-  const tyres = new THREE.InstancedMesh(wheels.tyre, materials.tyre, 4);
-  const rims = new THREE.InstancedMesh(wheels.rim, materials.rim, 4);
+  const corners = [];
+  type.axles.forEach((z, axle) => corners.push([-1, axle], [1, axle]));
+  const tyres = new THREE.InstancedMesh(wheels.tyre, materials.tyre, corners.length);
+  const rims = new THREE.InstancedMesh(wheels.rim, materials.rim, corners.length);
   const dummy = new THREE.Object3D();
-  [[-1, 0], [1, 0], [-1, 1], [1, 1]].forEach(([side, axle], index) => {
+  corners.forEach(([side, axle], index) => {
     const z = type.axles[axle];
     const sag = index === flat ? 0.8 : 1;
     dummy.position.set(side * (halfWidth(z) * 0.97 - 0.13), type.wheel * sag, z);
@@ -2587,7 +2695,7 @@ function buildCar(factory, options) {
     car.rotation.z = (flat % 2 === 0 ? 1 : -1) * 0.03;
     car.rotation.x = (flat < 2 ? 1 : -1) * 0.016;
   }
-  let triangles = (wheels.tyre.index.count / 3 + wheels.rim.attributes.position.count / 3) * 4;
+  let triangles = (wheels.tyre.index.count / 3 + wheels.rim.attributes.position.count / 3) * corners.length;
   car.traverse((mesh) => {
     if (mesh.isMesh && !mesh.isInstancedMesh) triangles += mesh.geometry.attributes.position.count / 3;
   });
@@ -2800,7 +2908,8 @@ export class Ch1Props extends PropSet {
     ch1_cone: Ch1Props.cone,
     ch1_sign: Ch1Props.sign,
     ch1_beacon: Ch1Props.beacon,
-    ch1_truck: Ch1Props.truck,
+    ch1_box_truck: (ctx) => Ch1Props.boxTruck(ctx, 'blocking'),
+    ch1_box_truck_looted: (ctx) => Ch1Props.boxTruck(ctx, 'looted'),
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -3849,62 +3958,239 @@ export class Ch1Props extends PropSet {
   }
 
   /**
-   * A box lorry left across the road, along the longer side of `size`: cab, load box, six wheels,
-   * the same mud, rust and misted glass as the cars. One rear door hangs open.
+   * A box lorry: a rounded cab-over cab (built like the cars, from a curved side outline) and,
+   * a hand's width behind it, a taller load box with ribbed sides, edge trim with rivets and a
+   * roller door; two frame rails underneath with tank, battery box, exhaust and spare wheel;
+   * six wheels, the rear ones doubled. About 7 m long, front toward -Z, origin at the bottom centre.
+   *
+   * story 'blocking': left slewed across the road, driver's door open, one front tyre flat,
+   *                   indicators still blinking, something dragged from the door toward the trees.
+   * story 'looted':   roller door forced half up and boxes pulled out, long claw marks and a dent
+   *                   in the box, windscreen cracked, one headlamp smashed.
    */
-  static truck(ctx) {
-    const { factory, size, prop } = ctx;
-    const alongX = size.w > size.d;
-    const length = alongX ? size.w : size.d;
-    const width = Math.min(alongX ? size.d : size.w, 2.5);
-    const half = width / 2;
-    const materials = carMaterials(factory, false);
-    const shell = new Shell();
-    const tone = carColor(factory, 1 + Math.floor(hash01(prop, 1) * 5));
-    shell.tint = [tone.r, tone.g, tone.b];
-    const front = -length / 2;
-    const cab = 1.9;
-    // load box, chassis, cab
-    shell.box('paint', 0, 1.85, front + cab + (length - cab) / 2 + 0.05, width, 2.3, length - cab - 0.1);
-    shell.box('dark', 0, 0.55, 0, width * 0.7, 0.3, length * 0.96);
-    shell.box('paint', 0, 1.35, front + cab / 2, width * 0.96, 1.7, cab);
-    shell.box('glass', 0, 1.75, front - 0.01, width * 0.84, 0.62, 0.03);
-    [-1, 1].forEach((side) => {
-      shell.box('glass', side * (half * 0.96 + 0.005), 1.72, front + cab * 0.55, 0.02, 0.55, cab * 0.6);
-      shell.box('dark', side * (half + 0.14), 1.7, front + 0.25, 0.2, 0.3, 0.08);
-      shell.box('chrome', side * (half - 0.35), 0.8, front - 0.02, 0.4, 0.16, 0.06);
-      [front + 0.95, length / 2 - 1.3, length / 2 - 2.35].forEach((z, index) => {
-        const flat = index === 0 && side < 0;
-        shell.wheel('dark', side * (half - 0.14), 0.47 * (flat ? 0.75 : 1), z, 0.47, 0.3, flat ? 0.5 : 1);
-      });
+  static boxTruck(ctx, story) {
+    const { factory, prop } = ctx;
+    const looted = story === 'looted';
+    const r = (salt) => hash01(prop, 700 + salt);
+    const cargo = cargoTextures();
+    const parts = Object.assign({}, carMaterials(factory, false), {
+      steel: wetMaterial(factory, 'cargo', () => ({
+        map: cargo.map, roughnessMap: cargo.roughnessMap, vertexColors: true, side: THREE.DoubleSide, envMapIntensity: 0.6,
+      })),
+      alu: wetMaterial(factory, 'truck-alu', () => ({ color: new THREE.Color(0.2, 0.21, 0.21), roughness: 0.48, metalness: 0.75, envMapIntensity: 0.8 })),
     });
-    shell.box('dark', 0, 0.55, front - 0.06, width, 0.28, 0.14);
-    shell.box('plate', 0, 0.56, front - 0.14, 0.42, 0.11, 0.01);
-    // one of the rear doors was forced: it hangs open
-    const hinge = new THREE.Matrix4().makeTranslation(half, 0, length / 2).multiply(new THREE.Matrix4().makeRotationY(-1.9));
-    shell.box('paint', -half / 2, 1.85, 0.02, half, 2.2, 0.04, hinge);
-    shell.box('dark', -half * 0.5, 1.85, length / 2 - 0.05, half * 0.98, 2.2, 0.03);
     const truck = new THREE.Group();
-    shell.meshes(materials).forEach((mesh) => truck.add(mesh));
-    truck.rotation.z = 0.03;
-    const marks = new QuadSheet().floor(MARK.oil, 0, 0, width + 2, length + 1.6, 0, 0.045);
-    [-1, 1].forEach((side) => [front + 0.95, length / 2 - 1.8].forEach((z) => {
-      const x = side * (half + 0.012);
-      marks.add(MARK.splash, [x, 0.4, z + 0.5 + side * 0.6], [x, 0.4, z + 0.5 - side * 0.6], [x, 1.5, z + 0.5 - side * 0.6], [x, 1.5, z + 0.5 + side * 0.6], [side, 0, 0]);
-    }));
-    marks.floor(MARK.leaves, 0, 0.5, 2.2, 2.6, hash01(prop, 2) * 6, 3.02);
+
+    // ---- cab ------------------------------------------------------------------------------------
+    const blinking = looted ? null : lampMaterial(factory, 'ch1Hazard', '#ff9a2a', blink);
+    const cab = buildCar(factory, {
+      shape: 'cab', w: 2.3, d: 2.0, color: carColor(factory, looted ? 4 : 1), seed: looted ? 31 : 17,
+      doors: looted ? [] : [1.15], flat: looted ? -1 : 0, steer: looted ? 0 : 0.35,
+      indicators: blinking, brokenLamp: looted ? 1 : -1,
+    });
+    cab.car.position.z = -2.5;
+    truck.add(cab.car);
+
+    // ---- load box, chassis and everything bolted to them ---------------------------------------------
+    const shell = new Shell();
+    // kept dark: at arm's length the torch burns anything paler out to white
+    shell.tint = looted ? [0.06, 0.068, 0.078] : [0.095, 0.09, 0.078];
+    const z0 = -1.38;
+    const z1 = 3.42;
+    const y0 = 0.86;
+    const y1 = 3.2;
+    const hw = 1.15;
+    const mid = (z0 + z1) / 2;
+    const shift = looted ? 0.37 : 0;
+    // the box's texture runs once along its length and once up its height; the two sides are mirrored
+    shell.mapUv = (x, y, z) => [((z - z0) / (z1 - z0)) * (x < 0 ? 1 : -1) + shift, (y - y0) / (y1 - y0)];
+    const dent = looted ? [1.3, 2.0] : null;
+    [-1, 1].forEach((side) => {
+      const ribs = 24;
+      const pitch = (z1 - z0) / ribs;
+      const rows = dent && side > 0 ? [y0, y0 + 0.6, y0 + 1.2, y0 + 1.8, y1] : [y0, y1];
+      const xAt = (z, y, deep) => {
+        let x = side * (hw - (deep ? 0.028 : 0));
+        if (dent && side > 0) x -= 0.17 * Math.exp(-((z - dent[0]) ** 2 + (y - dent[1]) ** 2) / 0.35); // pushed in
+        return x;
+      };
+      for (let i = 0; i < ribs; i++) { // ribbed sheet: flat, step in, flat, step out
+        const a = z0 + i * pitch;
+        const stops = [[a, false], [a + pitch * 0.34, false], [a + pitch * 0.48, true], [a + pitch * 0.86, true], [a + pitch, false]];
+        for (let s = 0; s < stops.length - 1; s++) {
+          for (let row = 0; row < rows.length - 1; row++) {
+            const [za, da] = stops[s];
+            const [zb, db] = stops[s + 1];
+            const ya = rows[row];
+            const yb = rows[row + 1];
+            const p = [[xAt(za, ya, da), ya, za], [xAt(zb, ya, db), ya, zb], [xAt(zb, yb, db), yb, zb], [xAt(za, yb, da), yb, za]];
+            if (side > 0) shell.quad('steel', p[1], p[0], p[3], p[2]);
+            else shell.quad('steel', p[0], p[1], p[2], p[3]);
+          }
+        }
+      }
+      // inside walls, dark: what you see through the open door
+      shell.quad('black', [side * (hw - 0.05), y0, z0 + 0.04], [side * (hw - 0.05), y0, z1], [side * (hw - 0.05), y1 - 0.04, z1], [side * (hw - 0.05), y1 - 0.04, z0 + 0.04]);
+      // edge trim: rails along the bottom and top, posts at the corners
+      shell.box('alu', side * hw, y0 + 0.05, mid, 0.07, 0.1, z1 - z0 + 0.04);
+      shell.box('alu', side * hw, y1 - 0.05, mid, 0.07, 0.1, z1 - z0 + 0.04);
+      [z0, z1].forEach((z) => shell.box('alu', side * hw, (y0 + y1) / 2, z, 0.08, y1 - y0, 0.08));
+      // door posts, mud flap, tail lamp, step, hinges, mirror on its arms
+      shell.box('alu', side * (hw - 0.07), (y0 + y1) / 2, z1 + 0.01, 0.1, y1 - y0 - 0.1, 0.05);
+      shell.box('black', side * (hw - 0.3), 0.5, 2.66, 0.56, 0.5, 0.02);
+      shell.box('lensRed', side * (hw - 0.22), 0.73, z1 + 0.05, 0.28, 0.1, 0.03);
+      shell.box('lensAmber', side * (hw - 0.22), 0.62, z1 + 0.05, 0.28, 0.07, 0.03);
+      shell.box('black', side * 1.13, 0.56, -2.35, 0.3, 0.05, 0.52);
+      shell.box('black', side * 1.02, 0.64, -2.35, 0.05, 0.2, 0.06);
+      [1.25, 1.95].forEach((y) => shell.box('chrome', side * 1.135, y, -3.34, 0.03, 0.1, 0.05));
+      [1.78, 2.12].forEach((y) => shell.box('chrome', side * 1.3, y, -3.12, 0.34, 0.022, 0.022));
+      shell.box('black', side * 1.5, 1.95, -3.12, 0.07, 0.42, 0.2);
+      shell.box('chrome', side * 1.5, 1.95, -3.012, 0.05, 0.36, 0.008);
+    });
+    shell.quad('steel', [-hw, y1, z0], [-hw, y1, z1], [hw, y1, z1], [hw, y1, z0]);
+    shell.quad('steel', [hw, y0, z0], [-hw, y0, z0], [-hw, y1, z0], [hw, y1, z0]);
+    shell.quad('black', [-hw + 0.05, y1 - 0.04, z0 + 0.04], [hw - 0.05, y1 - 0.04, z0 + 0.04], [hw - 0.05, y1 - 0.04, z1], [-hw + 0.05, y1 - 0.04, z1]);
+    shell.quad('black', [-hw + 0.05, y0, z0 + 0.04], [hw - 0.05, y0, z0 + 0.04], [hw - 0.05, y1, z0 + 0.04], [-hw + 0.05, y1, z0 + 0.04]);
+    shell.box('black', 0, y0 - 0.03, mid, hw * 2, 0.06, z1 - z0);
+    [z0, z1].forEach((z) => {
+      shell.box('alu', 0, y1 - 0.04, z, hw * 2, 0.08, 0.07);
+      shell.box('alu', 0, y0 + 0.04, z, hw * 2, 0.08, 0.07);
+    });
+    // roller door: slats from the top; where it has been forced up the lower ones are gone
+    const doorHeight = y1 - y0 - 0.18;
+    const slats = 10;
+    const open = looted ? 0.5 : 0;
+    let lowest = y1 - 0.09;
+    for (let i = 0; i < slats; i++) {
+      const bottom = y1 - 0.09 - ((i + 1) * doorHeight) / slats;
+      if ((bottom - (y0 + 0.09)) / doorHeight < open - 0.01) break;
+      shell.box('alu', 0, bottom + doorHeight / slats / 2, z1 - 0.015 + (i % 2) * 0.008, hw * 2 - 0.3, (doorHeight / slats) * 0.9, 0.025);
+      lowest = bottom;
+    }
+    shell.box('black', 0, lowest + 0.03, z1 + 0.005, hw * 2 - 0.3, 0.07, 0.04); // bottom bar
+    shell.box('chrome', 0, lowest + 0.06, z1 + 0.04, 0.28, 0.03, 0.05);          // handle
+    shell.box('chrome', 0.5, lowest + 0.05, z1 + 0.03, 0.06, 0.12, 0.03);        // latch
+    // behind and below: under-run bar on two struts, reflectors, cross members, frame rails
+    shell.box('black', 0, 0.55, z1 + 0.08, hw * 2 - 0.1, 0.1, 0.08);
+    [-0.7, 0.7].forEach((x) => shell.box('black', x, 0.7, z1 + 0.02, 0.06, 0.3, 0.06));
+    for (let i = -3; i <= 3; i++) shell.box('bright', i * 0.3, 0.55, z1 + 0.125, 0.16, 0.05, 0.006);
+    for (let z = z0 + 0.3; z < z1; z += 0.55) shell.box('black', 0, y0 - 0.1, z, hw * 2 - 0.1, 0.09, 0.06);
+    [-0.42, 0.42].forEach((x) => shell.box('black', x, 0.66, 0.35, 0.09, 0.2, 6.1));
+    // hung on the frame: fuel tank, battery box, exhaust, spare wheel carrier
+    const along = new THREE.Matrix4().makeRotationX(Math.PI / 2);
+    shell.add('alu', new THREE.CylinderGeometry(0.27, 0.27, 1.0, 12), along.clone().setPosition(0.84, 0.6, -0.5));
+    [-0.82, -0.18].forEach((z) => shell.box('black', 0.84, 0.6, z, 0.58, 0.58, 0.04));
+    shell.box('black', -0.84, 0.6, -0.55, 0.5, 0.42, 0.62);
+    shell.box('alu', -0.84, 0.82, -0.55, 0.52, 0.03, 0.64);
+    shell.add('black', new THREE.CylinderGeometry(0.05, 0.05, 2.4, 8), along.clone().setPosition(-0.62, 0.45, 1.0));
+    shell.add('alu', new THREE.CylinderGeometry(0.13, 0.13, 0.6, 10), along.clone().setPosition(-0.62, 0.45, 0.2));
+    // on the cab roof: a row of small marker lamps
+    for (let i = -2; i <= 2; i++) shell.box('lensAmber', i * 0.42, 2.54, -3.02, 0.1, 0.045, 0.06);
+    shell.meshes(parts).forEach((mesh) => truck.add(mesh));
+
+    // ---- rear wheels (two side by side on each end of the axle) and the spare ----------------------------
+    const wheels = wheelGeometries();
+    const tyres = new THREE.InstancedMesh(wheels.tyre, parts.tyre, 5);
+    const rims = new THREE.InstancedMesh(wheels.rim, parts.rim, 4);
+    const dummy = new THREE.Object3D();
+    [[-1, 0.14], [-1, 0.42], [1, 0.14], [1, 0.42]].forEach(([side, inset], index) => {
+      dummy.position.set(side * (hw - inset), 0.45, 2.0);
+      dummy.rotation.set(0, side > 0 ? 0 : Math.PI, 0);
+      dummy.scale.setScalar(0.45);
+      dummy.updateMatrix();
+      tyres.setMatrixAt(index, dummy.matrix);
+      rims.setMatrixAt(index, dummy.matrix);
+    });
+    dummy.position.set(0, 0.6, 2.95);
+    dummy.rotation.set(0, 0, Math.PI / 2);
+    dummy.updateMatrix();
+    tyres.setMatrixAt(4, dummy.matrix);
+    // rivets along the trim: one tiny shape, copied
+    const rivetShape = paintedOnce('rivet', () => new THREE.TetrahedronGeometry(0.016));
+    const spots = [];
+    [-1, 1].forEach((side) => {
+      for (let z = z0 + 0.15; z < z1; z += 0.3) spots.push([side * (hw + 0.036), y0 + 0.05, z], [side * (hw + 0.036), y1 - 0.05, z]);
+      [z0, z1].forEach((z) => { for (let y = y0 + 0.3; y < y1 - 0.2; y += 0.33) spots.push([side * (hw + 0.04), y, z]); });
+    });
+    const rivets = new THREE.InstancedMesh(rivetShape, parts.alu, spots.length);
+    spots.forEach((spot, index) => {
+      dummy.position.set(spot[0], spot[1], spot[2]);
+      dummy.rotation.set(index, index * 2.1, 0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      rivets.setMatrixAt(index, dummy.matrix);
+    });
+    [tyres, rims, rivets].forEach((mesh) => {
+      mesh.frustumCulled = false;
+      mesh.castShadow = mesh !== rivets;
+      mesh.userData.dynamic = true;
+      truck.add(mesh);
+    });
+
+    // ---- what the weather and the night did to it ---------------------------------------------------------
+    const marks = new QuadSheet();
+    const water = new QuadSheet();
+    marks.floor(MARK.oil, 0, 0, 3.8, 8.4, 0, 0.045);
+    [-1, 1].forEach((side) => { // mud thrown up behind the rear wheels, onto the box
+      const x = side * (hw + 0.035);
+      marks.add(MARK.splash, [x, y0, 2.9 + side * 0.6], [x, y0, 2.9 - side * 0.6], [x, y0 + 1.1, 2.9 - side * 0.6], [x, y0 + 1.1, 2.9 + side * 0.6], [side, 0, 0]);
+    });
+    marks.floor(MARK.leaves, 0.2, 0.8, 2.0, 2.6, r(1) * 6, y1 + 0.012);
+    marks.floor(MARK.leaves, -0.3, 2.6, 1.6, 1.4, r(2) * 6, y1 + 0.013);
+    water.floor(MARK.puddleA, -0.2, 1.7, 1.7, 1.2, r(3) * 6, y1 + 0.016);
+    const glow = new QuadSheet();
+    if (looted) {
+      // something clawed its way along the left side
+      [0.1, 1.3, 2.5].forEach((z, i) => {
+        const x = -hw - 0.035;
+        const low = 1.3 + 0.3 * r(10 + i);
+        marks.add(MARK.claw, [x, low, z - 0.8], [x, low, z + 0.8], [x, low + 1.5, z + 0.8], [x, low + 1.5, z - 0.8], [-1, 0, 0]);
+      });
+      // the windscreen took a hit
+      marks.add(MARK.cracks, [0.55, 1.58, -3.475], [-0.55, 1.58, -3.475], [-0.55, 2.3, -3.235], [0.55, 2.3, -3.235], [0, 0.3, -1]);
+      // boxes pulled out of the back, some trodden flat
+      for (let i = 0; i < 9; i++) {
+        const flat = i % 3 === 0;
+        const carton = part(factory, 'crate', 0.4 + 0.3 * r(20 + i), flat ? 0.05 : 0.28 + 0.25 * r(30 + i), 0.4 + 0.2 * r(40 + i),
+          (r(50 + i) - 0.5) * 3.2, 0.03, z1 + 0.5 + r(60 + i) * 2.6);
+        carton.rotation.set(0, r(70 + i) * 3, flat ? 0 : (r(80 + i) - 0.5) * 0.3);
+        truck.add(carton);
+      }
+      const hanging = part(factory, 'crate', 0.5, 0.4, 0.5, 0.4, y0 - 0.02, z1 - 0.3); // one still on the sill
+      hanging.rotation.set(0.3, 0.4, 0);
+      truck.add(hanging);
+    } else {
+      // blood on the step and under the open door, and a trail dragged forward toward the trees
+      marks.floor(MARK.blood, -1.13, -2.35, 0.3, 0.5, 0, 0.59);
+      marks.floor(MARK.blood, -1.5, -2.6, 0.9, 1.4, 0.4, 0.047);
+      marks.floor(MARK.blood, -1.75, -4.4, 0.7, 2.4, 0.1, 0.047);
+      marks.floor(MARK.blood, -1.95, -6.5, 0.6, 2.4, -0.05, 0.047);
+      marks.floor(MARK.blood, -1.9, -8.4, 0.5, 2.2, 0.08, 0.047);
+      // the indicators' light lying on the wet road at each corner
+      [[-1, -3.5], [1, -3.5], [-1, 3.5], [1, 3.5]].forEach(([side, z]) => glow.floor(MARK.soft, side * 1.5, z, 4, 4, 0, 0.06));
+    }
     const markMesh = marks.mesh(markMaterial(factory));
     markMesh.renderOrder = 3;
-    truck.add(markMesh);
-    // what fell out of the back
-    for (let i = 0; i < 5; i++) {
-      const box = part(factory, 'crate', 0.4 + 0.3 * hash01(prop, 10 + i), 0.3 + 0.2 * hash01(prop, 20 + i), 0.4, (hash01(prop, 30 + i) - 0.5) * 2.4, 0.03, length / 2 + 0.6 + hash01(prop, 40 + i) * 1.8);
-      box.rotation.y = hash01(prop, 50 + i) * 3;
-      truck.add(box);
+    const waterMesh = water.mesh(waterMaterial(factory));
+    waterMesh.renderOrder = 4;
+    truck.add(markMesh, waterMesh);
+    if (!glow.empty) {
+      const light = glow.mesh(glowSheetMaterial(factory, 'ch1Hazard', '#ff9a2a', 0.05, blink));
+      light.renderOrder = 7;
+      truck.add(light);
     }
-    if (alongX) truck.rotation.y = Math.PI / 2;
+
+    let triangles = cab.triangles + (wheels.tyre.index.count / 3) * 5 + (wheels.rim.attributes.position.count / 3) * 4 + spots.length * 4;
+    truck.traverse((mesh) => {
+      if (mesh.isMesh && !mesh.isInstancedMesh && !cab.car.getObjectById(mesh.id) && mesh !== markMesh && mesh !== waterMesh) {
+        triangles += mesh.geometry.attributes.position.count / 3;
+      }
+    });
+    // the first one was not parked: it stands slewed across the road
+    if (!looted) truck.rotation.y = -0.2;
     const placed = new THREE.Group();
     placed.add(truck);
+    placed.userData.triangles = Math.round(triangles);
     return placed;
   }
 }
