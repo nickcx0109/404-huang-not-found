@@ -23,7 +23,7 @@ export class PlayerCombat {
       if (!document.pointerLockElement) this.trigger.release();
     };
     this._unsubscribeShop = ctx.events.on(EVENTS.SHOP_CHANGED, detail => {
-      if (detail.ownerId !== ownerId) return;
+      if (detail.ownerId !== ownerId || !detail.open) return;
       this.trigger.release();
       if (detail.open && document.pointerLockElement) document.exitPointerLock();
     });

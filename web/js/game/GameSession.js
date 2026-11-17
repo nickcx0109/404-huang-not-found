@@ -47,8 +47,10 @@ export class GameSession {
         if (this.canMove && player?.damageable.alive) player.weapons.switchTo(request.index);
       }),
       ctx.events.on(EVENTS.SHOP_TOGGLE_REQUESTED, ({ ownerId }) => {
+        const wasOpen = this.shop.isOpen(ownerId);
         this.shop.toggle(this.state, this.playerById(ownerId), ctx.level.markers);
-        ctx.events.emit(EVENTS.SHOP_CHANGED, { ownerId, open: this.shop.isOpen(ownerId) });
+        const open = this.shop.isOpen(ownerId);
+        if (open !== wasOpen) ctx.events.emit(EVENTS.SHOP_CHANGED, { ownerId, open });
       }),
       ctx.events.on(EVENTS.SHOP_CLOSE_REQUESTED, ({ ownerId }) => this.closeShop(ownerId)),
       ctx.events.on(EVENTS.PURCHASE_REQUESTED, request => this.buy(request.ownerId, request.itemId)),
