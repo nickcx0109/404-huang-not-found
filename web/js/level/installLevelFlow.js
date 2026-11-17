@@ -1,4 +1,5 @@
 import { LevelFlow } from './LevelFlow.js';
+import { EVENTS } from '../game/events.js';
 
 // Connects LevelFlow to the running page: the E key, the on-screen prompt, hiding a cleared
 // block, loading the next level, and remembering cleared blocks for the browser session.
@@ -57,6 +58,21 @@ function createPrompt() {
   };
 }
 
+/** With gameplay on (?play=1) the HUD draws the prompt; this only tells it what to show. */
+function createHudPrompt(events) {
+  const id = 'level-flow';
+  let shown = null;
+  return {
+    show(status) {
+      const progress = status ? status.progress : null;
+      if (progress === shown) return;
+      shown = progress;
+      events.emit(EVENTS.PROMPT_CHANGED, status ? { id, text: 'HOLD E   CLEAR THE WAY', progress } : { id, text: null });
+    },
+    remove() {},
+  };
+}
+
 /**
  * @param {App} app  after its level, collision and player exist
  * @returns {{update: (dt: number) => void, flow: LevelFlow, dispose: () => void}|null}
@@ -91,7 +107,7 @@ export function installLevelFlow(app) {
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('blur', onBlur);
 
-  const prompt = createPrompt();
+  const prompt = app.game ? createHudPrompt(app.events) : createPrompt();
   return {
     flow,
     update(dt) {

@@ -1,0 +1,599 @@
+/* In-game HUD. Loaded by js/ui/hud/HudAssets.js, so only with ?play=1.
+   No boxes, no panels: text and marks sit straight on the picture and stay readable through
+   a dark outline and a soft shadow. Every size is in em of the root, which follows the view height. */
+.hud {
+  /* The only four colours of the HUD. */
+  --bone: #d8d2c4;   /* main text */
+  --ash: #6b6a64;    /* secondary information */
+  --dried: #7a1a12;  /* hurt, danger, low health */
+  --fresh: #c4301f;  /* only for the moment something is dangerous right now */
+
+  --num: "Stardos Stencil", "Special Elite", "Courier New", monospace;
+  --type: "Special Elite", "Courier New", Courier, monospace;
+  --hand: "Caveat Brush", "Bradley Hand", "Segoe Print", "Comic Sans MS", cursive;
+  --edge: 0 0 0.07em rgba(8, 6, 5, 0.95), 0 0.05em 0.14em rgba(8, 6, 5, 0.9), 0 0 0.55em rgba(8, 6, 5, 0.6);
+  --mark-shadow: drop-shadow(0 0 0.14em rgba(8, 6, 5, 0.95)) drop-shadow(0 0.05em 0.3em rgba(8, 6, 5, 0.6));
+  /* One cartridge, used as a mask for the round icons: bullet, case, rim. */
+  --round: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 28' preserveAspectRatio='none'%3E%3Cpath d='M5 .4C7.3 3.2 8.3 6.2 8.4 10.1H1.6C1.7 6.2 2.7 3.2 5 .4Z'/%3E%3Cpath d='M1.2 11.2H8.8V24.4H1.2Z'/%3E%3Cpath d='M.4 25.4H9.6V27.6H.4Z'/%3E%3C/svg%3E");
+
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  font-size: clamp(10px, 1.9vh, 30px);
+  color: var(--bone);
+}
+
+.hud-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* Resting state: almost gone. A change brings the widget up fast; it sinks back slowly. */
+.hud-widget {
+  position: absolute;
+  opacity: 0.5;
+  transition: opacity 1.6s ease-in;
+}
+
+.hud-widget.is-awake {
+  opacity: 1;
+  transition: opacity 0.12s ease-out;
+}
+
+/* Large stencil numbers, slightly worn. */
+.hud-num {
+  position: relative;
+  display: inline-block;
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 3.5em;
+  line-height: 0.82;
+  letter-spacing: 0.01em;
+  -webkit-text-stroke: 0.03em rgba(8, 6, 5, 0.55);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+  filter: var(--hud-rough, none);
+}
+
+/* ---- health, bottom left ------------------------------------------------ */
+
+.hud-health {
+  left: 2.8em;
+  bottom: 2.4em;
+}
+
+.hud-health__num {
+  transition: transform 0.3s ease-out;
+}
+
+/* A copy of the number in fresh red on top of it; only its opacity moves. */
+.hud-health__num::after {
+  content: attr(data-value);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--fresh);
+  opacity: 0;
+  transition: opacity 0.7s ease-out;
+}
+
+/* A hit: the number drops a little and goes red at once, then the red drains out. */
+.hud-health.is-hit .hud-health__num {
+  transform: translateY(0.05em);
+  transition-duration: 0.04s;
+}
+
+.hud-health.is-hit .hud-health__num::after {
+  opacity: 1;
+  transition: none;
+}
+
+.hud-health.is-low .hud-health__num {
+  color: var(--dried);
+  -webkit-text-stroke-color: rgba(216, 210, 196, 0.16);
+}
+
+.hud-health.is-low .hud-health__num::after {
+  animation: hud-throb 1.5s ease-in-out infinite;
+}
+
+.hud-health__stroke {
+  margin-top: 0.5em;
+  filter: var(--mark-shadow);
+}
+
+.hud-health__bar {
+  position: relative;
+  width: 12.5em;
+  height: 1.35em;
+  -webkit-mask: var(--brush) center / 100% 100% no-repeat;
+  mask: var(--brush) center / 100% 100% no-repeat;
+}
+
+.hud-health__bar i {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+}
+
+.hud-health__ghost {
+  background: var(--ash);
+  opacity: 0.3;
+}
+
+/* Left behind by a hit: waits a moment, then drains. */
+.hud-health__trail {
+  background: var(--dried);
+  transition: transform 0.9s cubic-bezier(0.5, 0, 0.9, 0.7) 0.45s;
+}
+
+.hud-health.is-rising .hud-health__trail {
+  transition: none;
+}
+
+.hud-health__fill {
+  background: var(--bone);
+  transition: transform 0.07s linear, background-color 0.6s ease-out;
+}
+
+.hud-health.is-low .hud-health__fill {
+  background: var(--dried);
+}
+
+/* ---- ammunition, bottom right ------------------------------------------- */
+
+.hud-ammo {
+  right: 2.8em;
+  bottom: 2.4em;
+  text-align: right;
+}
+
+.hud-ammo.is-unarmed {
+  visibility: hidden;
+}
+
+.hud-ammo__count {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.55em;
+}
+
+.hud-ammo__mag {
+  transform-origin: right bottom;
+  transition: transform 0.22s ease-out;
+}
+
+.hud-ammo.is-firing .hud-ammo__mag {
+  transform: translateY(0.04em);
+  transition-duration: 0.03s;
+}
+
+.hud-ammo.is-empty .hud-ammo__mag {
+  color: var(--fresh);
+}
+
+.hud-ammo__reserve {
+  font-family: var(--type);
+  font-size: 1.3em;
+  color: var(--ash);
+  -webkit-text-stroke: 0.04em rgba(8, 6, 5, 0.6);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+}
+
+.hud-ammo__reserve::before {
+  content: "/ ";
+}
+
+.hud-ammo__rounds {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.14em;
+  height: 1.3em;
+  max-width: 19em;
+  margin: 0.5em 0 0 auto;
+  filter: var(--mark-shadow);
+  transition: opacity 0.3s ease-out;
+}
+
+.hud-ammo.is-reloading .hud-ammo__rounds {
+  opacity: 0.45;
+}
+
+.hud-ammo__rounds i {
+  flex: 0 1 0.46em;
+  min-width: 1px;
+  background: var(--bone);
+  -webkit-mask: var(--round) center / 100% 100% no-repeat;
+  mask: var(--round) center / 100% 100% no-repeat;
+  transform: translateY(var(--lift, 0)) rotate(var(--tilt, 0deg));
+  transition: opacity 0.2s ease-out, transform 0.09s ease-in, background-color 0.2s;
+}
+
+.hud-ammo__rounds i.is-spent {
+  background: var(--ash);
+  opacity: 0.34;
+  transform: translateY(calc(var(--lift, 0em) + 0.16em)) rotate(var(--tilt, 0deg));
+}
+
+.hud-ammo.is-refilling .hud-ammo__rounds i {
+  transition-delay: calc(var(--i, 0) * 16ms);
+}
+
+.hud-ammo__notice {
+  height: 1.4em;
+  margin-top: 0.55em;
+  font-family: var(--type);
+  font-size: 1.1em;
+  letter-spacing: 0.16em;
+  white-space: pre;
+  -webkit-text-stroke: 0.04em rgba(8, 6, 5, 0.6);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+}
+
+.hud-ammo__notice.is-on {
+  opacity: 1;
+}
+
+.hud-ammo__notice.is-urgent {
+  color: var(--fresh);
+  animation: hud-blink 1s steps(1, end) infinite;
+}
+
+.hud-ammo__notice.is-quiet {
+  color: var(--ash);
+}
+
+.hud-ammo__notice.is-dry {
+  color: var(--dried);
+  -webkit-text-stroke-color: rgba(216, 210, 196, 0.16);
+}
+
+/* ---- status line, top centre (temporary) -------------------------------- */
+
+.hud-status {
+  top: 1.8em;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--type);
+  font-size: 1em;
+  letter-spacing: 0.16em;
+  white-space: pre;
+  -webkit-text-stroke: 0.04em rgba(8, 6, 5, 0.6);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+}
+
+/* ---- crosshair, centre --------------------------------------------------- */
+
+.hud-crosshair {
+  --line: max(1px, 0.07em);
+  --gap: 0.34em;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  opacity: 0.8;
+  transition: opacity 0.25s ease-out;
+}
+
+.hud-crosshair.is-off {
+  opacity: 0;
+}
+
+.hud-crosshair__tick {
+  position: absolute;
+  background: var(--bone);
+  box-shadow: 0 0 0 1px rgba(8, 6, 5, 0.5);
+  transition: transform 0.22s ease-out;
+}
+
+.hud-crosshair__tick.is-top,
+.hud-crosshair__tick.is-bottom {
+  left: calc(var(--line) / -2);
+  width: var(--line);
+  height: 0.5em;
+}
+
+.hud-crosshair__tick.is-left,
+.hud-crosshair__tick.is-right {
+  top: calc(var(--line) / -2);
+  width: 0.5em;
+  height: var(--line);
+}
+
+.hud-crosshair__tick.is-top { bottom: var(--gap); }
+.hud-crosshair__tick.is-bottom { top: var(--gap); }
+.hud-crosshair__tick.is-left { right: var(--gap); }
+.hud-crosshair__tick.is-right { left: var(--gap); }
+
+/* The shot pushes the ticks apart at once; they settle back slowly. */
+.hud-crosshair.is-firing .hud-crosshair__tick {
+  transition-duration: 0.02s;
+}
+
+.hud-crosshair.is-firing .is-top { transform: translateY(-0.36em); }
+.hud-crosshair.is-firing .is-bottom { transform: translateY(0.36em); }
+.hud-crosshair.is-firing .is-left { transform: translateX(-0.36em); }
+.hud-crosshair.is-firing .is-right { transform: translateX(0.36em); }
+
+/* Hit: a small cross with an open centre. Kill: the same cross, larger and red. */
+.hud-crosshair__mark {
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+
+.hud-crosshair__mark::before,
+.hud-crosshair__mark::after {
+  content: "";
+  position: absolute;
+  left: -0.62em;
+  top: calc(max(1.5px, 0.1em) / -2);
+  width: 1.24em;
+  height: max(1.5px, 0.1em);
+  background: linear-gradient(90deg, var(--bone) 0 30%, transparent 30% 70%, var(--bone) 70%);
+  filter: drop-shadow(0 0 1px rgba(8, 6, 5, 0.9));
+  transform: rotate(45deg);
+}
+
+.hud-crosshair__mark::after {
+  transform: rotate(-45deg);
+}
+
+.hud-crosshair.is-hit .hud-crosshair__mark {
+  opacity: 1;
+  transition: none;
+}
+
+.hud-crosshair.is-kill .hud-crosshair__mark {
+  transform: scale(1.3);
+}
+
+.hud-crosshair.is-kill .hud-crosshair__mark::before,
+.hud-crosshair.is-kill .hud-crosshair__mark::after {
+  background: linear-gradient(90deg, var(--fresh) 0 30%, transparent 30% 70%, var(--fresh) 70%);
+}
+
+/* ---- being hurt, full screen --------------------------------------------- */
+
+.hud-damage {
+  /* Fine noise used as a mask, so the red is grainy like the picture and not a smooth glow. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 2.6 -0.6'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+  inset: 0;
+  opacity: 1;
+}
+
+.hud-damage > div {
+  position: absolute;
+  inset: 0;
+}
+
+/* One hit: seeps in from the side it came from. DamageOverlay.js sets the side and the opacity. */
+.hud-damage__hit {
+  opacity: 0;
+  background: radial-gradient(ellipse 48% 66% at var(--hit-x, 50%) var(--hit-y, 108%),
+    rgba(122, 26, 18, 0.95) 0%, rgba(122, 26, 18, 0.6) 36%, rgba(122, 26, 18, 0) 74%);
+  -webkit-mask: var(--grain) 0 0 / 240px 240px;
+  mask: var(--grain) 0 0 / 240px 240px;
+}
+
+/* Low health: the whole edge, slowly breathing. */
+.hud-damage__low {
+  opacity: 0;
+  background: radial-gradient(ellipse 72% 72% at 50% 50%,
+    rgba(122, 26, 18, 0) 52%, rgba(122, 26, 18, 0.42) 86%, rgba(70, 12, 8, 0.75) 100%);
+  -webkit-mask: var(--grain) 0 0 / 240px 240px;
+  mask: var(--grain) 0 0 / 240px 240px;
+  transition: opacity 1.2s ease-out;
+}
+
+.hud-damage.is-low .hud-damage__low {
+  opacity: 1;
+  animation: hud-breathe 2.8s ease-in-out infinite;
+}
+
+.hud-damage.is-dead .hud-damage__low {
+  opacity: 1;
+}
+
+/* Slightly out of focus towards the edge, only while it matters. */
+.hud-damage__blur {
+  display: none;
+  -webkit-backdrop-filter: blur(0.16em);
+  backdrop-filter: blur(0.16em);
+  -webkit-mask: radial-gradient(ellipse 70% 70% at 50% 50%, transparent 48%, #000 92%);
+  mask: radial-gradient(ellipse 70% 70% at 50% 50%, transparent 48%, #000 92%);
+}
+
+.hud-damage.is-low .hud-damage__blur,
+.hud-damage.is-dead .hud-damage__blur {
+  display: block;
+}
+
+@keyframes hud-breathe {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ---- prompt, bottom centre ------------------------------------------------ */
+
+.hud-prompt {
+  left: 0;
+  right: 0;
+  bottom: 20%;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+
+.hud-prompt.is-on {
+  opacity: 1;
+  transition-duration: 0.2s;
+}
+
+.hud-prompt__text {
+  font-family: var(--type);
+  font-size: 1em;
+  letter-spacing: 0.16em;
+  white-space: pre;
+  -webkit-text-stroke: 0.04em rgba(8, 6, 5, 0.6);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+}
+
+/* Thin progress line under the text; only there while the action takes time. */
+.hud-prompt__line {
+  width: 9em;
+  height: max(1px, 0.09em);
+  margin: 0.65em auto 0;
+  background: var(--ash);
+  box-shadow: 0 0 0 1px rgba(8, 6, 5, 0.5);
+  opacity: 0;
+}
+
+.hud-prompt.has-line .hud-prompt__line {
+  opacity: 1;
+}
+
+.hud-prompt__fill {
+  display: block;
+  height: 100%;
+  background: var(--bone);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* ---- event card, upper middle --------------------------------------------- */
+
+.hud-card {
+  left: 0;
+  right: 0;
+  top: 17%;
+  text-align: center;
+  opacity: 0;
+}
+
+/* Comes up quickly, stays, then drains away over the fade time of CardQueue. */
+.hud-card.is-on {
+  opacity: 1;
+  transition: opacity 0.18s ease-out;
+}
+
+.hud-card.is-fading {
+  opacity: 0;
+  transition: opacity 0.9s ease-in;
+}
+
+/* Written by hand, a little crooked, straight onto the picture: no plate behind it. */
+.hud-card__text {
+  display: inline-block;
+  font-family: var(--hand);
+  font-size: 3.4em;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  white-space: pre;
+  transform: rotate(-2.2deg);
+  -webkit-text-stroke: 0.02em rgba(8, 6, 5, 0.55);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+  filter: var(--hud-rough, none);
+}
+
+/* ---- teammates, bottom left above the player's health ---------------------- */
+
+.hud-team {
+  left: 2.8em;
+  bottom: 8.6em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+}
+
+.hud-team__name,
+.hud-team__state {
+  font-family: var(--type);
+  font-size: 0.9em;
+  letter-spacing: 0.14em;
+  -webkit-text-stroke: 0.04em rgba(8, 6, 5, 0.6);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+}
+
+.hud-team__state {
+  margin-left: 0.9em;
+  color: var(--fresh);
+  opacity: 0;
+}
+
+.hud-team__row.is-down .hud-team__name {
+  color: var(--fresh);
+}
+
+.hud-team__row.is-down .hud-team__state {
+  opacity: 1;
+}
+
+.hud-team__bar {
+  width: 6.5em;
+  height: max(2px, 0.15em);
+  margin-top: 0.35em;
+  background: rgba(107, 106, 100, 0.5);
+  box-shadow: 0 0 0 1px rgba(8, 6, 5, 0.5);
+}
+
+.hud-team__fill {
+  display: block;
+  height: 100%;
+  background: var(--bone);
+  transform-origin: left center;
+  transition: transform 0.2s ease-out, background-color 0.4s ease-out;
+}
+
+.hud-team__row.is-low .hud-team__fill {
+  background: var(--dried);
+}
+
+/* ---- motion ------------------------------------------------------------- */
+
+/* Never down to nothing: dried red alone is too dark to read on a dark picture. */
+@keyframes hud-throb {
+  0%, 100% { opacity: 0.45; }
+  18% { opacity: 0.95; }
+  45% { opacity: 0.5; }
+}
+
+/* Hard cut, like a lamp with a loose wire. */
+@keyframes hud-blink {
+  0%, 59% { opacity: 1; }
+  60%, 100% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud *,
+  .hud *::after {
+    animation: none !important;
+  }
+
+  .hud-health.is-hit .hud-health__num,
+  .hud-ammo.is-firing .hud-ammo__mag {
+    transform: none;
+  }
+
+  .hud-ammo__rounds i.is-spent {
+    transform: translateY(var(--lift, 0)) rotate(var(--tilt, 0deg));
+  }
+
+  .hud-health__trail {
+    transition: none;
+  }
+}

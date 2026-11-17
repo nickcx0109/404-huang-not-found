@@ -67,7 +67,18 @@ classDiagram
   CombatPlayer *-- Wallet
   Economy --> ShopItem
   ShopItem <|-- AmmoRefillItem
-  Hud <|-- GameplayHud
+  Hud <|-- SurvivalHud
+  SurvivalHud o-- HudWidget
+  SurvivalHud *-- PlayerStatus
+  HudWidget *-- Attention
+  HudWidget <|-- HealthWidget
+  HudWidget <|-- AmmoWidget
+  HudWidget <|-- CrosshairWidget
+  HudWidget <|-- DamageOverlay
+  HudWidget <|-- PromptWidget
+  HudWidget <|-- EventCard
+  HudWidget <|-- TeamWidget
+  HudWidget <|-- StatusLine
 ```
 
 ## 檔案與介面
@@ -92,7 +103,10 @@ classDiagram
 | `enemies/Brain.js`、`enemies/behaviour/Nodes.js` | Brain Strategy 與最小 reactive 行為樹；Sequence 遇非成功就停止，Selector 遇非失敗就停止，running 會向上傳遞；下次 tick 從首個子節點重新判斷，沒有有記憶的游標 |
 | `enemies/EnemyFactory.js` | `register(type, EnemySubclass)`、`create(type, spawn)`、`release(enemy)`、`dispose()`；每種類型獨立 ObjectPool，拒絕重複註冊與重複歸還 |
 | `economy/` | Wallet 驗證整數金額；Economy 控制交易並在 apply 失敗時退費；ShopItem 的 `canBuy/apply` 以多型擴充，不在 Economy 寫商品 switch |
-| `ui/GameplayHud.js` | 繼承既有 Hud，只加獨立節點；原有 `showError`、`#error`、debug/perf 顯示保留。生命／彈藥／波次／金錢以 10 Hz 更新且文字變動才寫 DOM |
+| `ui/hud/SurvivalHud.js` | 遊戲內介面，繼承既有 Hud（`showError`、`#error`、debug/perf 顯示保留），裡面裝一組 `HudWidget`。只有 `play=1` 才建立；字型、`css/hud.css` 也是這時才加進頁面 |
+| `ui/hud/HudWidget.js` 和各元件 | 每個元件一個類別、一個檔案：血量、彈藥、準星、受傷效果、提示文字、事件字卡、隊友、頂端狀態列。`bind()` 訂閱事件處理「某一刻發生的事」，`sync(status)` 收目前的數字、有變才寫 DOM；元件不持有遊戲物件 |
+| `ui/hud/PlayerStatus.js` | HUD 唯一會讀 Session 的類別，每幀把血量、彈藥、金錢、波次、位置、隊友抄成普通數字。事件沒帶的數字（子彈數、是否換彈中）從這裡來；之後連線時 Client 可以用 Host 的快照填同樣的欄位 |
+| `ui/hud/logic/` | 不碰 DOM 的純邏輯，各有測試：`Attention`（多久淡回去）、`HealthMeter`（低於 30% 算低血量）、`AmmoMeter`、`HitMark`、`DamagePulse`、`HitDirection`、`CardQueue`、`BrushStroke` |
 
 ### 傷害與行為的邊界
 
@@ -112,6 +126,8 @@ classDiagram
 | Observer | 所有玩法通知及輸入命令名稱統一在 `game/events.js`，用 App 的 EventBus 解耦 |
 | Chain of Responsibility | DamagePipeline 串接 DamageRule.next，先前規則輸出交給下一個；目前只提供爆頭範例 |
 | Object Pool | EnemyFactory 每種類型使用既有 ObjectPool；死亡隱藏、重設、歸還，跨波次重用 mesh 與路徑 buffer |
+| Composite | `SurvivalHud` 裝著一組 `HudWidget`，每幀對每個元件呼叫 `sync` 和 `tick`；加元件不用改其他元件 |
+| Template Method（介面） | `HudWidget.tick` 固定「計時的 class → 子類的 `advance` → 共用的淡入淡出」，子類只覆寫 `bind`、`sync`、`advance` |
 | Factory／Registry | EnemyFactory 依字串類型建構已註冊子類；不靠大量 if/else 或匯入各種具體敵人 |
 
 ## 事件清單
@@ -138,6 +154,8 @@ classDiagram
 | `WAVE_STARTED` | `wave.started` | `{wave,count}`；Session 通知 |
 | `WAVE_CLEARED` | `wave.cleared` | `{wave,kills}`；Session 通知，kills 為本局累計 |
 | `GAME_OVER` | `game.over` | `{wave,kills}`；Session 通知 |
+| `PROMPT_CHANGED` | `hud.prompt-changed` | `{id,text,progress}`；任何模組 → HUD，在畫面下方顯示一行提示。`progress` 是 0–1（省略就不畫進度線）；`text` 給 `null` 表示收掉這個 `id` 的提示 |
+| `ANNOUNCED` | `hud.announced` | `{text}`；任何模組 → HUD，在畫面中上顯示一張字卡，約 2 秒後淡出 |
 
 Payload 中的 entity 是同步事件借用的實體參照，不是網路快照。長期保存請複製所需數值與當時 id；物件池會重用該物件。訂閱 `on()` 回傳的取消函式由訂閱者在 dispose 時呼叫。
 
@@ -176,6 +194,15 @@ Payload 中的 entity 是同步事件借用的實體參照，不是網路快照�
 4. 用 `session.changeState(state)` 轉換以保留 STATE_CHANGED 通知，不從其他模組直接呼叫 machine.change。
 5. 加上可進入、可離開、事件只發一次、禁用命令被拒絕的測試；如果增加事件，先在 events.js 定義常數再讓其他模組訂閱。
 
+## 新增 HUD 元件
+
+1. 從 `ui/hud/HudWidget.js`、`ui/hud/HealthWidget.js`、`test/HudSurvivalHud.test.js` 開始，在 `ui/hud/` 新增自己的 `HudWidget` 子類，一個元件一個檔案。
+2. constructor 呼叫 `super(doc, '名字')`，用 `this.part()` 建立節點。CSS class 會是 `hud-名字`，樣式加在 `web/css/hud.css` 自己的一段。
+3. 「某一刻發生的事」（開槍、被打、波次開始）在 `bind(events, playerId)` 用 `this.listen()` 訂閱 `game/events.js` 的事件；「現在是多少」從 `sync(status)` 的 `PlayerStatus` 拿，數字有變才寫 DOM。需要新的數字就加在 `PlayerStatus`，不要在元件裡讀 Session 或實體。
+4. 平常要淡下去的元件用 `this.attention.poke()`（有變化）和 `this.attention.pin(條件)`（有狀況時不淡）；短暫的 class 用 `this.flash(class, 秒數)`。判斷和計時寫成 `ui/hud/logic/` 裡不碰 DOM 的類別，並加測試。
+5. 在 `SurvivalHud.standard()` 加一行 `.add(new 你的類別(doc))`。其他模組要顯示提示或字卡，不用匯入 HUD，發 `PROMPT_CHANGED`、`ANNOUNCED` 事件就好。
+6. 顏色只用 `hud.css` 最上面那四個，不加方框和面板；動畫只動 `transform` 和 `opacity`，並在 `prefers-reduced-motion` 那一段關掉。
+
 ## 效能與生命週期
 
 - Enemy 是一隻一個 mesh、沒有新增動態燈／投影，沿用原有霧、遠平面與後製。灰盒使用既有 palette 顏色，不更動美術。
@@ -183,7 +210,7 @@ Payload 中的 entity 是同步事件借用的實體參照，不是網路快照�
 - `PathFinder.createRoute()` 在建立 pooled enemy 時配置 buffer，`findPathInto(...,route)` 在預配置 BFS queue／from 上運作，與展示用 `findPath()` 分開。BFS 不切障礙對角，針對固定 collider 網格；動態碰撞更新尚未支援。
 - 玩法專用 finder 多留 0.002 m clearance，避免貼牆格點的浮點誤差讓敵人卡住；不改展示模式的網格結果。遠距路徑每 1.5 秒、近距每 0.75 秒才重算，移動仍按每幀 dt 更新。
 - 這不是最終大量殭屍方案：24／40／64 隻、品質分級、自動降解析度、Worker flow field 還是 PERFORMANCE_PLAN 的後續工作，不在這次擴寫。
-- DamageInfo、事件摘要、換波出怪等只在離散事件配置；不要新增每幀的 map/filter、new Vector3 或尋路陣列。HUD 限頻，不每幀重建 DOM。
+- DamageInfo、事件摘要、換波出怪等只在離散事件配置；不要新增每幀的 map/filter、new Vector3 或尋路陣列。HUD 每幀只比對數字，有變才寫 DOM，不重建節點。
 - Session.dispose 取消訂閱並釋放 Factory；Factory.dispose 清理所有曾建立的 mesh／材質／幾何。頁面離開會清理輸入與 HUD。若日後加入頁內重開，應先走完整 dispose，再建立新 Session。
 - LevelData 以真正圓柱與 AABB 的最近點檢查出生點；移動仍沿用原本較保守的方柱碰撞。新驗證使 `mood.json` 的 `spawns.zombies[1]` 警告與 `tree_56` 重疊，未改該關卡；ch2／test 無新警告。
 

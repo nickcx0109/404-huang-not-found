@@ -17,4 +17,6 @@ export const EVENTS = Object.freeze({
   WAVE_STARTED: 'wave.started',
   WAVE_CLEARED: 'wave.cleared',
   GAME_OVER: 'game.over',
+  PROMPT_CHANGED: 'hud.prompt-changed',
+  ANNOUNCED: 'hud.announced',
 });

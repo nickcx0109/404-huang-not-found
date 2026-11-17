@@ -105,23 +105,3 @@ html, body {
 [hidden] {
   display: none !important;
 }
-
-#gameplay-hud {
-  position: fixed;
-  bottom: 12px;
-  left: 12px;
-  margin: 0;
-  padding: 10px 14px;
-  background: rgba(0, 0, 0, 0.7);
-  font: 15px/1.7 ui-monospace, Consolas, monospace;
-  pointer-events: none;
-}
-
-#gameplay-crosshair {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font: 24px monospace;
-  pointer-events: none;
-}
