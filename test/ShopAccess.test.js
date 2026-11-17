@@ -1,0 +1,52 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { ShopAccess } from '../web/js/economy/ShopAccess.js';
+import { ShopCatalog } from '../web/js/economy/ShopCatalog.js';
+import { RifleItem } from '../web/js/economy/RifleItem.js';
+import { EventBus } from '../web/js/core/EventBus.js';
+import { CombatPlayer } from '../web/js/player/CombatPlayer.js';
+import { Wallet } from '../web/js/economy/Wallet.js';
+
+test('ShopAccess checks wave-break, life, marker type and exact radius boundary', () => {
+  const shop = new ShopAccess();
+  const player = { id: 'me', position: { x: 1.35, z: 0 }, body: { radius: .35 }, damageable: { alive: true } };
+  const markers = [{ type: 'shop', x: 0, z: 0, r: 1 }];
+  assert.equal(shop.available('wave-break', player, markers), true);
+  assert.equal(shop.toggle('wave-break', player, markers), true);
+  assert.equal(shop.isOpen('me'), true);
+  assert.equal(shop.toggle('wave-break', player, markers), false);
+  assert.equal(shop.isOpen('me'), false);
+  assert.equal(shop.close('me'), false);
+  player.position.x += .001;
+  assert.equal(shop.available('wave-break', player, markers), false);
+  player.position.x = 0;
+  for (const state of ['lobby', 'playing', 'game-over']) assert.equal(shop.toggle(state, player, markers), false);
+  assert.equal(shop.available('wave-break', player, [{ ...markers[0], type: 'post' }]), false);
+  player.damageable.alive = false;
+  assert.equal(shop.toggle('wave-break', player, markers), false);
+  assert.equal(shop.toggle('wave-break', null, markers), false);
+});
+
+test('ShopCatalog rejects duplicate registration and copies reusable records with availability reasons', () => {
+  const events = new EventBus();
+  const player = new CombatPlayer('me', { x: 0, z: 0 }, events);
+  player.wallet = new Wallet(player.id, events);
+  const item = new RifleItem();
+  const catalog = new ShopCatalog().register(item, { name: 'Rifle', unavailableReason: 'Already owned' });
+  assert.equal(catalog.get('rifle'), item);
+  assert.equal(catalog.get('unknown'), undefined);
+  assert.throws(() => catalog.register(new RifleItem()), /duplicate/);
+  assert.throws(() => catalog.register({ id: 'fake' }), /Invalid/);
+  const rows = catalog.readInto([], player, {});
+  const row = rows[0];
+  assert.equal(row.reason, 'Not enough money');
+  player.wallet.credit(75);
+  catalog.readInto(rows, player, {});
+  assert.equal(rows[0], row);
+  assert.equal(row.available, true);
+  item.apply(player);
+  catalog.readInto(rows, player, {});
+  assert.equal(row.available, false);
+  assert.equal(row.reason, 'Already owned');
+  assert.deepEqual(Object.keys(row).sort(), ['available', 'cost', 'description', 'id', 'name', 'reason']);
+});
