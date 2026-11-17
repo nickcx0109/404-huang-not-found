@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { resolveBloomLevels } from './core/bloomLevels.js';
 
 // PostFX: lightweight post-processing.
 //   scene -> HDR target -> [optional bloom, from quarter resolution down] -> one final pass:
@@ -7,7 +8,6 @@ import * as THREE from 'three';
 // On integrated GPUs the cost of a pass is roughly the number of pixels it writes, so the
 // chain has exactly two full-resolution passes (scene, final) and everything else is small.
 // All numbers arrive through setParams() from Atmosphere (palette.json).
-const MAX_BLOOM_LEVELS = 4;
 // Size of the largest bloom level relative to the screen: 4 = quarter resolution.
 // (2 = half resolution looks slightly tighter but writes 4x the pixels: measured
 // 1.9 ms vs 0.5 ms per frame at 1080p on Intel Iris Xe.)
@@ -299,9 +299,9 @@ export class PostFX {
     u.uChroma.value = post.chromaticAberration || 0;
 
     const bloom = post.bloom || {};
-    this.bloom.enabled = Boolean(bloom.enabled) && bloom.strength > 0;
+    this.bloom.levels = resolveBloomLevels(bloom.levels);
+    this.bloom.enabled = Boolean(bloom.enabled) && bloom.strength > 0 && this.bloom.levels > 0;
     this.bloom.strength = bloom.strength || 0;
-    this.bloom.levels = Math.min(MAX_BLOOM_LEVELS, Math.max(1, Math.round(bloom.levels || 3)));
     this._prefilter.uniforms.uThreshold.value = bloom.threshold === undefined ? 1 : bloom.threshold;
     this._prefilter.uniforms.uKnee.value = bloom.knee === undefined ? 0.5 : bloom.knee;
     this._rebuildBloomTargets();

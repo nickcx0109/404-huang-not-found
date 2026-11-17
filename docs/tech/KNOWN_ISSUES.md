@@ -8,7 +8,7 @@
 | 2 | ✅ 已修復 | `web/js/LevelData.js`、`player/PlayerBody.js` | 出生點以玩家圓柱檢查（含角落、上下高度） | `PlayerController` 與驗證器共用 `PLAYER_BODY` | `fix(level): validate spawns against shared player dimensions` |
 | 3 | 🟠 | `web/levels/mood.json:81`、`web/js/PropFactory.js:52-54` | 綁了 collider 的道具，旋轉或縮放後，外觀會超出碰撞盒 | mood 的 `car_wreck` 轉 28°，玩家可以走進車角約 0.18 m | LevelData 驗證時發出警告；或讓碰撞盒依旋轉後的外框計算 |
 | 4 | 🟡 | `tools/serve.mjs:63` | 隱藏檔過濾只擋開頭是 `.` 的路徑；Windows 的 8.3 短檔名（如 `GIT~1`）可以繞過 | 用 `HOST=0.0.0.0` 開放給區網時，別人可能讀到 `.git/config`、`.env` | 解析成真實路徑後再檢查，或只開放 `web/`、`art/` 等白名單資料夾 |
-| 5 | 🟡 | `web/js/PostFX.js:305` | `bloom.levels \|\| 3` 會把 0 當成沒有設定 | palette 設 `levels: 0` 想省效能，結果變成 3 層 | 改用 `??` 或明確判斷 undefined，再限制最小值 1 |
+| 5 | ✅ 已修復 | `web/js/PostFX.js`、`core/bloomLevels.js` | 明確的 levels: 0 關閉 bloom，不建立 targets 或執行 bloom pass；缺省為 3，非零層數限制為 1～4 | 純函式測試涵蓋 0、缺省、邊界與無效值 | `fix(postfx): treat bloom.levels 0 as a valid value` |
 | 6 | 🟡 | `tools/art/shots.mjs:150` | `waitForFunction` 逾時時直接丟錯，跳出整個迴圈 | 某一張卡住，後面的截圖全部不拍 | 每張各自 try/catch，算進 `failures`；`--gpu` 的 d3d11 參數只適用於 Windows |
 | 7 | ⚪ | `web/js/App.js:207` | fps 統計用的 `elapsed` 沒有限制範圍 | 第一幀或切回分頁時，fps 數字會跳 | 和 dt 一樣限制範圍 |
 | 8 | ⚪ 效能 | `web/js/App.js:235` `_countLights` | 每一幀都走訪整個場景數燈，就算沒開 `?perf` | 白白花掉每幀的時間 | 建好場景後數一次，或只在 perf／截圖模式才數 |
