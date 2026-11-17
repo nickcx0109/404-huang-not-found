@@ -12,10 +12,15 @@ import { Exploder } from '../enemies/Exploder.js';
 import { CombatPlayer } from '../player/CombatPlayer.js';
 import { PlayerCombat } from '../player/PlayerCombat.js';
 import { Pistol } from '../weapons/Pistol.js';
-import { Rifle } from '../weapons/Rifle.js';
-import { Shotgun } from '../weapons/Shotgun.js';
 import { Wallet } from '../economy/Wallet.js';
 import { Economy } from '../economy/Economy.js';
+import { ShopCatalog } from '../economy/ShopCatalog.js';
+import { RifleItem } from '../economy/RifleItem.js';
+import { ShotgunItem } from '../economy/ShotgunItem.js';
+import { HealthItem } from '../economy/HealthItem.js';
+import { ArmorItem } from '../economy/ArmorItem.js';
+import { DamagePipeline, HeadshotRule } from '../entities/DamagePipeline.js';
+import { ArmorRule } from '../entities/ArmorRule.js';
 import { AmmoRefillItem } from '../economy/AmmoRefillItem.js';
 import { SurvivalHud } from '../ui/hud/SurvivalHud.js';
 
@@ -25,8 +30,6 @@ export function installGameplay(app) {
   const player = new CombatPlayer('player-local', app.player, ctx.events);
   player.wallet = new Wallet(player.id, ctx.events);
   player.weapons.add(new Pistol());
-  player.weapons.add(new Rifle());
-  player.weapons.add(new Shotgun());
   ctx.players.push(player);
   const factory = new EnemyFactory(ctx, type => {
     const geometry = new THREE.BoxGeometry(ctx.pathFinder.radius * 2, ctx.pathFinder.height, ctx.pathFinder.radius * 2);
@@ -41,10 +44,16 @@ export function installGameplay(app) {
     .register('runner', Runner)
     .register('tank', Tank)
     .register('exploder', Exploder);
-  const ammo = new AmmoRefillItem();
+  const catalog = new ShopCatalog()
+    .register(new AmmoRefillItem(), { name: 'Ammo refill', description: 'Fill current weapon', unavailableReason: 'Ammo already full' })
+    .register(new RifleItem(), { name: 'Rifle', description: '30 rounds / 210 reserve', unavailableReason: 'Already owned' })
+    .register(new ShotgunItem(), { name: 'Shotgun', description: '6 shells / 36 reserve', unavailableReason: 'Already owned' })
+    .register(new HealthItem(), { name: 'First aid', description: 'Restore up to 50 HP', unavailableReason: 'Health already full' })
+    .register(new ArmorItem(), { name: 'Armor', description: 'Refill to 50 armor', unavailableReason: 'Armor already full' });
   app.game = new GameSession(ctx, { factory, director: new ExampleWaveDirector(), economy: new Economy(),
-    items: [ammo], breakSeconds: EXAMPLE_WAVES.breakSeconds });
-  app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id);
+    catalog, damagePipeline: new DamagePipeline([new HeadshotRule(),
+      new ArmorRule(id => ctx.players.find(candidate => candidate.id === id))]), breakSeconds: EXAMPLE_WAVES.breakSeconds });
+  app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id);
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);
   const unsubscribe = ctx.events.on(EVENTS.GAME_OVER, () => {

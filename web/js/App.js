@@ -214,9 +214,9 @@ export class App {
     const canvas = this.renderer.domElement;
     this.hud.setStartVisible(true);
     this.hud.onStartClick(() => this.player.requestLock());
-    canvas.addEventListener('click', () => this.player.requestLock());
+    canvas.addEventListener('click', () => { if (!this.game?.shopOpen) this.player.requestLock(); });
     this.player.onLockChange = (locked) => {
-      this.hud.setStartVisible(!locked && this.game?.state !== 'game-over');
+      this.hud.setStartVisible(!locked && !this.game?.shopOpen && this.game?.state !== 'game-over');
       if (locked && this.game) this.game.start();
     };
 
@@ -274,10 +274,14 @@ export class App {
 
     if (!this.game || this.game.canMove) this.player.update(dt);
     if (this.flow) this.flow.update(dt);
-    if (this.game && this.player.locked) {
-      this.combat.update();
-      this.game.update(dt);
-      this.hud.updateGame(dt, this.game);
+    if (this.game) {
+      const running = this.player.locked || this.game.shopOpen;
+      if (running) {
+        this.combat.update();
+        this.game.update(dt);
+      }
+      this.hud.updateGame(running ? dt : 0, this.game);
+      this.hud.setStartVisible(!this.player.locked && !this.game.shopOpen && this.game.state !== 'game-over');
     }
     this.atmosphere.update(dt, now / 1000);
     this.built.update(now / 1000);

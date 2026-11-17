@@ -563,6 +563,24 @@
   background: var(--dried);
 }
 
+/* ---- shop: loose stencil text, no panel --------------------------------- */
+.hud-shop { left: 50%; top: 23%; transform: translateX(-50%); width: min(34em, 86vw);
+  max-height: 64vh; overflow-y: auto; font-family: var(--type); text-shadow: var(--edge); }
+.hud-shop[hidden] { display: none; }
+.hud-shop__title { font-family: var(--num); font-size: 2em; letter-spacing: .08em; }
+.hud-shop__balance, .hud-shop__help, .hud-shop__notice { font-size: .8em; margin: .7em 0; }
+.hud-shop__item { display: block; width: 100%; margin: .65em 0; padding: .2em 0;
+  background: none; border: 0; color: var(--bone); font: inherit; text-align: left;
+  text-shadow: var(--edge); pointer-events: auto; cursor: pointer; }
+.hud-shop__item:disabled { color: var(--ash); cursor: default; }
+.hud-shop__item:focus-visible { outline: .1em dashed var(--bone); outline-offset: .15em; }
+.hud-shop__item:hover:not(:disabled) { transform: translateX(.2em); }
+.hud-shop__label, .hud-shop__detail { display: block; }
+.hud-shop__detail { font-size: .75em; margin-top: .2em; }
+.hud-shop__notice { color: var(--bone); min-height: 1em; }
+.hud-health__armor { font: .8em var(--type); text-shadow: var(--edge); margin-top: .6em; }
+@media (max-height: 500px) { .hud-shop { top: 13%; max-height: 72vh; font-size: .8em; } }
+
 /* ---- motion ------------------------------------------------------------- */
 
 /* Never down to nothing: dried red alone is too dark to read on a dark picture. */
@@ -582,6 +600,7 @@
   .hud *,
   .hud *::after {
     animation: none !important;
+    transition: none !important;
   }
 
   .hud-health.is-hit .hud-health__num,
@@ -592,6 +611,8 @@
   .hud-ammo__rounds i.is-spent {
     transform: translateY(var(--lift, 0)) rotate(var(--tilt, 0deg));
   }
+
+  .hud-shop__item:hover:not(:disabled) { transform: none; }
 
   .hud-health__trail {
     transition: none;

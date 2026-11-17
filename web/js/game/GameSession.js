@@ -5,10 +5,12 @@ import { LobbyState } from './states/LobbyState.js';
 import { PlayingState } from './states/PlayingState.js';
 import { WaveBreakState } from './states/WaveBreakState.js';
 import { GameOverState } from './states/GameOverState.js';
+import { ShopCatalog } from '../economy/ShopCatalog.js';
+import { ShopAccess } from '../economy/ShopAccess.js';
 import { EVENTS } from './events.js';
 
 export class GameSession {
-  constructor(ctx, { factory, director, economy, items = [], breakSeconds = 8,
+  constructor(ctx, { factory, director, economy, items = [], catalog = null, breakSeconds = 8,
     damagePipeline = new DamagePipeline([new HeadshotRule()]) }) {
     if (ctx.session) throw new Error('Context already has an authority');
     if (!Number.isFinite(breakSeconds) || breakSeconds < 0) throw new RangeError('Invalid break duration');
@@ -17,7 +19,9 @@ export class GameSession {
     this.factory = factory;
     this.director = director;
     this.economy = economy;
-    this.items = new Map(items.map(item => [item.id, item]));
+    this.catalog = catalog ?? new ShopCatalog();
+    for (const item of items) this.catalog.register(item);
+    this.shop = new ShopAccess();
     this.damagePipeline = damagePipeline;
     this.breakSeconds = breakSeconds;
     this.wave = 0;
@@ -32,7 +36,7 @@ export class GameSession {
       ctx.events.on(EVENTS.START_REQUESTED, () => { if (this.state === 'lobby') this.startRequested = true; }),
       ctx.events.on(EVENTS.FIRE_REQUESTED, request => {
         const player = this.playerById(request.ownerId);
-        if (this.canMove && player?.damageable.alive) player.weapons.current?.fire(ctx);
+        if (this.canMove && player?.damageable.alive && !this.isShopOpen(player.id)) player.weapons.current?.fire(ctx);
       }),
       ctx.events.on(EVENTS.RELOAD_REQUESTED, request => {
         const player = this.playerById(request.ownerId);
@@ -42,6 +46,11 @@ export class GameSession {
         const player = this.playerById(request.ownerId);
         if (this.canMove && player?.damageable.alive) player.weapons.switchTo(request.index);
       }),
+      ctx.events.on(EVENTS.SHOP_TOGGLE_REQUESTED, ({ ownerId }) => {
+        this.shop.toggle(this.state, this.playerById(ownerId), ctx.level.markers);
+        ctx.events.emit(EVENTS.SHOP_CHANGED, { ownerId, open: this.shop.isOpen(ownerId) });
+      }),
+      ctx.events.on(EVENTS.SHOP_CLOSE_REQUESTED, ({ ownerId }) => this.closeShop(ownerId)),
       ctx.events.on(EVENTS.PURCHASE_REQUESTED, request => this.buy(request.ownerId, request.itemId)),
       ctx.events.on(EVENTS.DAMAGE_REQUESTED, info => this.resolveDamage(info)),
       ctx.events.on(EVENTS.ENTITY_DIED, detail => this.recordDeath(detail)),
@@ -73,10 +82,12 @@ export class GameSession {
     if (!Number.isFinite(dt) || dt < 0 || dt > 0.05 + 1e-9) throw new RangeError('Use simulation steps of 0..0.05 seconds');
     this.context.time += dt;
     this.machine.update(dt);
+    this.refreshShops();
   }
 
   changeState(state) {
     this.machine.change(state);
+    this.refreshShops();
     this.context.events.emit(EVENTS.STATE_CHANGED, { state: this.state, wave: this.wave });
   }
 
@@ -135,7 +146,7 @@ export class GameSession {
     const targetEnemy = ctx.enemies.find(enemy => enemy.id === info.targetId && enemy.active);
     const target = sourcePlayer?.damageable.alive && targetEnemy ? targetEnemy :
       sourceEnemy && (targetPlayer || (targetEnemy === sourceEnemy && targetEnemy));
-    if (!target) return 0;
+    if (!target?.damageable?.alive) return 0;
     return target.damageable.takeDamage(this.damagePipeline.apply(info));
   }
 
@@ -153,11 +164,25 @@ export class GameSession {
   buy(ownerId, itemId) {
     if (this.state !== 'wave-break') return false;
     const player = this.playerById(ownerId);
-    const item = this.items.get(itemId);
+    const item = this.catalog.get(itemId);
     if (!player?.damageable.alive || !item) return false;
-    const nearShop = this.context.level.markers.some(marker => marker.type === 'shop' &&
-      Math.hypot(marker.x - player.position.x, marker.z - player.position.z) <= marker.r + player.body.radius);
-    return nearShop && this.economy.purchase(item, player, this.context);
+    return this.shop.available(this.state, player, this.context.level.markers) &&
+      this.economy.purchase(item, player, this.context);
+  }
+
+  isShopOpen(ownerId) {
+    if (!this.shop.available(this.state, this.playerById(ownerId), this.context.level.markers)) this.closeShop(ownerId);
+    return this.shop.isOpen(ownerId);
+  }
+
+  get shopOpen() { return this.shop.openOwners.size > 0; }
+
+  closeShop(ownerId) {
+    if (this.shop.close(ownerId)) this.context.events.emit(EVENTS.SHOP_CHANGED, { ownerId, open: false });
+  }
+
+  refreshShops() {
+    for (const ownerId of this.shop.openOwners) this.isShopOpen(ownerId);
   }
 
   finish() {
@@ -167,6 +192,7 @@ export class GameSession {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    for (const ownerId of this.shop.openOwners) this.closeShop(ownerId);
     for (const unsubscribe of this._subscriptions) unsubscribe();
     this.machine.change(null);
     this.factory.dispose();

@@ -8,6 +8,7 @@ import { CrosshairWidget } from './CrosshairWidget.js';
 import { DamageOverlay } from './DamageOverlay.js';
 import { PromptWidget } from './PromptWidget.js';
 import { EventCard } from './EventCard.js';
+import { ShopWidget } from './ShopWidget.js';
 import { TeamWidget } from './TeamWidget.js';
 
 /**
@@ -32,7 +33,7 @@ export class SurvivalHud extends Hud {
     this.layer = doc.createElement('div');
     this.layer.className = 'hud';
     this.assets = new HudAssets(doc).install(this.layer);
-    this.layer.setAttribute('aria-hidden', 'true');
+    this.layer.setAttribute('aria-label', 'Survival HUD');
     root.appendChild(this.layer);
     const instructions = this.start.querySelector('p');
     if (instructions) instructions.textContent = '滑鼠：視角／左鍵開火　WASD：移動　R：換彈　1–9：換武器';
@@ -50,7 +51,8 @@ export class SurvivalHud extends Hud {
       .add(new CrosshairWidget(doc))
       .add(new PromptWidget(doc))
       .add(new EventCard(doc))
-      .add(new TeamWidget(doc));
+      .add(new TeamWidget(doc))
+      .add(new ShopWidget(doc));
   }
 
   add(widget) {

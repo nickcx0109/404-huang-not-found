@@ -31,7 +31,7 @@ export class CrosshairWidget extends HudWidget {
   }
 
   sync(status) {
-    const off = !status.canMove;
+    const off = !status.canMove || status.shopOpen;
     if (off === this._off) return;
     this._off = off;
     this.el.classList.toggle('is-off', off);

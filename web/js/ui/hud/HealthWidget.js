@@ -14,6 +14,7 @@ export class HealthWidget extends HudWidget {
   constructor(doc, { meter = new HealthMeter(), stroke = new BrushStroke({ width: 250, height: 27, seed: 23 }) } = {}) {
     super(doc, 'health', { holdSeconds: 4 });
     this.meter = meter;
+    this.armor = this.part('div', 'hud-health__armor');
     this.number = this.part('div', 'hud-health__num hud-num');
     const shadow = this.part('div', 'hud-health__stroke');
     this.bar = this.part('div', 'hud-health__bar', shadow);
@@ -32,6 +33,8 @@ export class HealthWidget extends HudWidget {
 
   sync(status) {
     this.show(status.health, status.maxHealth);
+    const armor = 'ARMOR ' + (status.armor ?? 0);
+    if (this.armor.textContent !== armor) this.armor.textContent = armor;
   }
 
   show(health, max) {

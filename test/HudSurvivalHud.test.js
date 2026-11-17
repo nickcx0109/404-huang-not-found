@@ -145,7 +145,7 @@ test('StatusLine describes every game state in one line', () => {
   const base = { wave: 3, money: 125, enemies: 4, breakSeconds: 6 };
   assert.equal(StatusLine.describe({ ...base, state: 'lobby' }), 'CLICK TO START');
   assert.equal(StatusLine.describe({ ...base, state: 'playing' }), 'WAVE 3   $125   4 LEFT');
-  assert.equal(StatusLine.describe({ ...base, state: 'wave-break' }), 'WAVE 3   $125   NEXT WAVE IN 6   E AT SHOP: AMMO $25');
+  assert.equal(StatusLine.describe({ ...base, state: 'wave-break' }), 'WAVE 3   $125   NEXT WAVE IN 6   E AT SHOP: OPEN SHOP');
   assert.equal(StatusLine.describe({ ...base, state: 'game-over' }), 'REFRESH TO RETRY');
 });
 
@@ -304,4 +304,34 @@ test('TeamWidget lists the other players, marks low health and shows who is down
   assert.equal(team.rows.length, 0);
   assert.equal(row.el.removed, true);
   hud.dispose();
+});
+
+test('ShopWidget renders plain rows, reasons and balance, sends clicks, and cleans up', () => {
+  const { events, session, hud } = setup();
+  const shop = hud.widgets.at(-1);
+  const requests = [];
+  events.on(EVENTS.PURCHASE_REQUESTED, detail => requests.push(detail));
+  const status = { shopOpen: true, shopAvailable: true, money: 75, armor: 20, breakSeconds: 6,
+    shopItems: [{ id: 'rifle', name: 'Rifle', description: '30 rounds', cost: 75, available: true, reason: 'BUY' },
+      { id: 'health', name: 'First aid', description: '50 HP', cost: 25, available: false, reason: 'Health already full' }] };
+  shop.sync(status);
+  assert.equal(shop.el.hidden, false);
+  assert.equal(shop.rows.length, 2);
+  assert.equal(shop.rows[0].label.textContent, '1   RIFLE   $75');
+  assert.equal(shop.rows[1].detail.textContent, '50 HP / Health already full');
+  assert.equal(shop.rows[1].button.disabled, true);
+  const row = shop.rows[0];
+  row.button.onclick();
+  assert.deepEqual(requests, [{ ownerId: 'me', itemId: 'rifle' }]);
+  events.emit(EVENTS.ITEM_PURCHASED, { ownerId: 'me', itemId: 'rifle' });
+  assert.equal(shop.notice.textContent, 'PURCHASED: RIFLE');
+  shop.sync(status);
+  assert.equal(shop.rows[0], row, 'reuse row DOM');
+  assert.equal(shop.balance.textContent, '$75   ARMOR 20   NEXT WAVE IN 6');
+  shop.sync({ ...status, shopOpen: false });
+  assert.equal(shop.el.hidden, true);
+  hud.updateGame(0, session);
+  hud.dispose();
+  assert.equal(row.button.onclick, null);
+  assert.equal(events.emit(EVENTS.ITEM_PURCHASED, { ownerId: 'me', itemId: 'rifle' }), 0);
 });

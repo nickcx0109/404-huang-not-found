@@ -5,6 +5,10 @@
  */
 export class PlayerStatus {
   constructor() {
+    this.shopOpen = false;
+    this.shopAvailable = false;
+    this.shopItems = [];
+    this.armor = 0;
     this.health = 0;
     this.maxHealth = 1;
     this.armed = false;
@@ -44,6 +48,10 @@ export class PlayerStatus {
     this.reserve = weapon ? weapon.reserve : 0;
     this.reloading = weapon ? Boolean(weapon.reloading) : false;
     this.money = player?.wallet ? player.wallet.balance : 0;
+    this.shopOpen = Boolean(session.isShopOpen?.(player?.id));
+    this.shopAvailable = Boolean(session.shop?.available(session.state, player, context.level?.markers));
+    this.armor = player?.armor?.points ?? 0;
+    if (player && this.shopOpen) session.catalog.readInto(this.shopItems, player, context);
     this.state = session.state;
     this.wave = session.wave;
     this.enemies = context.enemies.length;

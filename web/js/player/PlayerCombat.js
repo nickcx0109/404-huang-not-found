@@ -3,18 +3,16 @@ import { EVENTS } from '../game/events.js';
 import { WeaponTrigger } from '../weapons/WeaponTrigger.js';
 
 export class PlayerCombat {
-  constructor(controller, camera, ctx, ownerId, purchaseItemId) {
+  constructor(controller, camera, ctx, ownerId) {
     this.controller = controller;
     this.camera = camera;
     this.context = ctx;
     this.ownerId = ownerId;
-    this.purchaseItemId = purchaseItemId;
     this._direction = new THREE.Vector3();
     this._ownerRequest = Object.freeze({ ownerId });
-    this._purchaseRequest = Object.freeze({ ownerId, itemId: purchaseItemId });
     this.trigger = new WeaponTrigger(ctx, ownerId);
     this._onMouseDown = event => {
-      if (event.button === 0 && this.controller.locked) {
+      if (event.button === 0 && this.controller.locked && !ctx.session.isShopOpen(ownerId)) {
         this.updateAim();
         this.trigger.press();
       }
@@ -24,10 +22,31 @@ export class PlayerCombat {
     this._onPointerLockChange = () => {
       if (!document.pointerLockElement) this.trigger.release();
     };
+    this._unsubscribeShop = ctx.events.on(EVENTS.SHOP_CHANGED, detail => {
+      if (detail.ownerId !== ownerId) return;
+      this.trigger.release();
+      if (detail.open && document.pointerLockElement) document.exitPointerLock();
+    });
     this._onKeyDown = event => {
-      if (event.repeat || !this.controller.locked) return;
-      if (event.code === 'KeyR') ctx.events.emit(EVENTS.RELOAD_REQUESTED, this._ownerRequest);
-      else if (event.code === 'KeyE') ctx.events.emit(EVENTS.PURCHASE_REQUESTED, this._purchaseRequest);
+      if (event.repeat) return;
+      const open = ctx.session.isShopOpen(ownerId);
+      if (open && event.code === 'Escape') {
+        ctx.events.emit(EVENTS.SHOP_CLOSE_REQUESTED, this._ownerRequest);
+        event.preventDefault();
+        return;
+      }
+      if (!this.controller.locked && !open) return;
+      if (event.code === 'KeyE') {
+        ctx.events.emit(EVENTS.SHOP_TOGGLE_REQUESTED, this._ownerRequest);
+        if (open) this.controller.requestLock();
+        event.preventDefault();
+      } else if (open) {
+        if (/^Digit[1-9]$/.test(event.code)) {
+          const entry = [...ctx.session.catalog.entries.values()][Number(event.code.slice(-1)) - 1];
+          if (entry) ctx.events.emit(EVENTS.PURCHASE_REQUESTED, { ownerId, itemId: entry.item.id });
+          event.preventDefault();
+        }
+      } else if (event.code === 'KeyR') ctx.events.emit(EVENTS.RELOAD_REQUESTED, this._ownerRequest);
       else if (/^Digit[1-9]$/.test(event.code)) {
         ctx.events.emit(EVENTS.SWITCH_REQUESTED, { ownerId, index: Number(event.code.slice(-1)) - 1 });
       }
@@ -53,11 +72,12 @@ export class PlayerCombat {
 
   update() {
     this.updateAim();
-    if (this.controller.locked) this.trigger.update();
+    if (this.controller.locked && !this.context.session.isShopOpen(this.ownerId)) this.trigger.update();
     else this.trigger.release();
   }
 
   dispose() {
+    this._unsubscribeShop();
     this.trigger.release();
     window.removeEventListener('mousedown', this._onMouseDown);
     window.removeEventListener('mouseup', this._onMouseUp);

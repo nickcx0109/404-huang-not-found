@@ -23,7 +23,7 @@ export class StatusLine extends HudWidget {
     if (status.state === 'game-over') return 'REFRESH TO RETRY';
     if (status.state === 'lobby') return 'CLICK TO START';
     const head = 'WAVE ' + status.wave + '   $' + status.money + '   ';
-    if (status.state === 'wave-break') return head + 'NEXT WAVE IN ' + status.breakSeconds + '   E AT SHOP: AMMO $25';
+    if (status.state === 'wave-break') return head + 'NEXT WAVE IN ' + status.breakSeconds + '   E AT SHOP: OPEN SHOP';
     return head + status.enemies + ' LEFT';
   }
 }
