@@ -6,7 +6,7 @@ import { EventBus } from '../web/js/core/EventBus.js';
 import { GameContext } from '../web/js/game/GameContext.js';
 import { GameSession } from '../web/js/game/GameSession.js';
 import { WaveTable, ENEMY_TYPES } from '../web/js/game/WaveTable.js';
-import { TimedWaveDirector } from '../web/js/game/TimedWaveDirector.js';
+import { TimedWaveDirector, SPAWN_RETRY_SECONDS } from '../web/js/game/TimedWaveDirector.js';
 import { SURVIVAL_WAVES } from '../web/js/game/waves/survival.js';
 import { EnemyFactory } from '../web/js/enemies/EnemyFactory.js';
 import { Walker } from '../web/js/enemies/Walker.js';
@@ -84,9 +84,11 @@ test('TimedWaveDirector retries spawn regions without consuming counts or return
   ctx.level.spawns.zombies = [{ x: 0, z: 0, r: 0 }];
   ctx.collision.add(new Aabb(-1, 0, -1, 1, 3, 1));
   director.start(1, ctx);
-  assert.throws(() => director.nextSpawn(ctx, {}), /No free point/);
+  assert.equal(director.nextSpawn(ctx, {}), false);
   assert.equal(director.remaining, 4);
   ctx.level.spawns.zombies[0].x = 5;
+  assert.equal(director.nextSpawn(ctx, {}), false, 'waits before retrying');
+  director.update(SPAWN_RETRY_SECONDS, ctx);
   assert.equal(director.nextSpawn(ctx, {}), true);
   for (const dt of [-1, NaN, Infinity]) assert.throws(() => director.update(dt, ctx), /dt/);
 });
@@ -173,5 +175,26 @@ test('GameSession keeps playing through empty spawn gaps, clears only the exhaus
   assert.ok(Math.abs(session.breakEndsAt - ctx.time - 0.3) < 1e-9);
   assert.deepEqual(started, [{ wave: 1, count: 2 }, { wave: 2, count: 1 }]);
   assert.equal(separations, 6);
+  session.dispose();
+});
+
+test('GameSession keeps running when every spawn sample is blocked and spawns once the area frees up', () => {
+  const ctx = context();
+  ctx.level.spawns.zombies = [{ x: 5, z: 5, r: 0 }];
+  const blocker = new Aabb(4, 0, 4, 6, 3, 6);
+  ctx.collision.add(blocker);
+  const player = new CombatPlayer('p1', { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }, ctx.events);
+  player.wallet = new Wallet(player.id, ctx.events);
+  ctx.players.push(player);
+  const factory = new EnemyFactory(ctx).register('walker', Walker).register('runner', Walker)
+    .register('tank', Walker).register('exploder', Walker);
+  const session = new GameSession(ctx, { factory, director: new TimedWaveDirector(SURVIVAL_WAVES), economy: new Economy() });
+  session.start();
+  assert.doesNotThrow(() => { for (let tick = 0; tick < 20; tick++) session.update(0.05); });
+  assert.equal(session.state, 'playing');
+  assert.equal(ctx.enemies.length, 0);
+  ctx.collision.boxes.splice(ctx.collision.boxes.indexOf(blocker), 1);
+  for (let tick = 0; tick < 10; tick++) session.update(0.05);
+  assert.equal(ctx.enemies.length, 1);
   session.dispose();
 });

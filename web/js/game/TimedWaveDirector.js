@@ -1,6 +1,8 @@
 import { WaveDirector } from './WaveDirector.js';
 import { WaveTable, ENEMY_TYPES } from './WaveTable.js';
 
+export const SPAWN_RETRY_SECONDS = 0.25;
+
 /** WaveDirector subtype: round-robin types, simulation-time pacing and a live crowd cap. */
 export class TimedWaveDirector extends WaveDirector {
   constructor(data) {
@@ -53,6 +55,9 @@ export class TimedWaveDirector extends WaveDirector {
       this._wait = this.spec.spawnInterval;
       return true;
     }
-    throw new Error('No free point in zombie spawn areas');
+    // Every sample was blocked (e.g. a player or prop on the area): keep the quota and retry
+    // later instead of throwing out of the frame loop.
+    this._wait = SPAWN_RETRY_SECONDS;
+    return false;
   }
 }

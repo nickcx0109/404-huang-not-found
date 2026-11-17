@@ -177,7 +177,7 @@ Payload 中的 entity 是同步事件借用的實體參照，不是網路快照�
 
 第 `5 + k` 波（k ≥ 1）依資料中的 `overflow.addPerWave` 計算：walker = `8 + 2k`、runner = `4 + k`、tank = `2`、exploder = `2 + k`；間隔、上限及休息時間維持第五波數值。增加的是整波待出怪量，在場上限仍為 10，驗證器允許的最大上限為 40。
 
-每波第一隻立即可出生，其後從最近一次成功出生起等待完整間隔。種類依 walker → runner → tank → exploder 輪流選尚有配額的類型，空配額略過。到上限後暫停出怪；等待期間不累積補發額度，空位出現最多先出一隻，再等完整間隔。出生點沿用關卡圓形區域與碰撞／邊界檢查，32 次嘗試失敗會明確拋錯，不消耗配額。
+每波第一隻立即可出生，其後從最近一次成功出生起等待完整間隔。種類依 walker → runner → tank → exploder 輪流選尚有配額的類型，空配額略過。到上限後暫停出怪；等待期間不累積補發額度，空位出現最多先出一隻，再等完整間隔。出生點沿用關卡圓形區域與碰撞／邊界檢查，32 次嘗試都失敗時這次不出怪、不消耗配額，0.25 秒後（`SPAWN_RETRY_SECONDS`）再試，不會從遊戲迴圈拋錯；完全沒有出生區域仍會在 `start()` 拋錯。
 
 Session.beginWave 只啟動 director、讀取該波 breakSeconds 並要求當下已到期的怪；Playing 每幀模擬、分離，再呼叫 director.update 與 nextSpawn。只有 `director.remaining === 0` 且場上陣列已空，才算過波，出怪間隔中的空場不會提早清波。舊 ExampleWaveDirector 的 update 不等待，因此原有測試與一次出完的範例仍成立。
 
