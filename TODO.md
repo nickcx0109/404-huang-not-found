@@ -19,10 +19,6 @@
 
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker`、`AmmoRefillItem` 這三個範例。
 
-- [~] **G1 步槍和霰彈槍**（進行中：@nickcx0109，分支 feat/weapons-rifle-shotgun）
-  - 起點：`web/js/weapons/Weapon.js`、`Pistol.js`、`HitscanFire.js`，`test/Weapon.test.js`。
-  - 內容：步槍按住連射；霰彈槍一發多顆彈丸、有散布，需要一個新的開火 Strategy（例如 `SpreadFire`），不要改 `HitscanFire`。數值參考 `reference/old-web-prototype/prototype-web/player/player.js`。
-  - 完成：兩把槍在 `game/installGameplay.js` 註冊，數字鍵切得到；有射速、空彈、換彈、散布的測試。
 - [~] **G2 更多殭屍種類**（進行中：@nickcx0109，分支 feat/enemies-more）
   - 起點：`web/js/enemies/Enemy.js`、`Walker.js`、`Brain.js`、`behaviour/Nodes.js`，`test/Enemy.test.js`。
   - 內容：先做 Runner（快、血少）、Tank（慢、血多、打得痛）、Exploder（靠近自爆、範圍傷害）。設計參考 `reference/old-web-prototype/docs/GAMEPLAY_DESIGN.md` 第 6 節。
@@ -108,3 +104,4 @@
 - S1 第一章灰盒（PR #8）
 - S6 第三章灰盒：一樓、二樓、頂樓三個關卡檔，樓梯間與載燃料的貨梯，樓層切換和擋路的障礙物（PR #11）
 - G12 遊戲內介面（HUD）重做（PR #14）
+- G1 步槍和霰彈槍（PR #9）

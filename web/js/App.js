@@ -275,7 +275,7 @@ export class App {
     if (!this.game || this.game.canMove) this.player.update(dt);
     if (this.flow) this.flow.update(dt);
     if (this.game && this.player.locked) {
-      this.combat.updateAim();
+      this.combat.update();
       this.game.update(dt);
       this.hud.updateGame(dt, this.game);
     }

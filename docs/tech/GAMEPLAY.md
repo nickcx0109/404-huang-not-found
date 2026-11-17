@@ -1,6 +1,6 @@
 # 玩法骨架
 
-這一版只建立共用契約，以及每個模組各一個最小範例：`Pistol`、`Walker`、`AmmoRefillItem`。其他槍枝、敵人、商品、章節任務與多人連線列在 [TODO.md](../../TODO.md)，照下面的步驟擴充，不把舊 prototype 整套搬回來。
+這一版建立共用契約，以及 `Pistol`、`Walker`、`AmmoRefillItem` 最小範例，並已加入 `Rifle`、`Shotgun`。其他敵人、商品、章節任務與多人連線列在 [TODO.md](../../TODO.md)，照下面的步驟擴充，不把舊 prototype 整套搬回來。
 
 ## 啟動與範圍
 
@@ -11,7 +11,7 @@ http://localhost:8080/web/index.html?level=ch2&play=1
 
 - 只有 **`play=1`** 開啟玩法；沒有此參數、`play=0`、`play=true` 都仍是原有走動展示。
 - `shot` 優先於 `play`，連 `?level=ch2&play=1&shot=gate_view` 也只拍原場景，不建立玩法實體或 HUD。
-- 點畫面取得滑鼠鎖定才從 Lobby 開始。WASD 移動、Shift 跑步、左鍵單發、R 換彈、1–9 換武器、F 手電筒。
+- 點畫面取得滑鼠鎖定才從 Lobby 開始。WASD 移動、Shift 跑步、左鍵開火（步槍按住連射）、R 換彈、1 手槍／2 步槍／3 霰彈槍、F 手電筒。放開左鍵、失去視窗焦點或解除鎖定會停止連射。
 - Esc 解除鎖定會暫停玩法時鐘；重新點畫面繼續。不要用系統時間決定射速或換彈，以免暫停期間偷偷完成。
 - 波次清空後整備 8 秒；靠近關卡 `type: "shop"` marker 按 E，以 $25 補滿目前武器的彈匣與備彈。波次中或離商店太遠不能買。
 - 生命歸零進入 GameOver，凍結戰鬥，重新整理才重開。暫無救援、復活、獲勝／開大門條件，也不實作故事章節目標。
@@ -167,6 +167,14 @@ Payload 中的 entity 是同步事件借用的實體參照，不是網路快照�
 4. 命中時只發 DAMAGE_REQUESTED，不直接讀 Walker 類別、加錢或扣血。視覺／音效用 onFired 或訂閱 WEAPON_FIRED，別把 Three.js 引進純邏輯基底。
 5. 在共用組合入口 `game/installGameplay.js` 匯入新類別，呼叫 `player.weapons.add(new 你的類別())`。WeaponHolder 已支援數字鍵切換，不需改 Enemy 或 Economy。
 6. 自己補假時鐘測試（射速、空彈、換彈、切槍），用 Conventional Commit 提交，一把武器一組 commit。
+
+### G1 武器與散布
+
+- `Rifle`：傷害 24、30 發彈匣／210 備彈、0.095 秒冷卻、1.7 秒換彈、單顆彈丸散布 0.006，可按住連射。
+- `Shotgun`：每顆傷害 15、每發 9 顆彈丸、6 發彈匣／36 備彈、0.85 秒冷卻、2.1 秒換彈、散布 0.065。每次點擊只消耗一發，完成全部彈丸後只發一次 WEAPON_FIRED。
+- 上述數值取自舊 prototype 的 player/player.js；射程沿用現有武器契約的 60 公尺，不引用 reference/ 模組，也不移植後座力、熱量或移動散布加成。
+- `SpreadFire` 以均勻圓盤取樣偏移，轉換到瞄準方向的正交平面後正規化，各彈丸委派既有 `HitscanFire`，因此沿用最近命中、牆壁遮擋、爆頭與 Session 傷害流程。回傳第一顆命中摘要，全部未命中則回傳 null，不修改共用 ctx.aim。
+- 亂數可用 `new SpreadFire({rng})` 注入，否則採用 `ctx.rng`；測試不依賴 Math.random。`WeaponTrigger` 僅送輸入命令，Session 仍決定是否允許開火，Weapon 仍管理彈藥與模擬時鐘 deadline。
 
 ## 新增敵人類型
 

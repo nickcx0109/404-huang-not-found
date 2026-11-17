@@ -9,6 +9,8 @@ import { Walker } from '../enemies/Walker.js';
 import { CombatPlayer } from '../player/CombatPlayer.js';
 import { PlayerCombat } from '../player/PlayerCombat.js';
 import { Pistol } from '../weapons/Pistol.js';
+import { Rifle } from '../weapons/Rifle.js';
+import { Shotgun } from '../weapons/Shotgun.js';
 import { Wallet } from '../economy/Wallet.js';
 import { Economy } from '../economy/Economy.js';
 import { AmmoRefillItem } from '../economy/AmmoRefillItem.js';
@@ -20,6 +22,8 @@ export function installGameplay(app) {
   const player = new CombatPlayer('player-local', app.player, ctx.events);
   player.wallet = new Wallet(player.id, ctx.events);
   player.weapons.add(new Pistol());
+  player.weapons.add(new Rifle());
+  player.weapons.add(new Shotgun());
   ctx.players.push(player);
   const factory = new EnemyFactory(ctx, type => {
     const geometry = new THREE.BoxGeometry(ctx.pathFinder.radius * 2, ctx.pathFinder.height, ctx.pathFinder.radius * 2);
