@@ -19,10 +19,6 @@
 
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker`、`AmmoRefillItem` 這三個範例。
 
-- [~] **G2 更多殭屍種類**（進行中：@nickcx0109，分支 feat/enemies-more）
-  - 起點：`web/js/enemies/Enemy.js`、`Walker.js`、`Brain.js`、`behaviour/Nodes.js`，`test/Enemy.test.js`。
-  - 內容：先做 Runner（快、血少）、Tank（慢、血多、打得痛）、Exploder（靠近自爆、範圍傷害）。設計參考 `reference/old-web-prototype/docs/GAMEPLAY_DESIGN.md` 第 6 節。
-  - 完成：用 `EnemyFactory.register` 註冊；有池回收、重新出生、攻擊的測試。
 - [ ] **G3 波次設計**
   - 起點：`web/js/game/WaveDirector.js`。
   - 內容：波次不要一次全部出完，改成一段時間內陸續出怪；每一波混合不同種類（等 G2）；波次表寫成資料，不要寫死在程式裡。順便做殭屍互相推開（設計文件 6.1 第 1 點），不然會疊成一點。
@@ -105,3 +101,4 @@
 - S6 第三章灰盒：一樓、二樓、頂樓三個關卡檔，樓梯間與載燃料的貨梯，樓層切換和擋路的障礙物（PR #11）
 - G12 遊戲內介面（HUD）重做（PR #14）
 - G1 步槍和霰彈槍（PR #9）
+- G2 更多殭屍種類（PR #10）

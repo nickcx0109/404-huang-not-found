@@ -6,6 +6,9 @@ import { EVENTS } from './events.js';
 import { PathFinder } from '../PathFinder.js';
 import { EnemyFactory } from '../enemies/EnemyFactory.js';
 import { Walker } from '../enemies/Walker.js';
+import { Runner } from '../enemies/Runner.js';
+import { Tank } from '../enemies/Tank.js';
+import { Exploder } from '../enemies/Exploder.js';
 import { CombatPlayer } from '../player/CombatPlayer.js';
 import { PlayerCombat } from '../player/PlayerCombat.js';
 import { Pistol } from '../weapons/Pistol.js';
@@ -34,7 +37,10 @@ export function installGameplay(app) {
     view.visible = false;
     ctx.scene.add(view);
     return view;
-  }).register('walker', Walker);
+  }).register('walker', Walker)
+    .register('runner', Runner)
+    .register('tank', Tank)
+    .register('exploder', Exploder);
   const ammo = new AmmoRefillItem();
   app.game = new GameSession(ctx, { factory, director: new ExampleWaveDirector(), economy: new Economy(),
     items: [ammo], breakSeconds: EXAMPLE_WAVES.breakSeconds });
