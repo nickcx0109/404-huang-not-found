@@ -9,13 +9,14 @@ import { EVENTS } from './events.js';
 
 export class GameSession {
   constructor(ctx, { factory, director, economy, items = [], breakSeconds = 8,
-    damagePipeline = new DamagePipeline([new HeadshotRule()]) }) {
+    damagePipeline = new DamagePipeline([new HeadshotRule()]), separation = null }) {
     if (ctx.session) throw new Error('Context already has an authority');
     if (!Number.isFinite(breakSeconds) || breakSeconds < 0) throw new RangeError('Invalid break duration');
     this.context = ctx;
     ctx.session = this;
     this.factory = factory;
     this.director = director;
+    this.separation = separation;
     this.economy = economy;
     this.items = new Map(items.map(item => [item.id, item]));
     this.damagePipeline = damagePipeline;
@@ -88,12 +89,19 @@ export class GameSession {
     const ctx = this.context;
     this.wave++;
     this.director.start(this.wave, ctx);
+    this.breakSeconds = this.director.breakSeconds ?? this.breakSeconds;
+    ctx.events.emit(EVENTS.WAVE_STARTED, { wave: this.wave, count: this.director.remaining });
+    this.spawnDue(0);
+  }
+
+  spawnDue(dt) {
+    const ctx = this.context;
+    this.director.update(dt, ctx);
     while (this.director.nextSpawn(ctx, this._spawn)) {
       const enemy = this.factory.create(this._spawn.type, this._spawn);
       ctx.enemies.push(enemy);
       ctx.events.emit(EVENTS.ENEMY_SPAWNED, { enemy, wave: this.wave });
     }
-    ctx.events.emit(EVENTS.WAVE_STARTED, { wave: this.wave, count: ctx.enemies.length });
   }
 
   simulate(dt) {
@@ -112,8 +120,12 @@ export class GameSession {
 
   updatePlaying(dt) {
     this.simulate(dt);
+    this.separation?.apply(this.context);
     if (!this.anyPlayerAlive) this.changeState(this.states.gameOver);
-    else if (this.director.remaining === 0 && this.context.enemies.length === 0) this.changeState(this.states.waveBreak);
+    else {
+      this.spawnDue(dt);
+      if (this.director.remaining === 0 && this.context.enemies.length === 0) this.changeState(this.states.waveBreak);
+    }
   }
 
   beginBreak() {

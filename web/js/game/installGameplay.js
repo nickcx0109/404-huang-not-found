@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { GameContext } from './GameContext.js';
 import { GameSession } from './GameSession.js';
-import { ExampleWaveDirector, EXAMPLE_WAVES } from './WaveDirector.js';
+import { TimedWaveDirector } from './TimedWaveDirector.js';
+import { CrowdSeparation } from './CrowdSeparation.js';
+import { SURVIVAL_WAVES } from './waves/survival.js';
 import { EVENTS } from './events.js';
 import { PathFinder } from '../PathFinder.js';
 import { EnemyFactory } from '../enemies/EnemyFactory.js';
@@ -42,8 +44,8 @@ export function installGameplay(app) {
     .register('tank', Tank)
     .register('exploder', Exploder);
   const ammo = new AmmoRefillItem();
-  app.game = new GameSession(ctx, { factory, director: new ExampleWaveDirector(), economy: new Economy(),
-    items: [ammo], breakSeconds: EXAMPLE_WAVES.breakSeconds });
+  app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(SURVIVAL_WAVES), economy: new Economy(),
+    items: [ammo], separation: new CrowdSeparation() });
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id);
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);
