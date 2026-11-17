@@ -13,7 +13,7 @@
 | 7 | ✅ 已修復 | `web/js/App.js`、`core/frameTime.js` | fps 統計與 dt 共用限制在 0～maxFrameTime 的 elapsed | 第一幀、分頁恢復與時鐘倒退不再累加越界時間 | `fix(app): clamp elapsed time for fps statistics` |
 | 8 | ✅ 已修復 | `web/js/App.js`、`core/LightCountCache.js` | 快取燈光集合；監聽每個節點 add/remove 追蹤巢狀動態燈，提供 invalidate() | 每幀只檢查燈及祖先可見性，不再走訪整個場景；強度 0 仍計數 | `fix(app): cache scene lights across frames` |
 | 9 | ⚪ 效能 | `web/js/StaticBatcher.js:33` | 同材質的東西整關合併成一個 mesh，邊界球涵蓋整個關卡 | 相機和手電筒陰影都沒辦法剔除，看不到的東西也照畫。**第一章 300 m 的山路會受影響** | 改成按區塊（例如 20 m 一格）合併 |
-| 10 | ⚪ | `web/js/Flashlight.js:34` | 改了 `shadow.camera.near` 卻沒呼叫 `updateProjectionMatrix` | 某些角度下，0.5 m 以內的陰影會被切掉 | 改完 near 之後呼叫 `updateProjectionMatrix()` |
+| 10 | ✅ 已修復 | `web/js/Flashlight.js` | 設定 shadow.camera.near = 0.2 後立即更新投影矩陣 | 陰影相機投影與 near 一致，避免近處陰影使用舊裁切面 | `fix(flashlight): update shadow camera projection after near changes` |
 
 另外在 T1～T3 回報中已知、還沒處理的：
 

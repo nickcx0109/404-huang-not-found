@@ -31,6 +31,7 @@ export class Flashlight {
     if (light.castShadow) {
       light.shadow.mapSize.set(shadow.mapSize, shadow.mapSize);
       light.shadow.camera.near = 0.2;
+      light.shadow.camera.updateProjectionMatrix();
       light.shadow.bias = shadow.bias;
     }
 
