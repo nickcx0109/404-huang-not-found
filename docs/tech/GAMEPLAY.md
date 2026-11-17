@@ -263,4 +263,4 @@ Windows 若 npm.ps1 被執行政策擋住，改用 `npm.cmd test`／`npm.cmd run
 
 加 `&debug=1` 才有 `window.__gameDebug`：`start()`、`snapshot()`、`aimAt(enemyId)`、`fire()`、`reload()`、`advance(seconds)`。advance 每次至多 120 秒、內部切成最多 0.05 秒的模擬步；fire 仍走正常命中、遮擋、扣彈、冷卻及 Session 傷害流程，不能直接送錢或殺敵。這不是公開遊戲 API，無 debug 參數不建立它。自動測試若用 advance，先停止一般 rAF，避免同時推進兩個時鐘。
 
-G3 驗收：125 個 node:test 全過，包含每波數量／種類／間隔／上限、延伸波次、資料錯誤、Session 空場等待／逐波休息，以及重疊敵人分離、薄牆與命中盒同步。修改前後 ch2 共 8 組 shot PNG 的 SHA-256 全部相同（無 play=1）。以 npm run serve 啟動後，瀏覽器在 `?level=ch2&play=1&debug=1` 停止一般 rAF，再使用 start／advance／snapshot：模擬時間 0.05／1.24／1.25／2.45 秒，場上為 1／1／2／3 隻；再前進 10 秒仍為 3 隻、remaining 為 1，符合第一波 1.2 秒間隔與 3 隻上限。PNG 放 OS temp，不加入版本控制；驗收後關閉 server。
+G3 驗收：126 個 node:test 全過，包含每波數量／種類／間隔／上限、延伸波次、資料錯誤、Session 空場等待／逐波休息，以及重疊敵人分離、薄牆與命中盒同步。修改前後 ch2 共 8 組 shot PNG 的 SHA-256 全部相同（無 play=1）。以 npm run serve 啟動後，瀏覽器在 `?level=ch2&play=1&debug=1` 停止一般 rAF，再使用 start／advance／snapshot：模擬時間 0.05／1.24／1.25／2.45 秒，場上為 1／1／2／3 隻；再前進 10 秒仍為 3 隻、remaining 為 1，符合第一波 1.2 秒間隔與 3 隻上限。PNG 放 OS temp，不加入版本控制；驗收後關閉 server。
