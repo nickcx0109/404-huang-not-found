@@ -2,7 +2,7 @@
   "version": 1,
   "name": "ch3_roof",
   "title": "Chapter 3: headquarters, roof",
-  "palette": "ch3",
+  "palette": "ch3_roof",
   "manifests": ["common","ch3"],
 
   "bounds": {"x":0,"z":-20,"w":33,"d":57},

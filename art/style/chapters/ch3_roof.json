@@ -1,0 +1,16 @@
+{
+  "_about": [
+    "Chapter 3, the roof of the tower. Palette block \"ch3_roof\" (web/levels/ch3_roof.json picks it).",
+    "Everything is the same as ch3 except what the outside is made of: a concrete deck and rendered walls instead of the carpet, painted walls and suspended ceiling of the office floors."
+  ],
+  "extends": "ch3",
+
+  "greybox": {
+    "ground": "#1c1f1e",
+    "collider": "#232726",
+    "surfaces": {
+      "ground": { "texture": "concrete", "metres": [4, 4], "roughness": 0.7 },
+      "collider": { "texture": "stucco", "metres": [3, 3], "roughness": 0.9 }
+    }
+  }
+}
