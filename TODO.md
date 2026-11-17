@@ -73,12 +73,8 @@
 
 - [ ] **B1** 綁了 collider 的道具旋轉或縮放後，外觀超出碰撞盒（KNOWN_ISSUES #3，和「AABB 不會跟著 rotY 轉」是同一件事）
 - [ ] **B2** `tools/serve.mjs` 開放區網時，8.3 短檔名可以繞過隱藏檔過濾（#4，做 G8 之前要修）
-- [~] **B3** `PostFX` 的 `bloom.levels || 3` 把 0 當成沒設定（#5）（進行中：@nickcx0109，分支 fix/small-engine-bugs）
 - [ ] **B4** `shots.mjs` 某一張逾時就整個中斷（#6）
-- [~] **B5** fps 統計的 `elapsed` 沒限制範圍（#7）（進行中：@nickcx0109，分支 fix/small-engine-bugs）
-- [~] **B6** `_countLights` 每幀走訪整個場景（#8）（進行中：@nickcx0109，分支 fix/small-engine-bugs）
 - [ ] **B7** `StaticBatcher` 整關合併、無法剔除，要改成按區塊合併（#9，S1 會遇到）
-- [~] **B8** 手電筒改了 `shadow.camera.near` 沒呼叫 `updateProjectionMatrix`（#10）（進行中：@nickcx0109，分支 fix/small-engine-bugs）
 - [ ] **B9** `mood.json` 的 `spawns.zombies[1]` 和 `tree_56` 重疊（出生點檢查變嚴格後才出現的警告）
 - [ ] **B10** 抗鋸齒：沒有 MSAA 也沒有 FXAA
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
@@ -102,3 +98,4 @@
 - G12 遊戲內介面（HUD）重做（PR #14）
 - G1 步槍和霰彈槍（PR #9）
 - G2 更多殭屍種類（PR #10）
+- B3 B5 B6 B8 引擎小 bug（PR #17）
