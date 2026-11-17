@@ -39,8 +39,9 @@ export class PlayerController {
     this.pitch = 0; // radians, positive looks up
     this.velocityX = 0;
     this.velocityZ = 0;
-    /** Keys only move the player while enabled (pointer locked). */
+    /** Keyboard movement; mouse look still requires pointer lock. */
     this.enabled = false;
+    this._unlockedMovement = false;
     this.onLockChange = null;
     this._movement = { x: 0, z: 0, hitX: false, hitZ: false };
 
@@ -51,9 +52,9 @@ export class PlayerController {
     this._onKeyUp = (e) => this._setKey(e, false);
     this._onMouseMove = (e) => this._look(e.movementX || 0, e.movementY || 0);
     this._onLockChange = () => {
-      this.enabled = this.locked;
+      this.enabled = this.locked || this._unlockedMovement;
       if (!this.enabled) this._releaseKeys();
-      if (this.onLockChange) this.onLockChange(this.enabled);
+      if (this.onLockChange) this.onLockChange(this.locked);
     };
     this._onBlur = () => this._releaseKeys();
 
@@ -70,6 +71,17 @@ export class PlayerController {
 
   requestLock() {
     if (!this.locked && this.dom.requestPointerLock) this.dom.requestPointerLock();
+  }
+
+  /** Gameplay can keep WASD active while the shop uses the unlocked mouse. */
+  setUnlockedMovement(allowed) {
+    this._unlockedMovement = Boolean(allowed);
+    this.enabled = this.locked || this._unlockedMovement;
+    if (!this.enabled) {
+      this._releaseKeys();
+      this.velocityX = 0;
+      this.velocityZ = 0;
+    }
   }
 
   /** Puts the player on a spawn point ({x, z, yaw in degrees}). */

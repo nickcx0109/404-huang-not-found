@@ -23,9 +23,11 @@ export class PlayerCombat {
       if (!document.pointerLockElement) this.trigger.release();
     };
     this._unsubscribeShop = ctx.events.on(EVENTS.SHOP_CHANGED, detail => {
-      if (detail.ownerId !== ownerId || !detail.open) return;
+      if (detail.ownerId !== ownerId) return;
+      this.controller.setUnlockedMovement(detail.open);
+      if (!detail.open) return;
       this.trigger.release();
-      if (detail.open && document.pointerLockElement) document.exitPointerLock();
+      if (document.pointerLockElement) document.exitPointerLock();
     });
     this._onKeyDown = event => {
       if (event.repeat) return;
@@ -78,6 +80,7 @@ export class PlayerCombat {
 
   dispose() {
     this._unsubscribeShop();
+    this.controller.setUnlockedMovement(false);
     this.trigger.release();
     window.removeEventListener('mousedown', this._onMouseDown);
     window.removeEventListener('mouseup', this._onMouseUp);
