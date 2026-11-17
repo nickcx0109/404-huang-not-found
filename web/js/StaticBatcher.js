@@ -9,8 +9,9 @@ const _normalMatrix = new THREE.Matrix3();
 export class StaticBatcher {
   /**
    * Replaces mergeable meshes under `root` with merged ones (added directly to `root`).
-   * A mesh is left alone when it is marked userData.dynamic, has several materials,
-   * or its material needs attributes other than position / normal (textures, vertex colours).
+   * A mesh is left alone when it is marked userData.dynamic, has several materials, or its
+   * material needs attributes the batch does not carry (vertex colours, tangents).
+   * Texture coordinates are carried, so boxes with a tiling surface texture merge as well.
    * @returns {{before:number, after:number}} mesh counts
    */
   static merge(root) {
@@ -54,7 +55,8 @@ export class StaticBatcher {
     const geometry = mesh.geometry;
     if (mesh.userData.dynamic || mesh.isInstancedMesh || mesh.isSkinnedMesh) return false;
     if (Array.isArray(material)) return false;
-    if (material.map || material.vertexColors || material.normalMap || material.emissiveMap) return false;
+    if (material.vertexColors || material.normalMap || material.emissiveMap) return false;
+    if (material.map && !geometry.attributes.uv) return false;
     return Boolean(geometry.attributes.position && geometry.attributes.normal);
   }
 
@@ -66,8 +68,11 @@ export class StaticBatcher {
     const vertexCount = sources.reduce((n, s) => n + s.geometry.attributes.position.count, 0);
     const positions = new Float32Array(vertexCount * 3);
     const normals = new Float32Array(vertexCount * 3);
+    // Texture coordinates are copied as they are: a tiling texture repeats by metres, not by mesh.
+    const uvs = sources.every((s) => s.geometry.attributes.uv) ? new Float32Array(vertexCount * 2) : null;
     const local = new THREE.Matrix4();
     let offset = 0;
+    let uvOffset = 0;
 
     sources.forEach((source) => {
       local.multiplyMatrices(rootInverse, source.mesh.matrixWorld);
@@ -85,12 +90,21 @@ export class StaticBatcher {
         normals[offset + 2] = _normal.z;
         offset += 3;
       }
+      if (uvs) {
+        const uv = source.geometry.attributes.uv;
+        for (let i = 0; i < uv.count; i++) {
+          uvs[uvOffset] = uv.getX(i);
+          uvs[uvOffset + 1] = uv.getY(i);
+          uvOffset += 2;
+        }
+      }
       if (source.geometry !== source.mesh.geometry) source.geometry.dispose();
     });
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+    if (uvs) geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     geometry.computeBoundingSphere();
 
     const first = meshes[0];

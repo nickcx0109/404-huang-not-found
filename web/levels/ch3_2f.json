@@ -305,7 +305,26 @@
     {"name": "fuel_barrel", "x": 0.4, "y": 0, "z": -36.6, "size": [0.6,0.9,0.6]},
     {"name": "fuel_barrel", "x": 14.2, "y": 0, "z": -37.4, "size": [0.6,0.9,0.6]},
     {"name": "fuel_barrel", "x": -13.2, "y": 0, "z": 5.6, "size": [0.6,0.9,0.6]},
-    {"name": "fuel_barrel", "x": 14.4, "y": 0, "z": -10.8, "size": [0.6,0.9,0.6]}
+    {"name": "fuel_barrel", "x": 14.4, "y": 0, "z": -10.8, "size": [0.6,0.9,0.6]},
+    {"name": "ch3_window", "x": 15.98, "y": 1.0, "z": 4, "rotY": 90, "size": [1.7,1.5,0.1]},
+    {"name": "ch3_window", "x": 15.98, "y": 1.0, "z": -2, "rotY": 90, "size": [1.7,1.5,0.1]},
+    {"name": "ch3_window", "x": 15.98, "y": 1.0, "z": -20, "rotY": 90, "size": [1.7,1.5,0.1]},
+    {"name": "ch3_window", "x": 15.98, "y": 1.0, "z": -26, "rotY": 90, "size": [1.7,1.5,0.1]},
+    {"name": "ch3_window", "x": 15.98, "y": 1.0, "z": -34, "rotY": 90, "size": [1.7,1.5,0.1]},
+    {"name": "ch3_window", "x": -15.98, "y": 1.0, "z": 3, "rotY": -90, "size": [1.7,1.5,0.1]},
+    {"name": "ch3_window", "x": -15.98, "y": 1.0, "z": -18, "rotY": -90, "size": [1.7,1.5,0.1]},
+    {"name": "ch3_window", "x": -15.98, "y": 1.0, "z": -28, "rotY": -90, "size": [1.7,1.5,0.1]},
+    {"name": "ch3_window", "x": -15.98, "y": 1.0, "z": -36, "rotY": -90, "size": [1.7,1.5,0.1]},
+    {"name": "ch3_tile_floor", "x": -12.6, "y": 0, "z": -44.08, "size": [6.9,0.012,7.85]},
+    {"name": "ch3_box_pile", "x": 12, "y": 0, "z": 2, "rotY": 20},
+    {"name": "ch3_box_pile", "x": -13, "y": 0, "z": -8.5, "rotY": 60},
+    {"name": "ch3_scorch", "x": 15.97, "y": 0, "z": -15, "rotY": 90},
+    {"name": "ch3_bullet_holes", "x": 2, "y": 0, "z": -11.84, "rotY": 180},
+    {"name": "ch3_bullet_holes", "x": 0, "y": 0, "z": -39.84, "rotY": 180},
+    {"name": "ch3_trash", "x": 3, "y": 0, "z": -3},
+    {"name": "ch3_copier", "x": 5, "y": 0, "z": -11.2, "rotY": 180},
+    {"name": "ch3_whiteboard", "x": -2, "y": 1.5, "z": 7.98, "rotY": 0},
+    {"name": "ch3_extinguisher", "x": -15.97, "y": 0, "z": -5, "rotY": -90}
   ],
 
   "spawns": {
