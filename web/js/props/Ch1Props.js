@@ -1557,6 +1557,8 @@ class Forest {
       // undergrowth: sparse on the shoulder, thick at the wall
       row(4.2, 1.5, 1.0, (x, z, near) => this.plantAt(x, z, near, rnd() * 0.5, rnd(), 0.35 + rnd() * 0.4));  // grass in the broken edge
       row(6.2, 2.4, 2.2, (x, z, near) => this.plantAt(x, z, near, rnd(), rnd(), 0.6 + rnd() * 0.6));
+      row(5.3, 1.9, 1.3, (x, z, near) => this.plantAt(x, z, near, rnd() * 0.8, rnd(), 0.5 + rnd() * 0.5));
+      row(7.4, 1.5, 1.5, (x, z, near) => this.plantAt(x, z, near, 0.2 + rnd() * 0.8, rnd(), 0.9 + rnd() * 0.9));
       row(8.6, 1.3, 1.4, (x, z, near) => this.plantAt(x, z, near, 0.3 + rnd() * 0.7, rnd(), 0.8 + rnd() * 0.8));
       row(10.2, 1.5, 1.6, (x, z, near) => this.plantAt(x, z, near, 0.4 + rnd() * 0.6, rnd(), 0.9 + rnd() * 0.9));
     });
@@ -2050,10 +2052,16 @@ function carMaterials(factory, clean) {
     paint: wetMaterial(factory, clean ? 'paint-clean' : 'paint', () => ({
       map: textures.map, roughnessMap: textures.roughnessMap, vertexColors: true, side: THREE.DoubleSide, envMapIntensity: 0.7,
     })),
-    glass: wetMaterial(factory, 'car-glass', () => ({
-      color: new THREE.Color(0.05, 0.065, 0.065), roughness: 0.12, transparent: true, opacity: 0.78,
-      side: THREE.DoubleSide, envMapIntensity: 1.2, vertexColors: false,
-    })),
+    // abandoned cars: glass gone dull with dirt and misted over from inside; the escape car's is clear
+    glass: clean
+      ? wetMaterial(factory, 'car-glass-clean', () => ({
+        color: new THREE.Color(0.05, 0.065, 0.065), roughness: 0.1, transparent: true, opacity: 0.74,
+        side: THREE.DoubleSide, envMapIntensity: 1.2, vertexColors: false,
+      }))
+      : wetMaterial(factory, 'car-glass', () => ({
+        color: new THREE.Color(0.15, 0.17, 0.17), roughness: 0.46, transparent: true, opacity: 0.9,
+        side: THREE.DoubleSide, envMapIntensity: 0.7, vertexColors: false,
+      })),
     dark: wetMaterial(factory, 'car-dark', () => ({ color: new THREE.Color(0.012, 0.012, 0.013), roughness: 0.8, side: THREE.DoubleSide, envMapIntensity: 0.15 })),
     chrome: wetMaterial(factory, 'car-trim', () => ({ color: new THREE.Color(0.2, 0.2, 0.2), roughness: 0.3, envMapIntensity: 0.8 })),
     plate: wetMaterial(factory, 'car-plate', () => ({ color: new THREE.Color(0.06, 0.06, 0.055), roughness: 0.6, envMapIntensity: 0.2 })),
@@ -2235,6 +2243,133 @@ function dressCar(factory, group, built, prop, options) {
   }
 }
 
+/** Rings spreading from drops that fall into puddles: each quad waits, shows one widening ring, waits again. */
+function rippleMaterial(factory) {
+  const set = wetSet(factory);
+  if (!set.has('ripples')) {
+    const material = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5,
+      uniforms: { uTime: { value: 0 }, uColor: { value: emitterColor(factory, 'ch1Mist', '#34423f').multiplyScalar(1.6) } },
+      vertexShader: [
+        'attribute vec2 aDrop; varying vec2 vUv; varying vec2 vDrop;',
+        'void main() { vUv = uv; vDrop = aDrop; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }',
+      ].join('\n'),
+      fragmentShader: [
+        'uniform float uTime; uniform vec3 uColor; varying vec2 vUv; varying vec2 vDrop;',
+        'void main() {',
+        '  float cycle = fract( uTime * vDrop.y + vDrop.x );',   // most of the cycle nothing happens
+        '  float t = cycle / 0.3;',
+        '  float d = length( vUv - 0.5 ) * 2.0;',
+        '  float ring = smoothstep( 0.09, 0.0, abs( d - t * 0.92 ) ) * ( 1.0 - t ) * step( cycle, 0.3 );',
+        '  gl_FragColor = vec4( uColor * ring, 1.0 );',
+        '}',
+      ].join('\n'),
+    });
+    material.name = 'ch1:ripples';
+    animate(factory, (time) => { material.uniforms.uTime.value = time; });
+    set.set('ripples', material);
+  }
+  return set.get('ripples');
+}
+
+/** A bank of mist hanging over standing water; it shifts slowly. */
+function poolMistMaterial(factory) {
+  const set = wetSet(factory);
+  if (!set.has('pool-mist')) {
+    const texture = new THREE.CanvasTexture(mistTexture());
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    const material = new THREE.MeshBasicMaterial({
+      map: texture, color: emitterColor(factory, 'ch1Mist', '#34423f'), transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide,
+    });
+    material.name = 'ch1:pool-mist';
+    animate(factory, (time) => texture.offset.set(time * 0.012, time * 0.008));
+    set.set('pool-mist', material);
+  }
+  return set.get('pool-mist');
+}
+
+/** Galvanised steel that has stood in the rain for years: grey, streaked with rust, green at the foot. */
+function railTextures() {
+  return paintedOnce('rail', () => {
+    const S = 256;
+    const colour = makeCanvas(S, S);
+    const rough = makeCanvas(S, S);
+    const cg = colour.getContext('2d');
+    const rg = rough.getContext('2d');
+    const broad = cloud(S, S, 4, 4, 4, 701);
+    const fine = cloud(S, S, 48, 48, 2, 702);
+    const rust = cloud(S, S, 8, 3, 4, 703);
+    const cd = cg.createImageData(S, S);
+    const rd = rg.createImageData(S, S);
+    for (let y = 0; y < S; y++) {
+      const height = 1 - y / S;
+      for (let x = 0; x < S; x++) {
+        const i = y * S + x;
+        let r = 128 + 40 * (broad[i] - 0.5) + 24 * (fine[i] - 0.5);
+        let g = r + 2;
+        let b = r + 4;
+        const eaten = smoothstep(0.5, 0.66, rust[i]);
+        r += (104 * (0.6 + fine[i]) - r) * eaten;
+        g += (62 * (0.6 + fine[i]) - g) * eaten;
+        b += (38 * (0.6 + fine[i]) - b) * eaten;
+        const green = smoothstep(0.35, 0.0, height) * smoothstep(0.4, 0.6, broad[i]);
+        r += (46 - r) * green * 0.7;
+        g += (62 - g) * green * 0.7;
+        b += (38 - b) * green * 0.7;
+        cd.data[i * 4] = r;
+        cd.data[i * 4 + 1] = g;
+        cd.data[i * 4 + 2] = b;
+        cd.data[i * 4 + 3] = 255;
+        rd.data[i * 4] = rd.data[i * 4 + 1] = rd.data[i * 4 + 2] = 255 * clamp01(0.32 + 0.55 * eaten + 0.4 * green);
+        rd.data[i * 4 + 3] = 255;
+      }
+    }
+    cg.putImageData(cd, 0, 0);
+    rg.putImageData(rd, 0, 0);
+    return { map: colourTexture(colour), roughnessMap: dataTexture(rough) };
+  });
+}
+
+/**
+ * Turns everything a builder made into ONE mesh in the rusty-rail material: the pieces keep their
+ * shape, the texture is laid over them by position so rust runs across posts and rail alike.
+ */
+function weatheredSteel(factory, group) {
+  group.updateMatrixWorld(true);
+  const positions = [];
+  const normals = [];
+  const uvs = [];
+  const point = new THREE.Vector3();
+  const normalMatrix = new THREE.Matrix3();
+  group.traverse((mesh) => {
+    if (!mesh.isMesh) return;
+    const geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
+    normalMatrix.getNormalMatrix(mesh.matrixWorld);
+    const p = geometry.attributes.position;
+    const n = geometry.attributes.normal;
+    for (let i = 0; i < p.count; i++) {
+      point.fromBufferAttribute(p, i).applyMatrix4(mesh.matrixWorld);
+      positions.push(point.x, point.y, point.z);
+      uvs.push((point.x + point.z) * 0.45, point.y * 0.9);
+      point.fromBufferAttribute(n, i).applyMatrix3(normalMatrix).normalize();
+      normals.push(point.x, point.y, point.z);
+    }
+  });
+  const merged = new THREE.BufferGeometry();
+  merged.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  merged.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  merged.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  const textures = railTextures();
+  const steel = new THREE.Mesh(merged, wetMaterial(factory, 'rail', () => ({
+    map: textures.map, roughnessMap: textures.roughnessMap, envMapIntensity: 0.5, side: THREE.DoubleSide,
+  })));
+  steel.castShadow = true;
+  steel.receiveShadow = true;
+  steel.userData.dynamic = true;
+  return steel;
+}
+
 export class Ch1Props extends PropSet {
   static id = 'ch1';
 
@@ -2273,6 +2408,7 @@ export class Ch1Props extends PropSet {
     ch1_cone: Ch1Props.cone,
     ch1_sign: Ch1Props.sign,
     ch1_beacon: Ch1Props.beacon,
+    ch1_truck: Ch1Props.truck,
   };
 
   /** Bare dead tree: a tapered, leaning trunk with a few leafless, forked branches. */
@@ -2314,12 +2450,12 @@ export class Ch1Props extends PropSet {
 
 
   /** Steel guard rail along the longer side of `size`: posts every 2 m and one rail. */
-  static guardrail(ctx) {
+  static guardrailLegacy(ctx) {
     return Ch1Props._rail(ctx, false);
   }
 
   /** Guard rail that something drove through: one end of the rail is bent to the ground. */
-  static guardrailBroken(ctx) {
+  static guardrailBrokenLegacy(ctx) {
     return Ch1Props._rail(ctx, true);
   }
 
@@ -2715,12 +2851,15 @@ export class Ch1Props extends PropSet {
       water.floor(MARK.puddleA, x, z, across * 0.75, across * 0.6, rnd() * 6.28, 0.044);
     }
     // standing water from the size of a hand to three metres, mostly at the edges and in the wheel tracks
+    const bigPools = [];
     const pools = Math.round(length / 5);
     for (let i = 0; i < pools; i++) {
       const pick = rnd();
       const across = pick < 0.5 ? 0.15 + rnd() * 0.5 : pick < 0.88 ? 0.7 + rnd() * 1.1 : 2 + rnd() * 1.2;
       const x = rnd() < 0.65 ? (rnd() < 0.5 ? -1 : 1) * (half - 0.3 - rnd() * 0.9) : (rnd() - 0.5) * width * 0.7;
-      water.floor(rnd() < 0.5 ? MARK.puddleA : MARK.puddleB, x, (rnd() - 0.5) * length, across, across * (0.5 + rnd() * 0.6), rnd() * 6.28, 0.043);
+      const z = (rnd() - 0.5) * length;
+      water.floor(rnd() < 0.5 ? MARK.puddleA : MARK.puddleB, x, z, across, across * (0.5 + rnd() * 0.6), rnd() * 6.28, 0.043);
+      if (across > 0.6) bigPools.push({ x, z, across });
     }
     const drifts = Math.round(length / 9);
     for (let i = 0; i < drifts; i++) {
@@ -2746,6 +2885,55 @@ export class Ch1Props extends PropSet {
     const waterMesh = water.mesh(waterMaterial(factory));
     waterMesh.renderOrder = 2;
     leg.add(markMesh, waterMesh);
+
+    // drops from the branches fall into the larger puddles: a ring spreads and is gone, now and then
+    const rings = { positions: [], uvs: [], phases: [] };
+    // and the mist lies thicker over standing water
+    const fogBank = { positions: [], uvs: [] };
+    bigPools.forEach((pool) => {
+      const drops = pool.across > 1.5 ? 3 : 1;
+      for (let i = 0; i < drops; i++) {
+        const cx = pool.x + (rnd() - 0.5) * pool.across * 0.5;
+        const cz = pool.z + (rnd() - 0.5) * pool.across * 0.3;
+        const r = 0.16 + rnd() * 0.14;
+        const phase = rnd();
+        const rate = 0.12 + rnd() * 0.2;
+        [[-1, 1, 0, 0], [1, 1, 1, 0], [1, -1, 1, 1], [-1, 1, 0, 0], [1, -1, 1, 1], [-1, -1, 0, 1]].forEach(([sx, sz, u, v]) => {
+          rings.positions.push(cx + sx * r, 0.05, cz + sz * r);
+          rings.uvs.push(u, v);
+          rings.phases.push(phase, rate);
+        });
+      }
+      if (pool.across > 1.1) {
+        const half = pool.across * 1.1;
+        const turn = rnd() * 6.28;
+        const y = 0.22 + rnd() * 0.25;
+        const corner = (sx, sz) => [pool.x + (sx * Math.cos(turn) + sz * Math.sin(turn)) * half, y, pool.z + (-sx * Math.sin(turn) + sz * Math.cos(turn)) * half];
+        [[-1, 1, 0, 0], [1, 1, 1, 0], [1, -1, 1, 1], [-1, 1, 0, 0], [1, -1, 1, 1], [-1, -1, 0, 1]].forEach(([sx, sz, u, v]) => {
+          fogBank.positions.push(...corner(sx, sz));
+          fogBank.uvs.push(u, v);
+        });
+      }
+    });
+    if (rings.positions.length) {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(rings.positions, 3));
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(rings.uvs, 2));
+      geometry.setAttribute('aDrop', new THREE.Float32BufferAttribute(rings.phases, 2));
+      const drops = new THREE.Mesh(geometry, rippleMaterial(factory));
+      drops.userData.dynamic = true;
+      drops.renderOrder = 8;
+      leg.add(drops);
+    }
+    if (fogBank.positions.length) {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(fogBank.positions, 3));
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(fogBank.uvs, 2));
+      const bank = new THREE.Mesh(geometry, poolMistMaterial(factory));
+      bank.userData.dynamic = true;
+      bank.renderOrder = 11;
+      leg.add(bank);
+    }
 
     // litter along the shoulders: thick at the edge of the tarmac, thinning both ways
     const leafMaterial = wetMaterial(factory, 'leaf', () => ({
@@ -3252,5 +3440,76 @@ export class Ch1Props extends PropSet {
     const group = new THREE.Group();
     group.add(car);
     return group;
+  }
+
+  /** Crash barrier: the old shape, now one piece of rusty, mossy steel (chapter 1 road levels only). */
+  static guardrail(ctx) {
+    const built = Ch1Props.guardrailLegacy(ctx);
+    return forestOf(ctx.factory).roads.length === 0 ? built : weatheredSteel(ctx.factory, built);
+  }
+
+  static guardrailBroken(ctx) {
+    const built = Ch1Props.guardrailBrokenLegacy(ctx);
+    return forestOf(ctx.factory).roads.length === 0 ? built : weatheredSteel(ctx.factory, built);
+  }
+
+  /**
+   * A box lorry left across the road, along the longer side of `size`: cab, load box, six wheels,
+   * the same mud, rust and misted glass as the cars. One rear door hangs open.
+   */
+  static truck(ctx) {
+    const { factory, size, prop } = ctx;
+    const alongX = size.w > size.d;
+    const length = alongX ? size.w : size.d;
+    const width = Math.min(alongX ? size.d : size.w, 2.5);
+    const half = width / 2;
+    const materials = carMaterials(factory, false);
+    const shell = new Shell();
+    const tone = carColor(factory, 1 + Math.floor(hash01(prop, 1) * 5));
+    shell.tint = [tone.r, tone.g, tone.b];
+    const front = -length / 2;
+    const cab = 1.9;
+    // load box, chassis, cab
+    shell.box('paint', 0, 1.85, front + cab + (length - cab) / 2 + 0.05, width, 2.3, length - cab - 0.1);
+    shell.box('dark', 0, 0.55, 0, width * 0.7, 0.3, length * 0.96);
+    shell.box('paint', 0, 1.35, front + cab / 2, width * 0.96, 1.7, cab);
+    shell.box('glass', 0, 1.75, front - 0.01, width * 0.84, 0.62, 0.03);
+    [-1, 1].forEach((side) => {
+      shell.box('glass', side * (half * 0.96 + 0.005), 1.72, front + cab * 0.55, 0.02, 0.55, cab * 0.6);
+      shell.box('dark', side * (half + 0.14), 1.7, front + 0.25, 0.2, 0.3, 0.08);
+      shell.box('chrome', side * (half - 0.35), 0.8, front - 0.02, 0.4, 0.16, 0.06);
+      [front + 0.95, length / 2 - 1.3, length / 2 - 2.35].forEach((z, index) => {
+        const flat = index === 0 && side < 0;
+        shell.wheel('dark', side * (half - 0.14), 0.47 * (flat ? 0.75 : 1), z, 0.47, 0.3, flat ? 0.5 : 1);
+      });
+    });
+    shell.box('dark', 0, 0.55, front - 0.06, width, 0.28, 0.14);
+    shell.box('plate', 0, 0.56, front - 0.14, 0.42, 0.11, 0.01);
+    // one of the rear doors was forced: it hangs open
+    const hinge = new THREE.Matrix4().makeTranslation(half, 0, length / 2).multiply(new THREE.Matrix4().makeRotationY(-1.9));
+    shell.box('paint', -half / 2, 1.85, 0.02, half, 2.2, 0.04, hinge);
+    shell.box('dark', -half * 0.5, 1.85, length / 2 - 0.05, half * 0.98, 2.2, 0.03);
+    const truck = new THREE.Group();
+    shell.meshes(materials).forEach((mesh) => truck.add(mesh));
+    truck.rotation.z = 0.03;
+    const marks = new QuadSheet().floor(MARK.oil, 0, 0, width + 2, length + 1.6, 0, 0.045);
+    [-1, 1].forEach((side) => [front + 0.95, length / 2 - 1.8].forEach((z) => {
+      const x = side * (half + 0.012);
+      marks.add(MARK.splash, [x, 0.4, z + 0.5 + side * 0.6], [x, 0.4, z + 0.5 - side * 0.6], [x, 1.5, z + 0.5 - side * 0.6], [x, 1.5, z + 0.5 + side * 0.6], [side, 0, 0]);
+    }));
+    marks.floor(MARK.leaves, 0, 0.5, 2.2, 2.6, hash01(prop, 2) * 6, 3.02);
+    const markMesh = marks.mesh(markMaterial(factory));
+    markMesh.renderOrder = 3;
+    truck.add(markMesh);
+    // what fell out of the back
+    for (let i = 0; i < 5; i++) {
+      const box = part(factory, 'crate', 0.4 + 0.3 * hash01(prop, 10 + i), 0.3 + 0.2 * hash01(prop, 20 + i), 0.4, (hash01(prop, 30 + i) - 0.5) * 2.4, 0.03, length / 2 + 0.6 + hash01(prop, 40 + i) * 1.8);
+      box.rotation.y = hash01(prop, 50 + i) * 3;
+      truck.add(box);
+    }
+    if (alongX) truck.rotation.y = Math.PI / 2;
+    const placed = new THREE.Group();
+    placed.add(truck);
+    return placed;
   }
 }
