@@ -8,17 +8,17 @@
   ],
   "extends": "mood/heavy",
 
-  "fog": { "color": "#121716", "density": 0.066 },
-  "hemisphere": { "sky": "#3d4a4c", "ground": "#050706", "intensity": 0.09 },
+  "fog": { "color": "#1a2422", "density": 0.058 },
+  "hemisphere": { "sky": "#4c6068", "ground": "#0b100e", "intensity": 0.34 },
   "moon": { "intensity": 0 },
   "flashlight": { "intensity": 2.9, "angle": 17, "penumbra": 0.3, "distance": 26, "decay": 1.4 },
   "post": {
     "exposure": 0.72,
-    "saturation": 0.68,
-    "vignette": { "strength": 0.92, "start": 0.2, "end": 0.95 },
-    "grain": 0.075,
+    "saturation": 0.56,
+    "vignette": { "strength": 0.95, "start": 0.18, "end": 0.95 },
+    "grain": 0.085,
     "chromaticAberration": 0.0025,
-    "bloom": { "enabled": true, "threshold": 0.85, "knee": 0.5, "strength": 0.8, "levels": 3 }
+    "bloom": { "enabled": true, "threshold": 0.8, "knee": 0.5, "strength": 0.9, "levels": 3 }
   },
   "accent": {
     "color": "#ff3b2f",
@@ -37,7 +37,7 @@
     "truck": "#30373a",
     "crate": "#4a4234",
     "metal": "#24282a",
-    "roughness": 0.92,
+    "roughness": 0.72,
     "groundRoughness": 0.85,
 
     "ch1RoadLine": "#8a8672",
@@ -75,9 +75,24 @@
     },
     "ch1Sign": { "color": "#ffb23a", "intensity": 1.6 },
 
+    "ch1RoadTint": "#b9bcbc",
+    "ch1GroundTint": "#a9aca6",
+    "ch1Leaf": "#2e2416",
+    "ch1Silhouette": "#070a09",
+    "ch1Mist": { "color": "#34423f", "intensity": 1 },
+    "ch1Torch": { "color": "#cfd8d2", "intensity": 1 },
+    "ch1Lamp": { "color": "#ffd9a0", "intensity": 3.2 },
+    "ch1Hazard": { "color": "#ff9a2a", "intensity": 4 },
+    "ch1Headlamp": { "color": "#ffe2b0", "intensity": 0.95 },
+    "ch1TailGlow": { "color": "#ff3b2f", "intensity": 1 },
+    "ch1Smoke": { "color": "#4a4f4e", "intensity": 1 },
+    "ch1CarColors": ["#4a5356", "#5a4f48", "#3c4440", "#57595a", "#44464d", "#5c5348"],
+    "ch1EscapeCar": "#7a8386",
+    "ch1Cone": "#7a4326",
+    "ch1Brass": "#6d5a2c",
+    "ch1Dome": { "color": "#ffd6a0", "intensity": 2.2 },
+
     "surfaces": {
-      "ground": { "texture": "stone", "metres": [5, 5], "roughness": 0.9 },
-      "road": { "texture": "asphalt", "metres": [6, 2.2], "roughness": 0.8 },
       "ch1Barrier": { "texture": "concrete", "metres": [2, 1] },
       "ch1Cabin": { "texture": "stucco", "metres": [2.5, 2.5] }
     }
