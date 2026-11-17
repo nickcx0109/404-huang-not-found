@@ -30,6 +30,7 @@ const CONFIG = Object.freeze({
   fov: 70,
   near: 0.1,
   maxFrameTime: 0.05, // s; a long hitch must not teleport the player
+  maxStatsFrameTime: 0.5, // s; longer gaps (first frame, background tab) are left out of fps stats
   infoInterval: 0.25, // s between info text refreshes
 });
 
@@ -272,9 +273,9 @@ export class App {
 
   _frame(now) {
     requestAnimationFrame(this._frame);
-    const elapsed = clampFrameTime((now - this._lastTime) / 1000, CONFIG.maxFrameTime);
+    const elapsed = (now - this._lastTime) / 1000;
     this._lastTime = now;
-    const dt = elapsed;
+    const dt = clampFrameTime(elapsed, CONFIG.maxFrameTime);
 
     if (!this.game || this.game.canMove) this.player.update(dt);
     if (this.flow) this.flow.update(dt);
@@ -287,9 +288,13 @@ export class App {
     this.built.update(now / 1000);
     this._render(now / 1000);
 
-    this._frameCount++;
-    this._frameTimeSum += elapsed;
-    this._infoTimer += elapsed;
+    // Stats keep real frame times (a 30 fps machine must read 30, not the dt cap), but a
+    // gap longer than maxStatsFrameTime is a pause, not a frame, and is skipped.
+    if (elapsed >= 0 && elapsed <= CONFIG.maxStatsFrameTime) {
+      this._frameCount++;
+      this._frameTimeSum += elapsed;
+      this._infoTimer += elapsed;
+    }
     if (this._infoTimer >= CONFIG.infoInterval) {
       this.stats.frameMs = (this._frameTimeSum / this._frameCount) * 1000;
       this.stats.fps = this.stats.frameMs > 0 ? 1000 / this.stats.frameMs : 0;
