@@ -11,6 +11,7 @@ import { PlayerController } from './PlayerController.js';
 import { PathFinder } from './PathFinder.js';
 import { Hud } from './Hud.js';
 import { EventBus } from './core/EventBus.js';
+import { clampFrameTime } from './core/frameTime.js';
 
 // App: wires the modules together.
 //   LevelData -> SceneBuilder (-> PropFactory) -> scene + collision
@@ -268,9 +269,9 @@ export class App {
 
   _frame(now) {
     requestAnimationFrame(this._frame);
-    const elapsed = (now - this._lastTime) / 1000;
+    const elapsed = clampFrameTime((now - this._lastTime) / 1000, CONFIG.maxFrameTime);
     this._lastTime = now;
-    const dt = Math.min(CONFIG.maxFrameTime, Math.max(0, elapsed));
+    const dt = elapsed;
 
     if (!this.game || this.game.canMove) this.player.update(dt);
     if (this.flow) this.flow.update(dt);

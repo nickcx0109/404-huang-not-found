@@ -10,7 +10,7 @@
 | 4 | 🟡 | `tools/serve.mjs:63` | 隱藏檔過濾只擋開頭是 `.` 的路徑；Windows 的 8.3 短檔名（如 `GIT~1`）可以繞過 | 用 `HOST=0.0.0.0` 開放給區網時，別人可能讀到 `.git/config`、`.env` | 解析成真實路徑後再檢查，或只開放 `web/`、`art/` 等白名單資料夾 |
 | 5 | ✅ 已修復 | `web/js/PostFX.js`、`core/bloomLevels.js` | 明確的 levels: 0 關閉 bloom，不建立 targets 或執行 bloom pass；缺省為 3，非零層數限制為 1～4 | 純函式測試涵蓋 0、缺省、邊界與無效值 | `fix(postfx): treat bloom.levels 0 as a valid value` |
 | 6 | 🟡 | `tools/art/shots.mjs:150` | `waitForFunction` 逾時時直接丟錯，跳出整個迴圈 | 某一張卡住，後面的截圖全部不拍 | 每張各自 try/catch，算進 `failures`；`--gpu` 的 d3d11 參數只適用於 Windows |
-| 7 | ⚪ | `web/js/App.js:207` | fps 統計用的 `elapsed` 沒有限制範圍 | 第一幀或切回分頁時，fps 數字會跳 | 和 dt 一樣限制範圍 |
+| 7 | ✅ 已修復 | `web/js/App.js`、`core/frameTime.js` | fps 統計與 dt 共用限制在 0～maxFrameTime 的 elapsed | 第一幀、分頁恢復與時鐘倒退不再累加越界時間 | `fix(app): clamp elapsed time for fps statistics` |
 | 8 | ⚪ 效能 | `web/js/App.js:235` `_countLights` | 每一幀都走訪整個場景數燈，就算沒開 `?perf` | 白白花掉每幀的時間 | 建好場景後數一次，或只在 perf／截圖模式才數 |
 | 9 | ⚪ 效能 | `web/js/StaticBatcher.js:33` | 同材質的東西整關合併成一個 mesh，邊界球涵蓋整個關卡 | 相機和手電筒陰影都沒辦法剔除，看不到的東西也照畫。**第一章 300 m 的山路會受影響** | 改成按區塊（例如 20 m 一格）合併 |
 | 10 | ⚪ | `web/js/Flashlight.js:34` | 改了 `shadow.camera.near` 卻沒呼叫 `updateProjectionMatrix` | 某些角度下，0.5 m 以內的陰影會被切掉 | 改完 near 之後呼叫 `updateProjectionMatrix()` |
