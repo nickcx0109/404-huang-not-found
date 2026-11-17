@@ -135,7 +135,11 @@ test('GameSession keeps playing through empty spawn gaps, clears only the exhaus
   ];
   const factory = new EnemyFactory(ctx).register('walker', Walker);
   const director = new TimedWaveDirector(data);
-  const session = new GameSession(ctx, { factory, director, economy: new Economy() });
+  let separations = 0;
+  const session = new GameSession(ctx, { factory, director, economy: new Economy(), separation: { apply: actual => {
+    assert.equal(actual, ctx);
+    separations++;
+  } } });
   const started = [];
   ctx.events.on(EVENTS.WAVE_STARTED, detail => started.push(detail));
   const kill = () => ctx.events.emit(EVENTS.DAMAGE_REQUESTED, new DamageInfo({ amount: 1000, sourceId: player.id, targetId: ctx.enemies[0].id }));
@@ -168,5 +172,6 @@ test('GameSession keeps playing through empty spawn gaps, clears only the exhaus
   assert.equal(session.state, 'wave-break');
   assert.ok(Math.abs(session.breakEndsAt - ctx.time - 0.3) < 1e-9);
   assert.deepEqual(started, [{ wave: 1, count: 2 }, { wave: 2, count: 1 }]);
+  assert.equal(separations, 6);
   session.dispose();
 });

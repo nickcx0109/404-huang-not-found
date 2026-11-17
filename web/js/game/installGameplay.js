@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GameContext } from './GameContext.js';
 import { GameSession } from './GameSession.js';
 import { TimedWaveDirector } from './TimedWaveDirector.js';
+import { CrowdSeparation } from './CrowdSeparation.js';
 import { SURVIVAL_WAVES } from './waves/survival.js';
 import { EVENTS } from './events.js';
 import { PathFinder } from '../PathFinder.js';
@@ -44,7 +45,7 @@ export function installGameplay(app) {
     .register('exploder', Exploder);
   const ammo = new AmmoRefillItem();
   app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(SURVIVAL_WAVES), economy: new Economy(),
-    items: [ammo] });
+    items: [ammo], separation: new CrowdSeparation() });
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id);
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);

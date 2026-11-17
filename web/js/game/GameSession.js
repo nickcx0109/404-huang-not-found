@@ -9,13 +9,14 @@ import { EVENTS } from './events.js';
 
 export class GameSession {
   constructor(ctx, { factory, director, economy, items = [], breakSeconds = 8,
-    damagePipeline = new DamagePipeline([new HeadshotRule()]) }) {
+    damagePipeline = new DamagePipeline([new HeadshotRule()]), separation = null }) {
     if (ctx.session) throw new Error('Context already has an authority');
     if (!Number.isFinite(breakSeconds) || breakSeconds < 0) throw new RangeError('Invalid break duration');
     this.context = ctx;
     ctx.session = this;
     this.factory = factory;
     this.director = director;
+    this.separation = separation;
     this.economy = economy;
     this.items = new Map(items.map(item => [item.id, item]));
     this.damagePipeline = damagePipeline;
@@ -119,6 +120,7 @@ export class GameSession {
 
   updatePlaying(dt) {
     this.simulate(dt);
+    this.separation?.apply(this.context);
     if (!this.anyPlayerAlive) this.changeState(this.states.gameOver);
     else {
       this.spawnDue(dt);
