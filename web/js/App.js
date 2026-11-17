@@ -12,6 +12,7 @@ import { PathFinder } from './PathFinder.js';
 import { Hud } from './Hud.js';
 import { EventBus } from './core/EventBus.js';
 import { clampFrameTime } from './core/frameTime.js';
+import { LightCountCache } from './core/LightCountCache.js';
 
 // App: wires the modules together.
 //   LevelData -> SceneBuilder (-> PropFactory) -> scene + collision
@@ -92,6 +93,7 @@ export class App {
 
     this._createRenderer();
     this.scene = new THREE.Scene();
+    this._lightCounts = new LightCountCache(this.scene);
     this.camera = new THREE.PerspectiveCamera(CONFIG.fov, 1, CONFIG.near, 100);
     this.scene.add(this.camera); // the flashlight is a child of the camera
 
@@ -309,11 +311,7 @@ export class App {
   }
 
   _countLights() {
-    let count = 0;
-    this.scene.traverseVisible((o) => {
-      if (o.isLight && !o.isAmbientLight && !o.isHemisphereLight) count++;
-    });
-    return count;
+    return this._lightCounts.count();
   }
 
   _updateInfo() {
