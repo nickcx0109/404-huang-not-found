@@ -25,15 +25,25 @@ export class Weapon {
     return this.reloadEndsAt !== null;
   }
 
+  /** Which loadout slot the weapon goes in: 'primary', 'sidearm' or 'melee'. Guns are primary unless they say otherwise. */
+  get slot() {
+    return 'primary';
+  }
+
+  /** False for weapons that never run out (melee): fire does not spend a round and reload does nothing. */
+  get usesAmmo() {
+    return true;
+  }
+
   get canRefill() {
-    return this.ammo < this.magazine || this.reserve < this.maxReserve;
+    return this.usesAmmo && (this.ammo < this.magazine || this.reserve < this.maxReserve);
   }
 
   fire(ctx) {
     this.update(0, ctx);
-    if (this.reloading || this.ammo === 0 || ctx.time + 1e-9 < this.nextFireAt) return false;
+    if (this.reloading || (this.usesAmmo && this.ammo === 0) || ctx.time + 1e-9 < this.nextFireAt) return false;
     const shot = this.createShot(ctx);
-    this.ammo--;
+    if (this.usesAmmo) this.ammo--;
     this.nextFireAt = ctx.time + this.cooldownSeconds;
     const hit = this.fireMode.fire(shot, ctx, this.ownerId);
     this.onFired(ctx, hit);
@@ -49,7 +59,7 @@ export class Weapon {
 
   reload(ctx) {
     this.update(0, ctx);
-    if (this.reloading || this.ammo === this.magazine || this.reserve === 0) return false;
+    if (!this.usesAmmo || this.reloading || this.ammo === this.magazine || this.reserve === 0) return false;
     this.reloadEndsAt = ctx.time + this.reloadSeconds;
     return true;
   }
@@ -66,6 +76,12 @@ export class Weapon {
   refill() {
     this.ammo = this.magazine;
     this.reserve = this.maxReserve;
+    this.reloadEndsAt = null;
+  }
+
+  /** Called when the weapon leaves a player's hands (dropped on the ground): an unfinished reload is lost. */
+  drop() {
+    this.ownerId = null;
     this.reloadEndsAt = null;
   }
 }
