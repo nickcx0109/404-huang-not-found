@@ -13,9 +13,14 @@ import { Tank } from '../enemies/Tank.js';
 import { Exploder } from '../enemies/Exploder.js';
 import { CombatPlayer } from '../player/CombatPlayer.js';
 import { PlayerCombat } from '../player/PlayerCombat.js';
-import { Pistol } from '../weapons/Pistol.js';
+import { StarterPistol } from '../weapons/StarterPistol.js';
+import { Bat } from '../weapons/Bat.js';
 import { Rifle } from '../weapons/Rifle.js';
 import { Shotgun } from '../weapons/Shotgun.js';
+import { LoadoutHolder } from '../weapons/LoadoutHolder.js';
+import { WeaponCatalog } from '../pickups/WeaponCatalog.js';
+import { PickupField } from '../pickups/PickupField.js';
+import { WeaponPickupViews } from '../pickups/WeaponPickupViews.js';
 import { Wallet } from '../economy/Wallet.js';
 import { Economy } from '../economy/Economy.js';
 import { AmmoRefillItem } from '../economy/AmmoRefillItem.js';
@@ -24,12 +29,17 @@ import { SurvivalHud } from '../ui/hud/SurvivalHud.js';
 export function installGameplay(app) {
   const ctx = new GameContext({ scene: app.scene, collision: app.built.collision,
     pathFinder: new PathFinder(app.built.collision, { clearance: 0.002 }), events: app.events, level: app.level });
-  const player = new CombatPlayer('player-local', app.player, ctx.events);
+  const player = new CombatPlayer('player-local', app.player, ctx.events, new LoadoutHolder('player-local', ctx.events));
   player.wallet = new Wallet(player.id, ctx.events);
-  player.weapons.add(new Pistol());
-  player.weapons.add(new Rifle());
-  player.weapons.add(new Shotgun());
+  // Start with the pistol in hand and the bat on the back; guns are found on the ground.
+  player.weapons.add(new StarterPistol());
+  player.weapons.add(new Bat());
   ctx.players.push(player);
+  const catalog = new WeaponCatalog()
+    .register('rifle', { create: () => new Rifle(), name: 'RIFLE', look: { length: 0.95, height: 0.14, width: 0.12 } })
+    .register('shotgun', { create: () => new Shotgun(), name: 'SHOTGUN', look: { length: 0.85, height: 0.12, width: 0.14 } });
+  const pickups = PickupField.fromLevel(app.level, catalog);
+  const pickupViews = new WeaponPickupViews(ctx.scene, pickups, ctx.events);
   const factory = new EnemyFactory(ctx, type => {
     const geometry = new THREE.BoxGeometry(ctx.pathFinder.radius * 2, ctx.pathFinder.height, ctx.pathFinder.radius * 2);
     const material = new THREE.MeshStandardMaterial({ color: app.style.greybox.dummy,
@@ -45,10 +55,13 @@ export function installGameplay(app) {
     .register('exploder', Exploder);
   const ammo = new AmmoRefillItem();
   app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(SURVIVAL_WAVES), economy: new Economy(),
-    items: [ammo], separation: new CrowdSeparation() });
+    items: [ammo], separation: new CrowdSeparation(), pickups });
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id);
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);
+  const unsubscribePickup = ctx.events.on(EVENTS.WEAPON_PICKED_UP, ({ ownerId, weaponId }) => {
+    if (ownerId === player.id) ctx.events.emit(EVENTS.ANNOUNCED, { text: catalog.nameOf(weaponId) });
+  });
   const unsubscribe = ctx.events.on(EVENTS.GAME_OVER, () => {
     app.player.enabled = false;
     app.hud.setStartVisible(false);
@@ -57,6 +70,8 @@ export function installGameplay(app) {
   });
   const dispose = () => {
     unsubscribe();
+    unsubscribePickup();
+    pickupViews.dispose();
     app.combat.dispose();
     app.game.dispose();
     app.hud.dispose();
