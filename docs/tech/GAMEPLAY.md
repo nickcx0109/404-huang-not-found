@@ -191,7 +191,7 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 
 - `waves(data)`：回傳放大後的波次資料副本。每種數量和 overflow 都乘 `count`，同時活著的上限也乘（但不超過 `maxAliveCap`，預設 40），生怪間隔除以 `count`（最短 0.05 秒），休息時間不變。
 - `tune(enemy)`：速度乘 `speed`，近戰和自爆傷害乘 `damage`。由 `EnemyFactory` 的 `prepare` 在每隻殭屍第一次建出來時呼叫一次；物件池重複使用同一隻，所以不會越用越快。
-- 現在的值在 `installGameplay`：`new Difficulty({ count: 10, speed: 3 })`，傷害不變。第一波 40 隻、同時最多 30 隻，走路殭屍 4.8 m/s（比玩家走路 4.5 m/s 快一點，衝刺 7 m/s 甩得掉）、跑者 10.2 m/s。
+- 現在的值在 `installGameplay`：`new Difficulty({ count: 10, speed: 2 })`，傷害不變。第一波 40 隻、同時最多 30 隻，走路殭屍 3.2 m/s（比玩家走路 4.5 m/s 慢）、跑者 6.8 m/s（比玩家衝刺 7 m/s 慢一點）。
 
 ## 新增武器
 
