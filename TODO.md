@@ -69,7 +69,7 @@
 
 - [ ] **B1** 綁了 collider 的道具旋轉或縮放後，外觀超出碰撞盒（KNOWN_ISSUES #3，和「AABB 不會跟著 rotY 轉」是同一件事）
 - [ ] **B2** `tools/serve.mjs` 開放區網時，8.3 短檔名可以繞過隱藏檔過濾（#4，做 G8 之前要修）
-- [ ] **B4** `shots.mjs` 某一張逾時就整個中斷（#6）
+- [~] **B4**（進行中：@nickcx0109，分支 fix/shots-timeout） `shots.mjs` 某一張逾時就整個中斷（#6）
 - [ ] **B7** `StaticBatcher` 整關合併、無法剔除，要改成按區塊合併（#9，S1 會遇到）
 - [ ] **B9** `mood.json` 的 `spawns.zombies[1]` 和 `tree_56` 重疊（出生點檢查變嚴格後才出現的警告）
 - [ ] **B10** 抗鋸齒：沒有 MSAA 也沒有 FXAA
