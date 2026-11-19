@@ -15,6 +15,7 @@ export const EVENTS = Object.freeze({
   EXPLODED: 'effect.exploded',
   ENEMY_SPAWNED: 'enemy.spawned',
   WEAPON_FIRED: 'weapon.fired',
+  WEAPON_RELOAD_STARTED: 'weapon.reload-started',
   WEAPON_RELOADED: 'weapon.reloaded',
   WEAPON_CHANGED: 'weapon.changed',
   WEAPON_PICKED_UP: 'weapon.picked-up',

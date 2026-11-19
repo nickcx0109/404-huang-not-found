@@ -79,3 +79,17 @@ test('Hitscan chooses the nearest live hit volume and cannot shoot through a col
   assert.equal(hits.length, 1);
   assert.equal(collision.raycast(ctx.aim.origin, ctx.aim.direction, 1), Infinity);
 });
+
+test('Weapon announces a reload only when one really starts', () => {
+  const ctx = { events: new EventBus(), time: 0 };
+  const started = [];
+  ctx.events.on(EVENTS.WEAPON_RELOAD_STARTED, detail => started.push(detail));
+  const weapon = new Pistol({ fire: () => null });
+  weapon.ownerId = 'p1';
+  weapon.reload(ctx);
+  assert.equal(started.length, 0, 'a full magazine does not reload');
+  weapon.fire(ctx);
+  weapon.reload(ctx);
+  weapon.reload(ctx);
+  assert.deepEqual(started, [{ ownerId: 'p1', weaponId: 'pistol', seconds: weapon.reloadSeconds }]);
+});

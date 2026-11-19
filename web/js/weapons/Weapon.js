@@ -61,6 +61,7 @@ export class Weapon {
     this.update(0, ctx);
     if (!this.usesAmmo || this.reloading || this.ammo === this.magazine || this.reserve === 0) return false;
     this.reloadEndsAt = ctx.time + this.reloadSeconds;
+    ctx.events.emit(EVENTS.WEAPON_RELOAD_STARTED, { ownerId: this.ownerId, weaponId: this.id, seconds: this.reloadSeconds });
     return true;
   }
 
