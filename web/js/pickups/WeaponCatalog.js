@@ -49,9 +49,14 @@ export class WeaponCatalog {
     return false;
   }
 
+  /** The ids that draw from `pool`, in the order they were registered. */
+  idsIn(pool) {
+    return [...this.entries.values()].filter(entry => entry.pools.includes(pool)).map(entry => entry.id);
+  }
+
   /** One id from `pool` picked with `rng` (a function returning 0 <= x < 1), each equally likely. */
   randomId(rng, pool = 'weapon') {
-    const ids = [...this.entries.values()].filter(entry => entry.pools.includes(pool)).map(entry => entry.id);
+    const ids = this.idsIn(pool);
     if (ids.length === 0) throw new RangeError('No weapons registered in pool ' + pool);
     const roll = rng();
     if (!(roll >= 0 && roll < 1)) throw new RangeError('rng must return a number in [0, 1)');

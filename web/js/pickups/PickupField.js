@@ -23,12 +23,14 @@ export class PickupField {
    * Builds one pickup per marker whose type is a pool of the catalog (`weapon`, `healing`, `throwable`).
    * Unknown items are an error, not a silent skip.
    * @param {() => number} rng  draws the gun for markers without an item (the session's rng, so a host decides)
+   * @param {(pool: string) => string} [pick]  chooses the item for a marker without one; by default each
+   *   spot draws on its own, so the same gun may lie twice. Pass an ItemDeck's next to deal every item once first.
    */
-  static fromLevel(level, catalog, rng = Math.random) {
+  static fromLevel(level, catalog, rng = Math.random, pick = pool => catalog.randomId(rng, pool)) {
     const pickups = [];
     for (const marker of level.markers ?? []) {
       if (!catalog.hasPool(marker.type)) continue;
-      const item = marker.item ?? catalog.randomId(rng, marker.type);
+      const item = marker.item ?? pick(marker.type);
       if (!catalog.has(item)) throw new RangeError('Marker ' + marker.id + ': unknown weapon item "' + item + '"');
       pickups.push(new WeaponPickup(marker.id, { x: marker.x, y: 0, z: marker.z }, catalog.create(item), marker.r));
     }
