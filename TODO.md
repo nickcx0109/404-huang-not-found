@@ -19,10 +19,6 @@
 
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker` 這兩個範例。
 
-- [~] **G26 拿掉商店和金錢**（進行中：@nickcx0109，分支 refactor/remove-shop）
-  - 決定：不做商店。槍、投擲物、治療物都從地上撿，子彈從彈藥箱補（G11、G13、G14 已完成）。
-  - 內容：拿掉 `web/js/economy/`（`Wallet`、`Economy`、`ShopItem`、`AmmoRefillItem`）、`GameSession` 的 `economy` 和 `PURCHASE_REQUESTED`／`ITEM_PURCHASED` 事件、殺敵給錢、HUD 的金額和「E AT SHOP」提示、關卡裡的 `shop` 標記；`shop_terminal` 模型留著當場景裝飾（不然沒開 `play=1` 的畫面會變）。GAMEPLAY.md、ARCHITECTURE.md 裡講商店的段落一起改。
-  - 完成：`npm test` 通過，沒有留下引用 economy 的程式；`shots.mjs --level ch2` 的截圖和改之前一樣。
 - [ ] **G5 開始、結束、重開畫面**
   - 起點：`web/js/game/states/`、`GameSession.js`，`test/GameSession.test.js`。
   - 內容：Lobby 顯示開始畫面；GameOver 顯示結算（波次、擊殺）並可以不重新整理就重開（先完整 dispose 再建新的 Session）；新增 Victory 狀態給 G6 用。
@@ -117,3 +113,4 @@
 - G18 G19 G13 武士刀、鏈鋸（每個場景 2 個近戰點）、彈藥箱（每個場景 3 個）；投擲物會傷到自己和隊友（分支 feat/more-guns）
 - G24 武士刀刀光：揮刀時畫面有一道弧形刀光，打到更亮更粗；`SlashStyles` 註冊表讓之後的近戰也能用（分支 feat/katana-slash）
 - G25 其他武器的第一人稱模型：`play=1` 時十一把武器都看得到，換武器會切換，開槍有後座和火光、換彈和揮砍有動作；沿用 G9 的 `WeaponRig`、`WeaponView`、`Clip`（分支 feat/weapon-models）
+- G26 拿掉商店和金錢（PR #待補）
