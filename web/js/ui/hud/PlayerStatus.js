@@ -1,5 +1,5 @@
 /** Scratch record for the pickup offer; its two values are copied out at once, so one is enough. */
-const OFFER = { name: '', swap: false };
+const OFFER = { name: '', swap: false, full: false };
 
 /**
  * The plain numbers the HUD draws for one player.
@@ -18,6 +18,8 @@ export class PlayerStatus {
     /** The weapon on the ground the player could take now: its screen name, and whether it would replace one. */
     this.pickup = null;
     this.pickupSwap = false;
+    /** True when the item on the ground is one the player already carries as many of as they can. */
+    this.pickupFull = false;
     /** A timed action involving this player (bandaging yourself, a teammate, or being bandaged): its text and 0..1, or null. */
     this.action = null;
     this.actionProgress = 0;
@@ -101,6 +103,7 @@ export class PlayerStatus {
     const offer = player && session.canMove ? session.pickups?.offerFor(player, OFFER) : null;
     this.pickup = offer ? offer.name : null;
     this.pickupSwap = offer ? offer.swap : false;
+    this.pickupFull = offer ? offer.full : false;
     this._readSlots(player);
     this._readAction(context, player);
     this.money = player?.wallet ? player.wallet.balance : 0;

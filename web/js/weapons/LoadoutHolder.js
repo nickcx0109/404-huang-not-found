@@ -50,6 +50,11 @@ export class LoadoutHolder extends WeaponHolder {
     return !this.weapons[index]?.refuses(weapon);
   }
 
+  /** Whether `weapon` cannot be taken because the same item is already carried as a full stack. */
+  isFull(weapon) {
+    return Boolean(this.inSlot(weapon?.slot)?.refuses(weapon));
+  }
+
   /** Whether taking `weapon` would replace what is in its slot (false when the slot is empty or the item stacks). */
   wouldSwap(weapon) {
     const previous = this.inSlot(weapon?.slot);

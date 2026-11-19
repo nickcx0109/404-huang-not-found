@@ -65,12 +65,31 @@ export class PickupField {
     return true;
   }
 
-  /** What taking the nearest pickup would do, for the HUD prompt: { name, swap } or null. */
-  offerFor(player, out = { name: '', swap: false }) {
-    const pickup = this.nearestFor(player);
+  /**
+   * What taking the nearest pickup would do, for the HUD prompt: { name, swap, full } or null.
+   * When nothing can be taken but the player stands at an item they already carry a full stack of,
+   * the offer says so (`full`), so the prompt can tell why E does nothing.
+   */
+  offerFor(player, out = { name: '', swap: false, full: false }) {
+    const pickup = this.nearestFor(player) ?? this._nearestFull(player);
     if (!pickup) return null;
     out.name = this.catalog.nameOf(pickup.weapon.id);
-    out.swap = player.weapons.wouldSwap?.(pickup.weapon) ?? false;
+    out.full = player.weapons.isFull?.(pickup.weapon) ?? false;
+    out.swap = !out.full && (player.weapons.wouldSwap?.(pickup.weapon) ?? false);
     return out;
+  }
+
+  _nearestFull(player) {
+    let best = null;
+    let bestDistance = Infinity;
+    for (const pickup of this.pickups) {
+      if (!pickup.reachableBy(player) || !player.weapons.isFull?.(pickup.weapon)) continue;
+      const distance = pickup.distanceTo(player);
+      if (distance < bestDistance) {
+        best = pickup;
+        bestDistance = distance;
+      }
+    }
+    return best;
   }
 }
