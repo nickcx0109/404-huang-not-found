@@ -9,18 +9,7 @@
 | `explosion.flac` | `synthetic_explosion_1.flac` | qubodup | CC0 | https://opengameart.org/content/synthesized-explosion |
 | `chainsaw_idle.wav` | 「Chainsaw, Using」104.5～107 秒 | Joseph Sardin | CC0 | https://bigsoundbank.com/chainsaw-using-s0983.html |
 | `chainsaw_cut.wav` | 同一個檔案 67.25～68.45 秒 | Joseph Sardin | CC0 | 同上 |
-| `gun/pistol_1~3.ogg` | `sounds.zip` 裡的 `cz.wav`（CZ-52 手槍，2.80／4.03／5.52 秒起） | Tabasco（錄音）、Vincent Sevedge | 見下方 | https://opengameart.org/content/gunshot-sounds |
-| `gun/revolver_1~4.ogg` | 同一包的 `mosin.wav`（Mosin Nagant 步槍） | 同上 | 見下方 | 同上 |
-| `gun/rifle_1~4.ogg`、`gun/smg_1~4.ogg` | 同一包的 `sks.wav`（SKS），步槍剪 0.45 秒、衝鋒槍剪 0.25 秒 | 同上 | 見下方 | 同上 |
-| `gun/shotgun_1.ogg` | 同一包的 `shotty.wav` | 同上 | 見下方 | 同上 |
-| `gun/reload_pistol.ogg` | `gunreload1.wav` | SpringySpringo | CC0 | https://opengameart.org/content/gun-reload-sounds |
-| `gun/reload_rifle.ogg` | `assaultriflereload1.wav` | SpringySpringo | CC0 | 同上 |
-| `gun/shotgun_pump.ogg` | `shotguncock.wav` | SpringySpringo | CC0 | 同上 |
 | `zombie/z*.wav` | `zombie-<編號>.wav` | artisticdude | CC0 | https://opengameart.org/content/zombies-sound-pack |
 | `zombie/m*.wav` | `Monster-<編號>.wav` | Ogrebane | CC0 | https://opengameart.org/content/monster-sound-pack-volume-1 |
 
-**槍聲的授權**：opengameart 頁面寫 CC0（2026-11-19 確認），但壓縮檔裡的 `creativecommons.txt` 寫「Copyright (c) 2009 Vincent Sevedge，CC BY 3.0」。保險起見照 CC BY 3.0 處理：遊戲或報告裡要標示「Gunshot recordings by Tabasco / Vincent Sevedge (CC BY 3.0), opengameart.org」。
-
-槍聲處理：用 ffmpeg 從每次開槍的位置剪下、頭尾淡入淡出、轉單聲道 44.1 kHz、loudnorm 拉到差不多的音量，存成 ogg。換彈聲只轉單聲道和調音量。
-
-`manifest.json` 的 key 是音效名稱，value 是檔名（陣列就每次隨機挑一個）。沒列在裡面的音效（受傷、撿東西、波次開始等）用程式合成，見 `web/js/audio/SynthSounds.js`。
+`manifest.json` 的 key 是音效名稱，value 是檔名（陣列就每次隨機挑一個）。沒列在裡面的音效（槍聲、換彈、受傷、撿東西、波次開始等）用程式合成，見 `web/js/audio/SynthSounds.js`。
