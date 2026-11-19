@@ -38,6 +38,8 @@ export class ClipState extends WeaponState {
     super(view);
     this.clip = clip;
     this.time = 0;
+    /** Playback speed: 2 plays the clip in half its length (a reload that the weapon makes quicker). */
+    this.rate = 1;
   }
 
   enter() {
@@ -52,7 +54,7 @@ export class ClipState extends WeaponState {
 
   update(dt) {
     const before = this.time;
-    this.time += dt;
+    this.time += dt * this.rate;
     this.view.announce(this.clip, before, this.time);
     if (this.time >= this.clip.duration) this.view.machine.change(this.view.states.idle);
   }
@@ -73,7 +75,10 @@ export class WeaponView {
   static id = null;
   /** Where the weapon sits in the view when held ready: metres and radians, camera space. */
   static hold = { position: [0, 0, 0], rotation: [0, 0, 0] };
-  /** Clips by name. The base states use "equip", "fire" and "reload". */
+  /**
+   * Clips by name. The base states use "equip", "fire" and "reload" (a weapon that never fires
+   * or reloads leaves that one out), and showProgress() uses "use".
+   */
   static clips = {};
   /** Shortest time between two shots, seconds. */
   static fireInterval = 0.2;
@@ -91,6 +96,7 @@ export class WeaponView {
     this.machine = new StateMachine(this);
     this.machine.change(this.states.idle);
     this._sway = { x: 0, y: 0, bob: 0, phase: 0, sprint: 0 };
+    this._progress = null;
   }
 
   /** The states of this weapon, by name. Must include "idle". */
@@ -99,8 +105,8 @@ export class WeaponView {
     return {
       idle: new IdleState(this),
       equip: new ClipState(this, clips.equip),
-      fire: new FireState(this, clips.fire),
-      reload: new ClipState(this, clips.reload),
+      fire: clips.fire ? new FireState(this, clips.fire) : null,
+      reload: clips.reload ? new ClipState(this, clips.reload) : null,
     };
   }
 
@@ -115,18 +121,41 @@ export class WeaponView {
     return true;
   }
 
-  /** Plays one shot. Returns false when the weapon is busy (still cycling, reloading). */
-  fire() {
-    if (!this.canFire) return false;
+  /**
+   * Plays one shot. Returns false when the weapon is busy (still cycling, reloading).
+   * `force` plays it anyway: the game has already decided that the shot happened.
+   */
+  fire(force = false) {
+    if (!this.states.fire || (!force && !this.canFire)) return false;
     this._play(this.states.fire);
     return true;
   }
 
-  /** Plays the reload. Returns false when the weapon is busy. */
-  reload() {
-    if (!this.canReload) return false;
-    this._play(this.states.reload);
+  /**
+   * Plays the reload. Returns false when the weapon is busy or has no reload clip.
+   * @param {number} [seconds]  how long the game's reload takes; the clip is sped up or slowed to fit
+   * @param {boolean} [force]  play it even while busy (the game has already started the reload)
+   */
+  reload(seconds, force = false) {
+    const state = this.states.reload;
+    if (!state || (!force && !this.canReload)) return false;
+    state.rate = seconds > 0 ? state.clip.duration / seconds : 1;
+    this._play(state);
     return true;
+  }
+
+  /** The game says the reload is done: back to ready even if the clip has not quite ended. */
+  finishReload() {
+    if (this.states.reload && this.state === this.states.reload) this.machine.change(this.states.idle);
+  }
+
+  /**
+   * Shows a timed use (a bandage being applied) at `fraction` of the way through, 0..1, with the
+   * "use" clip; null ends it. Weapons without a "use" clip ignore it.
+   */
+  showProgress(fraction) {
+    this._progress = this.constructor.clips.use && fraction !== null && fraction !== undefined
+      ? Math.max(0, Math.min(1, fraction)) : null;
   }
 
   /**
@@ -139,6 +168,10 @@ export class WeaponView {
     this.machine.update(dt);
     const channels = {};
     this.state.sample(channels);
+    if (this._progress !== null) {
+      const use = this.constructor.clips.use;
+      use.sample(this._progress * use.duration, channels);
+    }
     this.addHandling(channels, dt, time, motion || WeaponView.STILL);
     this.model.applyPose(channels);
     return channels;
