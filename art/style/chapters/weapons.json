@@ -1,5 +1,5 @@
 {
-  "_about": "Not a level palette: the colours of the weapon models (\"_assets\") and the look of the first-person weapon view (\"viewmodel\", read by web/js/weapons/). Colours are sRGB hex, distances metres, angles degrees.",
+  "_about": "Not a level palette: the colours of the weapon models (\"_assets\") and the look of the first-person weapon view (\"viewmodel\", read by web/js/weapons/; the shape-built models in web/js/weapons/models/ take their colours from \"_assets\" too). Colours are sRGB hex, distances metres, angles degrees.",
   "_assets": {
     "colors": {
       "gun_steel": "#535a61",
@@ -9,7 +9,31 @@
       "gun_grip": "#453c31",
       "gun_bore": "#0c0d0e",
       "gun_brass": "#a5843c",
-      "gun_sight": "#c9c7b8"
+      "gun_sight": "#c9c7b8",
+      "gun_wood": "#5b3d26",
+      "gun_wood_dark": "#3a2617",
+      "gun_glass": "#9fc8e8",
+      "red_dot": "#ff3b2f",
+      "rubber": "#1b1b1c",
+      "bat_wood": "#9a7a52",
+      "bat_wood_dark": "#5e4630",
+      "bat_tape": "#26221f",
+      "blood": "#3d1210",
+      "katana_ito": "#201d22",
+      "katana_same": "#cfc8b6",
+      "katana_ridge": "#8f979f",
+      "katana_blade": "#c2cad2",
+      "katana_edge": "#bcd6f0",
+      "saw_orange": "#b5541d",
+      "saw_orange_dark": "#7c3a16",
+      "grenade_olive": "#4b5334",
+      "grenade_olive_dark": "#30351f",
+      "molotov_glass": "#5d8546",
+      "molotov_fuel": "#9a6a24",
+      "cloth": "#cdc5b0",
+      "cloth_dirty": "#8a7f68",
+      "flame_outer": "#ff8a2a",
+      "flame_core": "#ffd27a"
     }
   },
   "viewmodel": {
