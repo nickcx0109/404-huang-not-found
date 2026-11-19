@@ -19,7 +19,7 @@
 
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker` 這兩個範例。
 
-- [ ] **G6 第二章過關條件：守門開鎖**
+- [~] **G6 第二章過關條件：守門開鎖**（進行中：@nickcx0109，分支 feat/gate-objective）
   - 起點：`docs/story/chapter-2.md`、`web/levels/ch2.json`、`web/js/game/`。
   - 內容：開鎖倒數（故事文件還沒訂時間，先自己訂一個值放在關卡或波次資料裡，在 PR 說明寫出來；`docs/story/` 不要改），撐到倒數結束進 Victory；HUD 顯示剩餘時間。過關條件做成可以換的類別（例如 `Objective`），第一章、第三章之後也用得到。
   - 完成：`?level=ch2&play=1` 從開始玩得到勝利；有倒數和勝利的測試。
