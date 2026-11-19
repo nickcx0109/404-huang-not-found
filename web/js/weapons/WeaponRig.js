@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { Palette } from '../Palette.js';
-import { WeaponModel } from './WeaponModel.js';
 
 // WeaponRig: draws the weapon in the player's hands.
 //
@@ -14,39 +13,32 @@ import { WeaponModel } from './WeaponModel.js';
 // art/style/chapters/weapons.json, "viewmodel". The fill light takes the level's own
 // hemisphere colours, so the weapon sits in each chapter's mood.
 //
-// It listens on the App's event bus:
-//   'weapon:equip'  (id)   show that weapon
-//   'weapon:fire'          play one shot
-//   'weapon:reload'        play the reload
-// Gameplay code decides WHEN those happen (ammunition, fire rate, who shot whom); until it
-// exists, bindDemoInput() sends them straight from the mouse and keyboard.
+// Which weapon looks how comes from a ViewModelRegistry (views/standardViewModels.js). WHEN
+// something happens is the game's business: HeldWeaponDriver listens to the game's events and
+// calls equip(), fire(), reload(), finishReload() and showProgress() here. A weapon the
+// registry does not know is not drawn.
 const NEAR = 0.01;
 const FAR = 10;
 
 export class WeaponRig {
-  /** Weapon views by id, filled by WeaponRig.register(). */
-  static views = new Map();
-
-  /** @param {typeof WeaponView} ViewClass */
-  static register(ViewClass) {
-    if (!ViewClass.id) throw new Error('A weapon view needs a static id');
-    WeaponRig.views.set(ViewClass.id, ViewClass);
-  }
-
   /**
    * @param {object} config  the "viewmodel" block of weapons.json
    * @param {object} levelStyle  resolved palette style of the level
-   * @param {string} modelsUrl
-   * @param {EventBus} events
+   * @param {EventBus} events  receives and carries 'weapon:anim'
+   * @param {ViewModelRegistry} registry  weapon id -> view class and model factory
+   * @param {object} modelContext  handed to every model factory (modelsUrl, surface, colors)
    */
-  constructor(config, levelStyle, modelsUrl, events) {
+  constructor(config, levelStyle, events, registry, modelContext = {}) {
     this.config = config;
-    this.modelsUrl = modelsUrl;
     this.events = events;
+    this.registry = registry;
+    this.modelContext = modelContext;
     this.view = null;
     this.model = null;
     this._loading = null;
     this._models = new Map();
+    this._views = new Map();
+    this._muzzle = null;
     this._flashTime = Infinity;
     this._lastYaw = null;
     this._lastPitch = 0;
@@ -72,69 +64,97 @@ export class WeaponRig {
     this.flash = WeaponRig._createFlash(config.muzzleFlash);
 
     this._unsubscribe = [
-      events.on('weapon:equip', (id) => this.equip(id)),
-      events.on('weapon:fire', () => this.fire()),
-      events.on('weapon:reload', () => this.reload()),
       events.on('weapon:anim', (e) => {
-        if (e.name === 'shot') this._startFlash();
+        if (e.name === 'shot' && this.view && e.weapon === this.view.id) this._startFlash();
       }),
     ];
   }
 
-  /** Reads weapons.json and returns a rig with nothing in hand yet. */
-  static async create({ styleUrl, modelsUrl, levelStyle, events }) {
+  /**
+   * Reads weapons.json and returns a rig with nothing in hand yet. Model factories get the
+   * models folder, the "viewmodel.surface" and the "_assets.colors" of that file.
+   */
+  static async create({ styleUrl, modelsUrl, levelStyle, events, registry }) {
     const res = await fetch(styleUrl, { cache: 'no-store' });
     if (!res.ok) throw new Error('Cannot load weapon style ' + styleUrl + ' (HTTP ' + res.status + ')');
     const style = await res.json();
-    return new WeaponRig(style.viewmodel, levelStyle, modelsUrl, events);
+    return new WeaponRig(style.viewmodel, levelStyle, events, registry, {
+      modelsUrl,
+      surface: style.viewmodel.surface,
+      colors: (style._assets && style._assets.colors) || {},
+    });
   }
 
   /**
-   * Puts a weapon in the player's hands and plays its equip animation.
-   * @param {string} id  a registered weapon id
+   * Puts a weapon in the player's hands and plays its equip animation. An id the registry does
+   * not know, or null, leaves the hands empty.
+   * @param {string|null} id
    */
   async equip(id) {
-    const ViewClass = WeaponRig.views.get(id);
-    if (!ViewClass) {
-      throw new Error('Unknown weapon "' + id + '". Known: ' + Array.from(WeaponRig.views.keys()).join(', '));
-    }
+    const entry = id ? this.registry.get(id) : null;
     this._loading = id;
+    if (!entry) {
+      this._show(null, null);
+      return;
+    }
     if (!this._models.has(id)) {
-      this._models.set(id, await WeaponModel.load(this.modelsUrl, id, this.config.surface));
+      // the promise is cached at once, so asking twice while it loads builds one model
+      this._models.set(id, Promise.resolve(entry.createModel(this.modelContext)));
+    }
+    let model;
+    try {
+      model = await this._models.get(id);
+    } catch (err) {
+      this._models.delete(id);
+      console.warn('[weapons] ' + err.message);
+      return;
     }
     if (this._loading !== id) return; // another weapon was asked for meanwhile
 
-    if (this.model) this.holder.remove(this.model.root);
-    this.model = this._models.get(id);
-    this.view = new ViewClass(this.model, this.events);
-    this.holder.position.fromArray(ViewClass.hold.position);
-    this.holder.rotation.fromArray(ViewClass.hold.rotation);
-    this.holder.add(this.model.root);
-
-    const muzzle = this.model.marker('muzzle');
-    this.flash.position.copy(muzzle);
-    this.model.root.add(this.flash);
-    this._muzzle = muzzle;
+    if (!this._views.has(id)) this._views.set(id, new entry.View(model, this.events));
+    this._show(model, this._views.get(id));
     this.view.equip();
     this.view.update(0, 0);
   }
 
+  /** Plays one shot or swing; the game has already decided it happened. */
   fire() {
-    return this.view ? this.view.fire() : false;
+    return this.view ? this.view.fire(true) : false;
   }
 
-  reload() {
-    return this.view ? this.view.reload() : false;
+  /** @param {number} [seconds]  how long the game's reload takes */
+  reload(seconds) {
+    return this.view ? this.view.reload(seconds, true) : false;
   }
 
-  /** Until gameplay exists: left mouse button fires, R reloads, while `isActive()`. */
-  bindDemoInput(dom, isActive) {
-    dom.addEventListener('mousedown', (e) => {
-      if (e.button === 0 && isActive()) this.events.emit('weapon:fire');
-    });
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyR' && !e.repeat && isActive()) this.events.emit('weapon:reload');
-    });
+  finishReload() {
+    if (this.view) this.view.finishReload();
+  }
+
+  /** @param {number|null} fraction  how far a timed use (a bandage) has got, or null */
+  showProgress(fraction) {
+    if (this.view) this.view.showProgress(fraction);
+  }
+
+  _show(model, view) {
+    if (this.model) this.holder.remove(this.model.root);
+    if (this.flash.parent) this.flash.parent.remove(this.flash);
+    this._flashTime = Infinity;
+    this._showFlash(false, 0);
+    this.model = model;
+    this.view = view;
+    this._muzzle = null;
+    if (!model) return;
+    const hold = view.constructor.hold;
+    this.holder.position.fromArray(hold.position);
+    this.holder.rotation.fromArray(hold.rotation);
+    this.holder.add(model.root);
+    // only guns have a muzzle; blades and bottles get no flash
+    if (model.markers.has('muzzle')) {
+      this._muzzle = model.marker('muzzle');
+      this.flash.position.copy(this._muzzle);
+      model.root.add(this.flash);
+    }
   }
 
   /**
@@ -183,7 +203,7 @@ export class WeaponRig {
     this.view.freeze(clipName, time);
     const shot = clip.events.find((e) => e.name === 'shot');
     const since = shot ? time - shot.time : -1;
-    this._showFlash(since >= 0 && since < this.config.muzzleFlash.seconds, 0.6);
+    this._showFlash(this._muzzle !== null && since >= 0 && since < this.config.muzzleFlash.seconds, 0.6);
   }
 
   resize(aspect) {
@@ -208,6 +228,7 @@ export class WeaponRig {
   // ---- muzzle flash --------------------------------------------------------------------
 
   _startFlash() {
+    if (!this._muzzle) return;
     this._flashTime = 0;
     this._showFlash(true, Math.random());
   }
@@ -222,6 +243,7 @@ export class WeaponRig {
   }
 
   _showFlash(visible, variation) {
+    if (!this._muzzle) visible = false;
     this.flash.visible = visible;
     this.flashLight.intensity = visible ? this.config.muzzleFlash.light : 0;
     if (!visible) return;
