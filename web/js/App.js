@@ -222,7 +222,7 @@ export class App {
     this.hud.onStartClick(() => this.player.requestLock());
     canvas.addEventListener('click', () => this.player.requestLock());
     this.player.onLockChange = (locked) => {
-      this.hud.setStartVisible(!locked && this.game?.state !== 'game-over');
+      this.hud.setStartVisible(!locked && !this.game?.canRestart);
       if (locked && this.game) this.game.start();
     };
 

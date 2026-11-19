@@ -11,6 +11,9 @@ import { EventCard } from './EventCard.js';
 import { TeamWidget } from './TeamWidget.js';
 import { InventoryWidget } from './InventoryWidget.js';
 import { SlashWidget } from './SlashWidget.js';
+import { LobbyScreen } from './LobbyScreen.js';
+import { GameOverScreen } from './GameOverScreen.js';
+import { VictoryScreen } from './VictoryScreen.js';
 
 /**
  * The in-game HUD: a composite of HudWidget objects on one layer above the 3D view.
@@ -34,7 +37,6 @@ export class SurvivalHud extends Hud {
     this.layer = doc.createElement('div');
     this.layer.className = 'hud';
     this.assets = new HudAssets(doc).install(this.layer);
-    this.layer.setAttribute('aria-hidden', 'true');
     root.appendChild(this.layer);
     const instructions = this.start.querySelector('p');
     if (instructions) instructions.textContent = '滑鼠：視角／左鍵開火、使用　右鍵：治療隊友　WASD：移動　空白鍵：跳　R：換彈　E：撿起　1–7、滾輪：換武器';
@@ -54,7 +56,21 @@ export class SurvivalHud extends Hud {
       .add(new EventCard(doc))
       .add(new TeamWidget(doc))
       .add(new InventoryWidget(doc))
-      .add(new SlashWidget(doc));
+      .add(new SlashWidget(doc))
+      .add(new LobbyScreen(doc))
+      .add(new GameOverScreen(doc))
+      .add(new VictoryScreen(doc));
+  }
+
+  onStartClick(handler) {
+    if (this._startHandler) this.start.removeEventListener('click', this._startHandler);
+    this._startHandler = handler;
+    super.onStartClick(handler);
+    for (const widget of this.widgets) widget.onStartClick?.(handler);
+  }
+
+  setStartVisible(visible) {
+    super.setStartVisible(visible && !this.widgets.some(widget => widget.blocksStart));
   }
 
   add(widget) {
@@ -73,6 +89,7 @@ export class SurvivalHud extends Hud {
   }
 
   dispose() {
+    if (this._startHandler) this.start.removeEventListener('click', this._startHandler);
     for (const widget of this.widgets) widget.dispose();
     this.widgets.length = 0;
     this.assets.dispose();

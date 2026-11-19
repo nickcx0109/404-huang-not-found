@@ -21,6 +21,8 @@ function fakeNode() {
     remove() { node.removed = true; },
     setAttribute(name, value) { node.attributes[name] = value; },
     querySelector: () => null,
+    addEventListener() {},
+    removeEventListener() {},
   };
   return node;
 }
@@ -146,7 +148,52 @@ test('StatusLine describes every game state in one line', () => {
   assert.equal(StatusLine.describe({ ...base, state: 'lobby' }), 'CLICK TO START');
   assert.equal(StatusLine.describe({ ...base, state: 'playing' }), '4 LEFT');
   assert.equal(StatusLine.describe({ ...base, state: 'wave-break' }), 'NEXT WAVE IN 6');
-  assert.equal(StatusLine.describe({ ...base, state: 'game-over' }), 'REFRESH TO RETRY');
+  assert.equal(StatusLine.describe({ ...base, state: 'game-over', canRestart: true }), 'CLICK RESTART OR PRESS ENTER');
+  assert.equal(StatusLine.describe({ ...base, state: 'victory', canRestart: true }), 'CLICK RESTART OR PRESS ENTER');
+});
+
+test('registered screens hide the pause prompt, preserve pointer-lock start and emit restart commands', () => {
+  const { events, elements, session, hud } = setup();
+  const [lobby, gameOver, victory] = hud.widgets.slice(-3);
+  let locks = 0;
+  let starts = 0;
+  let restarts = 0;
+  const offStart = events.on(EVENTS.START_REQUESTED, () => starts++);
+  const offRestart = events.on(EVENTS.RESTART_REQUESTED, () => restarts++);
+  hud.onStartClick(() => locks++);
+  session.state = 'lobby';
+  session.kills = 0;
+  hud.updateGame(0, session);
+  hud.setStartVisible(true);
+  assert.equal(elements['#start'].hidden, true);
+  assert.equal(lobby.el.hidden, false);
+  assert.equal(gameOver.el.hidden, true);
+  lobby.button.onclick();
+  assert.equal(locks, 1);
+  assert.equal(starts, 0, 'the start button requests pointer lock, not START_REQUESTED');
+  session.state = 'playing';
+  hud.updateGame(0, session);
+  hud.setStartVisible(true);
+  assert.equal(elements['#start'].hidden, false, 'the original pause/resume prompt still works');
+  for (const [state, screen] of [['game-over', gameOver], ['victory', victory]]) {
+    session.state = state;
+    session.canRestart = true;
+    session.kills = 23;
+    hud.updateGame(0, session);
+    hud.setStartVisible(true);
+    assert.equal(elements['#start'].hidden, true);
+    assert.equal(lobby.el.hidden, true);
+    assert.equal(screen.el.hidden, false);
+    assert.equal(screen.summary.textContent, 'WAVE REACHED  2  /  KILLS  23');
+    screen.button.onclick();
+  }
+  assert.equal(restarts, 2);
+  offStart();
+  offRestart();
+  hud.dispose();
+  assert.equal(lobby.button.onclick, null);
+  assert.equal(gameOver.button.onclick, null);
+  assert.equal(victory.button.onclick, null);
 });
 
 test('CrosshairWidget kicks on a shot, marks hits and keeps a kill mark over a later hit', () => {

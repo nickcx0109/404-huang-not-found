@@ -6,13 +6,14 @@ test('PlayerStatus copies plain numbers out of the session', () => {
   const weapon = { ammo: 5, magazine: 12, reserve: 20, reloading: false };
   const player = { id: 'p1', position: { x: 3, y: 0, z: -4 }, controller: { yaw: 0.5 },
     damageable: { health: 75, maxHealth: 100 }, weapons: { current: weapon } };
-  const session = { state: 'wave-break', wave: 2, canMove: true, breakEndsAt: 13.2,
+  const session = { state: 'wave-break', wave: 2, kills: 17, canRestart: false, canMove: true, breakEndsAt: 13.2,
     context: { time: 10, players: [player],
       enemies: [{ id: 'z1', position: { x: 1, y: 0, z: 2 } }, { id: 'z2', position: { x: -5, y: 0, z: 0 } }] } };
   const status = new PlayerStatus();
   assert.equal(status.read(session, 'p1'), status);
   assert.deepEqual({ ...status }, { health: 75, maxHealth: 100, armed: true, ammo: 5, magazine: 12, reserve: 20,
     reloading: false, pickup: null, pickupSwap: false, pickupFull: false, pickupVerb: null, pickupNote: null, action: null, actionProgress: 0, slots: [], selected: -1, state: 'wave-break', wave: 2, enemies: 2, breakSeconds: 4, canMove: true,
+    canRestart: false, kills: 17,
     x: 3, z: -4, yaw: 0.5, threats: [{ id: 'z1', x: 1, z: 2 }, { id: 'z2', x: -5, z: 0 }], mates: [] });
 
   player.weapons.current = null;

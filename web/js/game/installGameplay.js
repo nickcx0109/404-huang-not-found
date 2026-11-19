@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { GameContext } from './GameContext.js';
 import { GameSession } from './GameSession.js';
+import { GameplayLifecycle } from './GameplayLifecycle.js';
+import { DamageInfo } from '../entities/DamageInfo.js';
 import { TimedWaveDirector } from './TimedWaveDirector.js';
 import { CrowdSeparation } from './CrowdSeparation.js';
 import { SURVIVAL_WAVES } from './waves/survival.js';
@@ -41,6 +43,27 @@ import { FirstPersonWeapon } from '../weapons/FirstPersonWeapon.js';
 import { installAudio } from '../audio/installAudio.js';
 
 export function installGameplay(app) {
+  const lifecycle = new GameplayLifecycle(app.events, () => createGameplayRun(app));
+  const onRestartKey = event => {
+    if (!event.repeat && event.code === 'Enter' && app.game.canRestart) {
+      event.preventDefault();
+      app.events.emit(EVENTS.RESTART_REQUESTED);
+    }
+  };
+  window.addEventListener('keydown', onRestartKey);
+  window.addEventListener('pagehide', () => {
+    window.removeEventListener('keydown', onRestartKey);
+    lifecycle.dispose();
+    app.player.dispose();
+  }, { once: true });
+  if (app.options.debug) installDebug(app, lifecycle);
+}
+
+export function createGameplayRun(app) {
+  if (document.pointerLockElement) document.exitPointerLock();
+  app.player._releaseKeys();
+  app.player.enabled = false;
+  app.player.spawnAt(app.level.spawns.players[Math.min(app.options.spawn, app.level.spawns.players.length - 1)]);
   const ctx = new GameContext({ scene: app.scene, collision: app.built.collision,
     pathFinder: new PathFinder(app.built.collision, { clearance: 0.002 }), events: app.events, level: app.level });
   const player = new CombatPlayer('player-local', app.player, ctx.events, new LoadoutHolder('player-local', ctx.events));
@@ -100,47 +123,81 @@ export function installGameplay(app) {
   app.audio = installAudio({ events: ctx.events, player: app.player, enemies: () => ctx.enemies, playerId: player.id });
   app.gameViews = [app.effectViews, app.crateViews, new MovementLock(app.player, app.game, player.id), app.audio];
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
+  app.hud.onStartClick(() => app.player.requestLock());
   app.hud.updateGame(0, app.game, true);
+  app.hud.setStartVisible(true);
+  let disposed = false;
   // The weapon in the player's hands, drawn over the scene once its models are ready.
   const held = FirstPersonWeapon.create(app, ctx, player).then(weapon => {
+    if (disposed) {
+      weapon?.dispose();
+      return null;
+    }
     app.overlay = weapon;
-    if (app.options.debug) window.__weaponView = weapon.debugHandle();
+    if (app.options.debug && weapon) window.__weaponView = weapon.debugHandle();
     return weapon;
   }).catch(err => {
     console.warn('[weapons] first-person weapon unavailable: ' + err.message);
     return null;
   });
-  const unsubscribe = ctx.events.on(EVENTS.GAME_OVER, () => {
+  app.gameplayReady = held;
+  const finish = () => {
     app.player.enabled = false;
     app.hud.setStartVisible(false);
     if (document.pointerLockElement) document.exitPointerLock();
     app.hud.updateGame(0, app.game, true);
-  });
-  const dispose = () => {
-    unsubscribe();
-    held.then(weapon => weapon?.dispose());
-    pickupViews.dispose();
-    app.effectViews.dispose();
-    app.crateViews.dispose();
-    app.audio.dispose();
-    app.combat.dispose();
-    app.game.dispose();
-    app.hud.dispose();
-    app.player.dispose();
   };
-  window.addEventListener('pagehide', dispose, { once: true });
-  if (app.options.debug) installDebug(app, ctx);
+  const subscriptions = [ctx.events.on(EVENTS.GAME_OVER, finish), ctx.events.on(EVENTS.VICTORY, finish)];
+  const session = app.game;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    for (const unsubscribe of subscriptions) unsubscribe();
+    app.overlay?.dispose();
+    app.overlay = null;
+    if (app.options.debug) delete window.__weaponView;
+    pickupViews.dispose();
+    for (const view of app.gameViews) view.dispose();
+    app.gameViews = [];
+    app.combat.dispose();
+    session.dispose();
+    for (const combatPlayer of ctx.players) combatPlayer.dispose();
+    ctx.players.length = 0;
+    app.hud.dispose();
+  };
+  return { session, dispose };
 }
 
-function installDebug(app, ctx) {
+function installDebug(app, lifecycle) {
+  const refresh = () => {
+    app.hud.updateGame(0, app.game);
+    app._render(0);
+  };
   window.__gameDebug = Object.freeze({
-    start: () => app.game.start(),
-    snapshot: () => ({ state: app.game.state, wave: app.game.wave, kills: app.game.kills,
-      time: ctx.time, health: ctx.players[0].damageable.health,
-      ammo: ctx.players[0].weapons.current.ammo,
-      enemies: ctx.enemies.map(enemy => ({ id: enemy.id, health: enemy.damageable.health,
-        x: enemy.position.x, z: enemy.position.z })) }),
+    ready: () => app.gameplayReady,
+    start: () => { app.game.start(); app.game.update(0); refresh(); },
+    restart: () => { lifecycle.restart(); refresh(); },
+    kill: () => {
+      const player = app.game.context.players[0];
+      player.damageable.takeDamage(new DamageInfo({ amount: player.damageable.maxHealth,
+        sourceId: 'debug', targetId: player.id }));
+      app.game.update(0);
+      refresh();
+    },
+    win: () => { const won = app.game.win(); refresh(); return won; },
+    snapshot: () => {
+      const ctx = app.game.context;
+      return { state: app.game.state, wave: app.game.wave, kills: app.game.kills,
+        time: ctx.time, health: ctx.players[0].damageable.health,
+        ammo: ctx.players[0].weapons.current.ammo,
+        inventory: ctx.players[0].weapons.weapons.map(weapon => weapon?.id ?? null),
+        sceneChildren: app.scene.children.length,
+        listeners: Array.from(ctx.events._listeners.values()).reduce((total, entries) => total + entries.size, 0),
+        enemies: ctx.enemies.map(enemy => ({ id: enemy.id, health: enemy.damageable.health,
+          x: enemy.position.x, z: enemy.position.z })) };
+    },
     aimAt: id => {
+      const ctx = app.game.context;
       const enemy = ctx.enemies.find(candidate => candidate.id === id);
       if (!enemy) return false;
       const dx = enemy.position.x - app.player.x;
@@ -153,9 +210,10 @@ function installDebug(app, ctx) {
     },
     fire: () => {
       app.combat.updateAim();
+      const ctx = app.game.context;
       ctx.events.emit(EVENTS.FIRE_REQUESTED, { ownerId: ctx.players[0].id });
     },
-    reload: () => ctx.events.emit(EVENTS.RELOAD_REQUESTED, { ownerId: ctx.players[0].id }),
+    reload: () => app.events.emit(EVENTS.RELOAD_REQUESTED, { ownerId: app.game.context.players[0].id }),
     advance: seconds => {
       if (!Number.isFinite(seconds) || seconds < 0 || seconds > 120) throw new RangeError('Debug advance is limited to 120 seconds');
       const steps = Math.ceil(seconds / 0.05);

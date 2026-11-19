@@ -36,6 +36,7 @@ export class WeaponRig {
     this.view = null;
     this.model = null;
     this._loading = null;
+    this._disposed = false;
     this._models = new Map();
     this._views = new Map();
     this._muzzle = null;
@@ -91,6 +92,7 @@ export class WeaponRig {
    * @param {string|null} id
    */
   async equip(id) {
+    if (this._disposed) return;
     const entry = id ? this.registry.get(id) : null;
     this._loading = id;
     if (!entry) {
@@ -222,7 +224,25 @@ export class WeaponRig {
   }
 
   dispose() {
+    if (this._disposed) return;
+    this._disposed = true;
+    this._loading = null;
     this._unsubscribe.forEach((off) => off());
+    this.flash.parent?.remove(this.flash);
+    this.flash.geometry.dispose();
+    this.flash.material.dispose();
+    for (const pending of this._models.values()) {
+      Promise.resolve(pending).then(model => model.root.traverse(node => {
+        node.geometry?.dispose();
+        const materials = Array.isArray(node.material) ? node.material : [node.material];
+        for (const material of materials) material?.dispose();
+      })).catch(() => {});
+    }
+    this._models.clear();
+    this._views.clear();
+    this.holder.clear();
+    this.view = null;
+    this.model = null;
   }
 
   // ---- muzzle flash --------------------------------------------------------------------
