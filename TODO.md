@@ -69,6 +69,8 @@
   - 內容：衝鋒槍傷害低、射速超快（按住連射）；左輪傷害高、射速慢；兩把都在地上撿，放主武器格。地上槍的位置照關卡 marker 固定，但每局放哪一把是隨機的（marker 不寫 `item` 就隨機，寫了就固定）。
 - [~] **G24 武士刀刀光**（進行中：@big0527，分支 feat/katana-slash，接在 feat/more-guns 後面）
   - 內容：`play=1` 揮武士刀時畫面出現一道弧形刀光，0.15～0.25 秒淡出，打到殭屍更亮。新類別訂閱 `WEAPON_FIRED`，用註冊表登記哪把武器用哪種刀光，不改 `Katana`、`MeleeWeapon`。
+- [~] **G25 其他武器的第一人稱模型**（進行中：@big0527，分支 feat/weapon-models，接在 feat/katana-slash 後面）
+  - 內容：`play=1` 時手上拿的武器看得到：手槍、左輪、步槍、衝鋒槍、霰彈槍、球棒、武士刀、電鋸、手榴彈、燃燒瓶、繃帶。換武器會切換，開槍有後座和槍口火光，換彈、近戰揮砍有動作。沿用 G9 分支 `feat/weapons-art` 的 `Clip`、`WeaponView`、`WeaponRig`，用 `register(weaponId, 模型工廠)` 選模型，聽 `WEAPON_FIRED`、`WEAPON_CHANGED`、`WEAPON_RELOADED`。
 - [~] **G10 音效**（進行中：@big0527，分支 feat/sound）
   - 起點：`reference/old-web-prototype/prototype-web/sfx/`、`core/audio.js`。
   - 內容：開槍、換彈、殭屍、受傷、波次開始的音效，用訂閱事件的方式播放，不寫進武器或敵人的邏輯裡。
