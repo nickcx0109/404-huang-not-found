@@ -10,6 +10,8 @@ export class GameContext {
     this.pools = new Map();
     this.players = [];
     this.enemies = [];
+    /** Things living in the world on their own (thrown grenades, fire); see effects/Effect.js. */
+    this.effects = [];
     this.aim = { origin: { x: 0, y: 0, z: 0 }, direction: { x: 0, y: 0, z: -1 } };
     this.session = null;
   }

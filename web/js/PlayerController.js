@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PLAYER_BODY } from './player/PlayerBody.js';
+import { JumpMotion } from './player/JumpMotion.js';
 
 // PlayerController: first-person walking. Pointer-lock mouse look + WASD,
 // eye height 1.7 m, AABB collision against the level's CollisionWorld.
@@ -18,6 +19,7 @@ const KEY_BINDINGS = Object.freeze({
   KeyA: 'left', ArrowLeft: 'left',
   KeyD: 'right', ArrowRight: 'right',
   ShiftLeft: 'sprint', ShiftRight: 'sprint',
+  Space: 'jump',
 });
 
 export class PlayerController {
@@ -41,10 +43,14 @@ export class PlayerController {
     this.velocityZ = 0;
     /** Keys only move the player while enabled (pointer locked). */
     this.enabled = false;
+    /** While true the keys stop moving and jumping the player (set from the game, e.g. while healing). */
+    this.rooted = false;
     this.onLockChange = null;
     this._movement = { x: 0, z: 0, hitX: false, hitZ: false };
+    /** Space jumps; the jump only lifts the eyes, walls still stop the player as if on the ground. */
+    this.jump = new JumpMotion();
 
-    this._keys = { forward: false, back: false, left: false, right: false, sprint: false };
+    this._keys = { forward: false, back: false, left: false, right: false, sprint: false, jump: false };
     this.camera.rotation.order = 'YXZ';
 
     this._onKeyDown = (e) => this._setKey(e, true);
@@ -80,6 +86,7 @@ export class PlayerController {
     this.pitch = 0;
     this.velocityX = 0;
     this.velocityZ = 0;
+    this.jump.reset();
     this._syncCamera();
   }
 
@@ -87,7 +94,7 @@ export class PlayerController {
   update(dt) {
     const o = this.options;
     const k = this._keys;
-    const active = this.enabled;
+    const active = this.enabled && !this.rooted;
 
     let forward = active ? (k.forward ? 1 : 0) - (k.back ? 1 : 0) : 0;
     let strafe = active ? (k.right ? 1 : 0) - (k.left ? 1 : 0) : 0;
@@ -119,6 +126,7 @@ export class PlayerController {
       if (moved.hitX) this.velocityX = 0;
       if (moved.hitZ) this.velocityZ = 0;
     }
+    this.jump.update(dt);
     this._syncCamera();
   }
 
@@ -144,6 +152,7 @@ export class PlayerController {
   _setKey(event, down) {
     const action = KEY_BINDINGS[event.code];
     if (!action) return;
+    if (action === 'jump' && down && !event.repeat && this.enabled && !this.rooted) this.jump.jump();
     this._keys[action] = down;
     if (this.enabled) event.preventDefault();
   }
@@ -162,8 +171,15 @@ export class PlayerController {
     this.pitch = Math.min(limit, Math.max(-limit, this.pitch - dy * o.sensitivity));
   }
 
+  /** Turns the view by a small amount (recoil); pitch stays within the usual limit. */
+  nudge(pitch, yaw) {
+    const limit = THREE.MathUtils.degToRad(this.options.maxPitch);
+    this.pitch = Math.min(limit, Math.max(-limit, this.pitch + pitch));
+    this.yaw += yaw;
+  }
+
   _syncCamera() {
-    this.camera.position.set(this.x, this.options.eyeHeight, this.z);
+    this.camera.position.set(this.x, this.options.eyeHeight + this.jump.height, this.z);
     this.camera.rotation.set(this.pitch, this.yaw, 0);
   }
 }

@@ -128,8 +128,11 @@ node tools/serve.mjs
 | `id` | 否 | 不能重複，不寫會自動叫 `m0`、`m1`… |
 | `r` | 否 | 範圍半徑，預設 1 |
 | `yaw` | 否 | 朝向（度），預設 0 |
+| `item` | 否 | 這個點給的東西，英數字、`-`、`_`。`type: "weapon"` 用它指定地上的槍：`rifle`、`shotgun`、`smg`、`revolver`；不寫就每局隨機 |
 
 程式用 `level.markersOfType('shop')` 取。
+
+地上的槍：`{ "id": "gun_left_post", "type": "weapon", "x": -6.8, "z": 6.4, "r": 1.2 }`，位置固定、每局隨機一把；要固定哪一把就加 `"item": "rifle"`。`r` 是撿得到的距離（從玩家身體邊緣算）。只有 `play=1` 會畫出來（地上的槍加亮色邊框），寫了沒註冊的 `item` 會在開始玩的時候報錯。
 
 ### 出口與擋路的障礙物（`exit` marker）
 

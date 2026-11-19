@@ -41,6 +41,10 @@ export class AmmoWidget extends HudWidget {
       this.flash('is-refilling', REFILL_SECONDS);
     }));
     this.listen(events, EVENTS.WEAPON_CHANGED, mine(() => this.attention.poke()));
+    this.listen(events, EVENTS.AMMO_REFILLED, mine(() => {
+      this.attention.poke();
+      this.flash('is-refilling', REFILL_SECONDS);
+    }));
   }
 
   sync(status) {
@@ -48,7 +52,7 @@ export class AmmoWidget extends HudWidget {
     if (!meter.set(status)) return;
     if (meter.resized) this._buildRounds(meter.icons);
     this.magazine.textContent = meter.armed ? String(meter.ammo) : '';
-    this.reserve.textContent = meter.armed ? String(meter.reserve) : '';
+    this.reserve.textContent = !meter.armed ? '' : meter.reserve === Infinity ? '∞' : String(meter.reserve);
     this._light(meter.litIcons);
     this._showNotice(meter.notice);
     this.el.classList.toggle('is-empty', meter.empty);

@@ -9,7 +9,7 @@ import { EVENTS } from './events.js';
 
 export class GameSession {
   constructor(ctx, { factory, director, economy, items = [], breakSeconds = 8,
-    damagePipeline = new DamagePipeline([new HeadshotRule()]), separation = null }) {
+    damagePipeline = new DamagePipeline([new HeadshotRule()]), separation = null, pickups = null }) {
     if (ctx.session) throw new Error('Context already has an authority');
     if (!Number.isFinite(breakSeconds) || breakSeconds < 0) throw new RangeError('Invalid break duration');
     this.context = ctx;
@@ -17,6 +17,8 @@ export class GameSession {
     this.factory = factory;
     this.director = director;
     this.separation = separation;
+    /** Weapons on the ground (a PickupField), or null when the level has none. */
+    this.pickups = pickups;
     this.economy = economy;
     this.items = new Map(items.map(item => [item.id, item]));
     this.damagePipeline = damagePipeline;
@@ -39,10 +41,19 @@ export class GameSession {
         const player = this.playerById(request.ownerId);
         if (this.canMove && player?.damageable.alive) player.weapons.current?.reload(ctx);
       }),
+      ctx.events.on(EVENTS.SECONDARY_REQUESTED, request => {
+        const player = this.playerById(request.ownerId);
+        if (this.canMove && player?.damageable.alive) player.weapons.current?.secondary(ctx);
+      }),
       ctx.events.on(EVENTS.SWITCH_REQUESTED, request => {
         const player = this.playerById(request.ownerId);
         if (this.canMove && player?.damageable.alive) player.weapons.switchTo(request.index);
       }),
+      ctx.events.on(EVENTS.CYCLE_REQUESTED, request => {
+        const player = this.playerById(request.ownerId);
+        if (this.canMove && player?.damageable.alive) player.weapons.cycle?.(request.step);
+      }),
+      ctx.events.on(EVENTS.PICKUP_REQUESTED, request => this.pickUp(request.ownerId)),
       ctx.events.on(EVENTS.PURCHASE_REQUESTED, request => this.buy(request.ownerId, request.itemId)),
       ctx.events.on(EVENTS.DAMAGE_REQUESTED, info => this.resolveDamage(info)),
       ctx.events.on(EVENTS.ENTITY_DIED, detail => this.recordDeath(detail)),
@@ -63,6 +74,11 @@ export class GameSession {
 
   start() {
     this.context.events.emit(EVENTS.START_REQUESTED);
+  }
+
+  /** True when this player may not walk: the item in their hand keeps them still. */
+  isRooted(playerId) {
+    return this.playerById(playerId)?.weapons.current?.holdsOwnerStill === true;
   }
 
   playerById(id) {
@@ -118,8 +134,19 @@ export class GameSession {
     }
   }
 
+  /** Moves every effect in the world one step and drops the ones that are over. */
+  updateEffects(dt) {
+    const effects = this.context.effects;
+    for (let index = 0; index < effects.length; index++) {
+      if (effects[index].update(dt, this.context)) continue;
+      effects.splice(index, 1);
+      index--;
+    }
+  }
+
   updatePlaying(dt) {
     this.simulate(dt);
+    this.updateEffects(dt);
     this.separation?.apply(this.context);
     if (!this.anyPlayerAlive) this.changeState(this.states.gameOver);
     else {
@@ -135,6 +162,7 @@ export class GameSession {
 
   updateBreak(dt) {
     for (const player of this.context.players) player.update(dt, this.context);
+    this.updateEffects(dt);
     if (this.context.time + 1e-9 >= this.breakEndsAt) this.changeState(this.states.playing);
   }
 
@@ -145,7 +173,9 @@ export class GameSession {
     const targetPlayer = this.playerById(info.targetId);
     const sourceEnemy = ctx.enemies.find(enemy => enemy.id === info.sourceId && enemy.damageable.alive);
     const targetEnemy = ctx.enemies.find(enemy => enemy.id === info.targetId && enemy.active);
+    // A player's grenade or fire may hurt players too (friendlyFire), even after the thrower died; bullets never do.
     const target = sourcePlayer?.damageable.alive && targetEnemy ? targetEnemy :
+      sourcePlayer && info.friendlyFire && targetPlayer ? targetPlayer :
       sourceEnemy && (targetPlayer || (targetEnemy === sourceEnemy && targetEnemy));
     if (!target) return 0;
     return target.damageable.takeDamage(this.damagePipeline.apply(info));
@@ -160,6 +190,13 @@ export class GameSession {
       this.kills++;
       this.economy.reward(player, entity.reward);
     }
+  }
+
+  /** Takes the nearest weapon on the ground, swapping it with the one in that slot. Allowed whenever players can move. */
+  pickUp(ownerId) {
+    const player = this.playerById(ownerId);
+    if (!this.pickups || !this.canMove || !player?.damageable.alive) return false;
+    return this.pickups.take(player, this.context);
   }
 
   buy(ownerId, itemId) {
@@ -183,6 +220,7 @@ export class GameSession {
     this.machine.change(null);
     this.factory.dispose();
     this.context.enemies.length = 0;
+    this.context.effects.length = 0;
     this.context.session = null;
   }
 }

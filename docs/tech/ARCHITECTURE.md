@@ -32,6 +32,7 @@
 | `weapons/`、`player/` | Weapon 模板、HitscanFire 策略、Pistol 範例、WeaponHolder、玩家戰鬥與瀏覽器輸入；PlayerBody 是共用尺寸來源 |
 | `enemies/`、`enemies/behaviour/` | Enemy 基底、Brain 策略、最小行為樹、Walker 範例、註冊 Factory 與 ObjectPool |
 | `economy/`、`ui/` | Wallet、Economy、ShopItem 與唯一補彈範例；`ui/hud/` 的 SurvivalHud 繼承既有 Hud（不替換錯誤面板），由一組 HudWidget 組成 |
+| `audio/` | 音效：`SoundBoard`、`SpatialMix`、`SoundRule` 和它的子類是純邏輯；`WebAudioOutput`、`Synth`、`Sound` 子類用 WebAudio，只在 `play=1` 由 `installAudio` 組起來 |
 
 原有檔名及類別名保留；同檔原本公開的輔助類別（例如 `Aabb`、`LevelError`、`AppOptions`、`BuiltLevel`）也用具名 export 匯出。
 

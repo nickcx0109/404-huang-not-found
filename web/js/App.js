@@ -183,6 +183,7 @@ export class App {
     this.postfx.resize();
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+    if (this.overlay) this.overlay.resize(width / height);
     if (this._still) this._render(this.options.time);
   }
 
@@ -280,12 +281,16 @@ export class App {
     if (!this.game || this.game.canMove) this.player.update(dt);
     if (this.flow) this.flow.update(dt);
     if (this.game && this.player.locked) {
-      this.combat.update();
+      this.combat.update(dt);
       this.game.update(dt);
       this.hud.updateGame(dt, this.game);
+      // Views that move every frame (thrown objects, fire, ammo boxes); set up by installGameplay.
+      for (const view of this.gameViews ?? []) view.update(dt);
     }
     this.atmosphere.update(dt, now / 1000);
     this.built.update(now / 1000);
+    // The weapon in the player's hands (only with ?play=1; set up by installGameplay).
+    if (this.overlay) this.overlay.update(dt, now / 1000);
     this._render(now / 1000);
 
     // Stats keep real frame times (a 30 fps machine must read 30, not the dt cap), but a
@@ -309,7 +314,7 @@ export class App {
   _render(time) {
     const info = this.renderer.info;
     info.reset();
-    this.postfx.render(this.scene, this.camera, time);
+    this.postfx.render(this.scene, this.camera, time, this.overlay);
     this.stats.calls = info.render.calls;
     this.stats.triangles = info.render.triangles;
     window.__stats = this.stats;

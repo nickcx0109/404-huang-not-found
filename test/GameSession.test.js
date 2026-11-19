@@ -102,3 +102,18 @@ test('WaveDirector defines an extension contract and empty spawn areas fail expl
   ctx.level.spawns.zombies.length = 0;
   assert.throws(() => new ExampleWaveDirector().start(1, ctx), /spawn areas/);
 });
+
+test('A player\'s grenade or fire can hurt players; a player\'s bullet cannot', () => {
+  const { ctx, player, session } = fixture();
+  const mate = new CombatPlayer('mate', { x: 1, z: 0 }, ctx.events);
+  ctx.players.push(mate);
+  session.start();
+  session.update(0.05);
+  assert.equal(session.resolveDamage(new DamageInfo({ amount: 10, sourceId: player.id, targetId: mate.id })), 0);
+  assert.equal(session.resolveDamage(new DamageInfo({ amount: 30, sourceId: player.id, targetId: mate.id,
+    kind: 'explosion', friendlyFire: true })), 30);
+  assert.equal(session.resolveDamage(new DamageInfo({ amount: 25, sourceId: player.id, targetId: player.id,
+    kind: 'fire', friendlyFire: true })), 25, 'your own fire burns you');
+  assert.equal(mate.damageable.health, 70);
+  assert.equal(player.damageable.health, 75);
+});
