@@ -76,6 +76,11 @@ export class GameSession {
     this.context.events.emit(EVENTS.START_REQUESTED);
   }
 
+  /** True when this player may not walk: the item in their hand keeps them still. */
+  isRooted(playerId) {
+    return this.playerById(playerId)?.weapons.current?.holdsOwnerStill === true;
+  }
+
   playerById(id) {
     return this.context.players.find(player => player.id === id);
   }
