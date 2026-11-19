@@ -15,6 +15,8 @@ export class WebAudioOutput {
     this.synth = null;
     this.library = new Map();
     this.loops = new Map();
+    this.disposed = false;
+    this.loads = new AbortController();
   }
 
   get ready() {
@@ -22,6 +24,7 @@ export class WebAudioOutput {
   }
 
   unlock() {
+    if (this.disposed) return;
     if (this.synth) {
       if (this.synth.context.state === 'suspended') this.synth.context.resume();
       return;
@@ -34,7 +37,9 @@ export class WebAudioOutput {
     master.connect(context.destination);
     this.synth = new Synth(context, master);
     SynthSounds.registerInto(this.library);
-    if (this.manifestUrl) this._loadFiles().catch(error => console.warn('[audio] sound files not loaded:', error));
+    if (this.manifestUrl) this._loadFiles().catch(error => {
+      if (!this.disposed) console.warn('[audio] sound files not loaded:', error);
+    });
   }
 
   play(cue, mix) {
@@ -52,26 +57,32 @@ export class WebAudioOutput {
   }
 
   async _loadFiles() {
-    const response = await fetch(this.manifestUrl);
+    const response = await fetch(this.manifestUrl, { signal: this.loads.signal });
     if (!response.ok) throw new Error('HTTP ' + response.status + ' for ' + this.manifestUrl);
     const manifest = await response.json();
+    if (this.disposed) return;
     const base = new URL('.', new URL(this.manifestUrl, location.href));
     await Promise.all(Object.entries(manifest).map(async ([cue, files]) => {
       const list = Array.isArray(files) ? files : [files];
       const buffers = (await Promise.all(list.map(file => this._decode(new URL(file, base))))).filter(Boolean);
-      if (buffers.length === 0) return;
+      if (this.disposed || buffers.length === 0) return;
       this.library.set(cue, new SampleSound(buffers));
       this._restartLoopsOf(cue);
     }));
   }
 
   async _decode(url) {
+    const context = this.synth?.context;
+    if (this.disposed || !context) return null;
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: this.loads.signal });
       if (!response.ok) return null;
-      return await this.synth.context.decodeAudioData(await response.arrayBuffer());
+      const bytes = await response.arrayBuffer();
+      if (this.disposed) return null;
+      const buffer = await context.decodeAudioData(bytes);
+      return this.disposed ? null : buffer;
     } catch (error) {
-      console.warn('[audio] could not load', url.href, error);
+      if (!this.disposed) console.warn('[audio] could not load', url.href, error);
       return null;
     }
   }
@@ -81,8 +92,12 @@ export class WebAudioOutput {
   }
 
   dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.loads.abort();
     for (const key of [...this.loops.keys()]) this.setLoop(key, null);
     this.synth?.context.close();
     this.synth = null;
+    this.library.clear();
   }
 }
