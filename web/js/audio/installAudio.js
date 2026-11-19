@@ -28,11 +28,11 @@ export function installAudio({ events, player, enemies, playerId }) {
     .cooldown('zombie_hiss', 0.6)
     .cooldown('heal', 0.4);
   board.install(new WeaponSounds(events, playerId)
-    .register('pistol', { fire: 'shot_pistol' })
-    .register('revolver', { fire: 'shot_revolver' })
-    .register('rifle', { fire: 'shot_rifle' })
-    .register('smg', { fire: 'shot_smg' })
-    .register('shotgun', { fire: 'shot_shotgun' })
+    .register('pistol', { fire: 'shot_pistol', reload: 'reload_pistol' })
+    .register('revolver', { fire: 'shot_revolver', reload: 'reload_pistol' })
+    .register('rifle', { fire: 'shot_rifle', reload: 'reload_rifle' })
+    .register('smg', { fire: 'shot_smg', reload: 'reload_rifle' })
+    .register('shotgun', { fire: 'shot_shotgun', reload: 'shotgun_pump' })
     .register('bat', { fire: 'swing', hit: 'bat_hit' })
     .register('katana', { fire: 'katana_swing', hit: 'katana_hit' })
     .register('chainsaw', { held: 'chainsaw_idle', working: 'chainsaw_cut' }));

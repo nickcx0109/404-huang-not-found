@@ -111,15 +111,18 @@ test('SoundRule is abstract and installs once', () => {
 test('WeaponSounds plays my shots and swings, the hit cue only on a hit, and ignores others', () => {
   const { events, output, board } = setup();
   board.install(new WeaponSounds(events, 'p1')
-    .register('pistol', { fire: 'shot_pistol' })
+    .register('pistol', { fire: 'shot_pistol', reload: 'reload_pistol' })
     .register('katana', { fire: 'katana_swing', hit: 'katana_hit' }));
   events.emit(EVENTS.WEAPON_FIRED, { ownerId: 'p1', weaponId: 'pistol', hit: null });
   events.emit(EVENTS.WEAPON_FIRED, { ownerId: 'p2', weaponId: 'pistol', hit: null });
   events.emit(EVENTS.WEAPON_FIRED, { ownerId: 'p1', weaponId: 'katana', hit: null });
   events.emit(EVENTS.WEAPON_FIRED, { ownerId: 'p1', weaponId: 'katana', hit: { targetId: 'z1' } });
   events.emit(EVENTS.WEAPON_FIRED, { ownerId: 'p1', weaponId: 'grenade', hit: null });
+  events.emit(EVENTS.WEAPON_RELOAD_STARTED, { ownerId: 'p1', weaponId: 'pistol', seconds: 1.1 });
+  events.emit(EVENTS.WEAPON_RELOAD_STARTED, { ownerId: 'p2', weaponId: 'pistol', seconds: 1.1 });
   events.emit(EVENTS.WEAPON_RELOADED, { ownerId: 'p1', weaponId: 'pistol' });
-  assert.deepEqual(output.cues, ['shot_pistol', 'katana_swing', 'katana_swing', 'katana_hit', 'reload']);
+  assert.deepEqual(output.cues, ['shot_pistol', 'katana_swing', 'katana_swing', 'katana_hit', 'reload_pistol'],
+    'the reload sound plays when the reload starts, not when it ends');
 });
 
 test('WeaponSounds idles the chainsaw in hand, cuts while firing and goes quiet when put away', () => {

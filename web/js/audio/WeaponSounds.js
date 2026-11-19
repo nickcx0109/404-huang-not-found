@@ -5,6 +5,7 @@ import { SoundRule } from './SoundRule.js';
  * The local player's weapons. Each weapon id is registered with what it sounds like:
  * - `fire`: played on every WEAPON_FIRED (a gunshot, a swing);
  * - `hit`: also played when that use hit something (the katana's clang);
+ * - `reload`: played when a reload starts (the magazine coming out and going back in);
  * - `held` + `working`: one loop that plays `held` while the weapon is in hand and switches to `working`
  *   while it keeps firing (the chainsaw idling, then cutting), back to `held` a moment after the last use.
  * Weapons that are not registered make no sound, so a new gun only adds one `register` line.
@@ -18,8 +19,8 @@ export class WeaponSounds extends SoundRule {
     this.inHand = null;
   }
 
-  register(weaponId, { fire = null, hit = null, held = null, working = null } = {}) {
-    this.table.set(weaponId, Object.freeze({ fire, hit, held, working }));
+  register(weaponId, { fire = null, hit = null, reload = null, held = null, working = null } = {}) {
+    this.table.set(weaponId, Object.freeze({ fire, hit, reload, held, working }));
     return this;
   }
 
@@ -35,8 +36,10 @@ export class WeaponSounds extends SoundRule {
     this.listen(EVENTS.WEAPON_CHANGED, detail => {
       if (detail.ownerId === this.ownerId) this.changeTo(detail.weaponId);
     });
-    this.listen(EVENTS.WEAPON_RELOADED, detail => {
-      if (detail.ownerId === this.ownerId) this.board.play('reload');
+    this.listen(EVENTS.WEAPON_RELOAD_STARTED, detail => {
+      if (detail.ownerId !== this.ownerId) return;
+      const cue = this.table.get(detail.weaponId)?.reload;
+      if (cue) this.board.play(cue);
     });
   }
 
