@@ -22,6 +22,11 @@ import { Revolver } from '../weapons/Revolver.js';
 import { Bandage } from '../weapons/Bandage.js';
 import { Grenade } from '../weapons/Grenade.js';
 import { Molotov } from '../weapons/Molotov.js';
+import { Katana } from '../weapons/Katana.js';
+import { Chainsaw } from '../weapons/Chainsaw.js';
+import { AmmoCrateField } from '../pickups/AmmoCrateField.js';
+import { AmmoCrateViews } from '../pickups/AmmoCrateViews.js';
+import { InteractionList } from '../pickups/InteractionList.js';
 import { EffectViews } from '../effects/EffectViews.js';
 import { RecoilKick } from '../player/RecoilKick.js';
 import { LoadoutHolder } from '../weapons/LoadoutHolder.js';
@@ -47,6 +52,11 @@ export function installGameplay(app) {
     .register('shotgun', { create: () => new Shotgun(), name: 'SHOTGUN', look: { length: 0.85, height: 0.12, width: 0.14 } })
     .register('smg', { create: () => new SubmachineGun(), name: 'SMG', look: { length: 0.55, height: 0.16, width: 0.1 } })
     .register('revolver', { create: () => new Revolver(), name: 'REVOLVER', look: { length: 0.34, height: 0.14, width: 0.07 } })
+    // Melee weapons lie at any weapon spot and also at the spots kept for them (at least two per scene).
+    .register('katana', { create: () => new Katana(), name: 'KATANA', pool: ['weapon', 'melee'],
+      look: { length: 1.0, height: 0.05, width: 0.07 } })
+    .register('chainsaw', { create: () => new Chainsaw(), name: 'CHAINSAW', pool: ['weapon', 'melee'],
+      look: { length: 0.85, height: 0.26, width: 0.22 } })
     // Healing and throwable spots draw from their own pools, never from the guns.
     .register('bandage', { create: () => new Bandage(), name: 'BANDAGE', pool: 'healing',
       look: { length: 0.22, height: 0.08, width: 0.16 } })
@@ -57,6 +67,7 @@ export function installGameplay(app) {
   // Weapon, healing and throwable markers without an item get a random one from their pool each game.
   const pickups = PickupField.fromLevel(app.level, catalog, ctx.rng);
   const pickupViews = new WeaponPickupViews(ctx.scene, pickups, ctx.events);
+  const crates = AmmoCrateField.fromLevel(app.level);
   const factory = new EnemyFactory(ctx, type => {
     const geometry = new THREE.BoxGeometry(ctx.pathFinder.radius * 2, ctx.pathFinder.height, ctx.pathFinder.radius * 2);
     const material = new THREE.MeshStandardMaterial({ color: app.style.greybox.dummy,
@@ -72,7 +83,7 @@ export function installGameplay(app) {
     .register('exploder', Exploder);
   const ammo = new AmmoRefillItem();
   app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(SURVIVAL_WAVES), economy: new Economy(),
-    items: [ammo], separation: new CrowdSeparation(), pickups });
+    items: [ammo], separation: new CrowdSeparation(), pickups: new InteractionList([pickups, crates]) });
   // Degrees of upward kick per shot and the most it swings sideways.
   const recoil = new RecoilKick(ctx.events, player.id, { rng: ctx.rng })
     .register('pistol', { pitch: 1.6, yaw: 0.4 })
@@ -82,6 +93,8 @@ export function installGameplay(app) {
     .register('revolver', { pitch: 4, yaw: 0.6 });
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id, recoil);
   app.effectViews = EffectViews.standard(ctx.scene, ctx, ctx.events);
+  app.crateViews = new AmmoCrateViews(ctx.scene, crates, () => ctx.time);
+  app.gameViews = [app.effectViews, app.crateViews];
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);
   const unsubscribe = ctx.events.on(EVENTS.GAME_OVER, () => {
@@ -94,6 +107,7 @@ export function installGameplay(app) {
     unsubscribe();
     pickupViews.dispose();
     app.effectViews.dispose();
+    app.crateViews.dispose();
     app.combat.dispose();
     app.game.dispose();
     app.hud.dispose();

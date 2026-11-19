@@ -283,7 +283,8 @@ export class App {
       this.combat.update(dt);
       this.game.update(dt);
       this.hud.updateGame(dt, this.game);
-      this.effectViews?.update(dt);
+      // Views that move every frame (thrown objects, fire, ammo boxes); set up by installGameplay.
+      for (const view of this.gameViews ?? []) view.update(dt);
     }
     this.atmosphere.update(dt, now / 1000);
     this.built.update(now / 1000);
