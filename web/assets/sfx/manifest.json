@@ -1,0 +1,12 @@
+{
+  "katana_swing": ["katana_swing_1.ogg", "katana_swing_2.ogg", "katana_swing_3.ogg", "katana_swing_4.ogg", "katana_swing_5.ogg"],
+  "katana_hit": ["katana_hit_1.ogg", "katana_hit_2.ogg", "katana_hit_3.ogg", "katana_hit_4.ogg", "katana_hit_5.ogg"],
+  "explosion": "explosion.flac",
+  "chainsaw_idle": "chainsaw_idle.wav",
+  "chainsaw_cut": "chainsaw_cut.wav",
+  "zombie_groan": ["zombie/z01.wav", "zombie/z02.wav", "zombie/z16.wav", "zombie/z17.wav", "zombie/z18.wav", "zombie/z20.wav", "zombie/z22.wav", "zombie/z23.wav"],
+  "zombie_death": ["zombie/z03.wav", "zombie/z04.wav", "zombie/z05.wav", "zombie/z06.wav", "zombie/z07.wav", "zombie/z10.wav", "zombie/z13.wav"],
+  "zombie_scream": ["zombie/m01.wav", "zombie/m02.wav", "zombie/m03.wav", "zombie/m11.wav"],
+  "zombie_hiss": ["zombie/m04.wav", "zombie/m05.wav", "zombie/m06.wav", "zombie/m07.wav", "zombie/m18.wav"],
+  "zombie_windup": ["zombie/z16.wav", "zombie/z18.wav", "zombie/z21.wav"]
+}
