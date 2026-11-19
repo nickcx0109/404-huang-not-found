@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { CrowdSeparation } from '../web/js/game/CrowdSeparation.js';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { EventBus } from '../web/js/core/EventBus.js';
@@ -63,7 +64,7 @@ test('EnemyFactory validates registration and reuses pooled enemies with fresh i
 
 test('Walker follows buffered routes and melee cannot pass through cover', () => {
   const ctx = context();
-  const target = { position: { x: 2, z: 0 }, body: { radius: 0.35 }, damageable: { alive: true } };
+  const target = { id: 'player-1', position: { x: 2, z: 0 }, body: { radius: 0.35 }, damageable: { alive: true } };
   ctx.players.push(target);
   const factory = new EnemyFactory(ctx).register('walker', Walker);
   const walker = factory.create('walker', { x: -2, z: 0 });
@@ -114,4 +115,25 @@ test('Walker can approach the player from every shipped ch2 zombie spawn area', 
     factory.release(walker);
   }
   factory.dispose();
+});
+
+test('two walkers pressed back to back keep walking instead of pushing each other forever', () => {
+  const collision = new CollisionWorld();
+  collision.bounds = { minX: -10, maxX: 10, minZ: -10, maxZ: 10 };
+  const ctx = new GameContext({ collision, pathFinder: new PathFinder(collision, { clearance: 0.002 }), events: new EventBus() });
+  const target = { position: { x: 8, z: 0.25 }, body: { radius: 0.35 }, damageable: { alive: true } };
+  ctx.players.push(target);
+  const factory = new EnemyFactory(ctx).register('walker', Walker);
+  // The front one stands a little past the centre of its path cell, the other one right behind it.
+  const front = factory.create('walker', { x: -1.6, z: 0.25 });
+  const back = factory.create('walker', { x: -2.3, z: 0.25 });
+  ctx.enemies.push(front, back);
+  const separation = new CrowdSeparation();
+  for (let frame = 0; frame < 90; frame++) {
+    ctx.time += 1 / 30;
+    for (const walker of ctx.enemies) walker.moveToward(target, 1 / 30, ctx);
+    separation.apply(ctx);
+  }
+  assert.ok(front.position.x > 2, 'the front walker got away: ' + front.position.x);
+  assert.ok(back.position.x > 1.5, 'the one behind followed: ' + back.position.x);
 });

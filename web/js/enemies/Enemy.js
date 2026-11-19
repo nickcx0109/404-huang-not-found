@@ -79,9 +79,7 @@ export class Enemy extends Entity {
       this.nextPathAt = ctx.time + (distance > 20 ? 1.5 : 0.75);
     }
     if (this.route.length === 0) return;
-    while (this.routeIndex < this.route.length - 1 &&
-      Math.hypot(this.route.points[this.routeIndex * 2] - position.x,
-        this.route.points[this.routeIndex * 2 + 1] - position.z) < 0.12) this.routeIndex++;
+    while (this.routeIndex < this.route.length - 1 && this.passedWaypoint(ctx.pathFinder.cell)) this.routeIndex++;
     const atGoal = this.routeIndex === this.route.length - 1;
     const dx = (atGoal ? target.position.x : this.route.points[this.routeIndex * 2]) - position.x;
     const dz = (atGoal ? target.position.z : this.route.points[this.routeIndex * 2 + 1]) - position.z;
@@ -92,6 +90,26 @@ export class Enemy extends Entity {
       this.radius, position.y, position.y + this.height, this._movement);
     position.x = this._movement.x;
     position.z = this._movement.z;
+  }
+
+  /**
+   * Whether the zombie is done with its current waypoint: standing on it, or close to it while it is
+   * either the first point of the route or already behind the zombie on the way to the next one. A fresh route starts at the centre of the
+   * cell the zombie stands in, often a step back; with another zombie pressed against its back it
+   * could never get there and both would stand still, pushing each other forever.
+   * @param {number} near  how close counts as "close" (one path cell)
+   */
+  passedWaypoint(near) {
+    const points = this.route.points;
+    const i = this.routeIndex * 2;
+    const toX = points[i] - this.position.x;
+    const toZ = points[i + 1] - this.position.z;
+    const distance = Math.hypot(toX, toZ);
+    if (distance < 0.12) return true;
+    if (distance >= near) return false;
+    // the first point of a route is only the centre of the cell the zombie is already in
+    if (this.routeIndex === 0) return true;
+    return toX * (points[i + 2] - points[i]) + toZ * (points[i + 3] - points[i + 1]) < 0;
   }
 
   syncView() {
