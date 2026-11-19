@@ -3,7 +3,8 @@ import { CarriedItem } from './CarriedItem.js';
 /**
  * Bandage, slot 6, up to 2 carried. Left click bandages yourself, right click the teammate in front of you.
  * It takes 3 seconds and adds 40 health when it finishes; putting it away, dying, or the patient dying
- * cancels it and nothing is spent. While it is in hand the player cannot shoot.
+ * cancels it and nothing is spent. While it is in hand the player cannot shoot, and while it is being
+ * applied the healer cannot walk or jump.
  */
 export class Bandage extends CarriedItem {
   constructor({ count = 1, healAmount = 40, seconds = 3, reach = 2.5, arcDegrees = 70 } = {}) {
@@ -76,6 +77,10 @@ export class Bandage extends CarriedItem {
 
   holster() {
     this.task = null;
+  }
+
+  get holdsOwnerStill() {
+    return this.task !== null;
   }
 
   drop() {

@@ -87,6 +87,11 @@ export class Weapon {
   /** Called when the player puts this weapon away for another slot. Reloads carry on; timed uses override this. */
   holster(ctx) {}
 
+  /** True while using this keeps the owner's feet still (a bandage being applied). They can still look around. */
+  get holdsOwnerStill() {
+    return false;
+  }
+
   /**
    * A timed action in progress (e.g. a bandage being applied), as { fraction, ownerId, targetId }, or null.
    * The HUD draws it as a progress bar.
