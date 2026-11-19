@@ -36,9 +36,6 @@ import { WeaponCatalog } from '../pickups/WeaponCatalog.js';
 import { PickupField } from '../pickups/PickupField.js';
 import { ItemDeck } from '../pickups/ItemDeck.js';
 import { WeaponPickupViews } from '../pickups/WeaponPickupViews.js';
-import { Wallet } from '../economy/Wallet.js';
-import { Economy } from '../economy/Economy.js';
-import { AmmoRefillItem } from '../economy/AmmoRefillItem.js';
 import { SurvivalHud } from '../ui/hud/SurvivalHud.js';
 import { FirstPersonWeapon } from '../weapons/FirstPersonWeapon.js';
 import { installAudio } from '../audio/installAudio.js';
@@ -47,7 +44,6 @@ export function installGameplay(app) {
   const ctx = new GameContext({ scene: app.scene, collision: app.built.collision,
     pathFinder: new PathFinder(app.built.collision, { clearance: 0.002 }), events: app.events, level: app.level });
   const player = new CombatPlayer('player-local', app.player, ctx.events, new LoadoutHolder('player-local', ctx.events));
-  player.wallet = new Wallet(player.id, ctx.events);
   // Start with the pistol in hand and the bat on the back; guns are found on the ground.
   player.weapons.add(new StarterPistol());
   player.weapons.add(new Bat());
@@ -89,9 +85,8 @@ export function installGameplay(app) {
     .register('runner', Runner)
     .register('tank', Tank)
     .register('exploder', Exploder);
-  const ammo = new AmmoRefillItem();
-  app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(difficulty.waves(SURVIVAL_WAVES)), economy: new Economy(),
-    items: [ammo], separation: new CrowdSeparation(), pickups: new InteractionList([pickups, crates]) });
+  app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(difficulty.waves(SURVIVAL_WAVES)),
+    separation: new CrowdSeparation(), pickups: new InteractionList([pickups, crates]) });
   // Degrees of upward kick per shot and the most it swings sideways.
   const recoil = new RecoilKick(ctx.events, player.id, { rng: ctx.rng })
     .register('pistol', { pitch: 1.6, yaw: 0.4 })
@@ -99,7 +94,7 @@ export function installGameplay(app) {
     .register('smg', { pitch: 0.6, yaw: 0.45 })
     .register('shotgun', { pitch: 4.5, yaw: 0.8 })
     .register('revolver', { pitch: 4, yaw: 0.6 });
-  app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id, recoil);
+  app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, recoil);
   app.effectViews = EffectViews.standard(ctx.scene, ctx, ctx.events);
   app.crateViews = new AmmoCrateViews(ctx.scene, crates, () => ctx.time);
   app.audio = installAudio({ events: ctx.events, player: app.player, enemies: () => ctx.enemies, playerId: player.id });
@@ -141,7 +136,7 @@ function installDebug(app, ctx) {
   window.__gameDebug = Object.freeze({
     start: () => app.game.start(),
     snapshot: () => ({ state: app.game.state, wave: app.game.wave, kills: app.game.kills,
-      time: ctx.time, health: ctx.players[0].damageable.health, money: ctx.players[0].wallet.balance,
+      time: ctx.time, health: ctx.players[0].damageable.health,
       ammo: ctx.players[0].weapons.current.ammo,
       enemies: ctx.enemies.map(enemy => ({ id: enemy.id, health: enemy.damageable.health,
         x: enemy.position.x, z: enemy.position.z })) }),

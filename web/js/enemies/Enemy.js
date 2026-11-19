@@ -5,12 +5,11 @@ import { DamageInfo } from '../entities/DamageInfo.js';
 import { EVENTS } from '../game/events.js';
 
 export class Enemy extends Entity {
-  constructor({ events, pathFinder, view = null }, { health, speed, reward, brain, attackDamage = 10 }) {
+  constructor({ events, pathFinder, view = null }, { health, speed, brain, attackDamage = 10 }) {
     super(null);
     if (new.target === Enemy) throw new TypeError('Enemy is abstract');
     this.damageable = new Damageable(this, health, events);
     this.speed = speed;
-    this.reward = reward;
     this.attackDamage = attackDamage;
     this.brain = brain;
     this.view = view;
@@ -32,7 +31,7 @@ export class Enemy extends Entity {
     this.position.z = spawn.z;
     this.damageable.reset();
     this.active = true;
-    this.rewarded = false;
+    this.deathRecorded = false;
     this.route.length = 0;
     this.routeIndex = 0;
     this.nextPathAt = ctx.time;

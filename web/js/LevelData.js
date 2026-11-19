@@ -165,7 +165,7 @@ export class LevelData {
     return this.bookmarks.map((b) => b.name);
   }
 
-  /** Markers of one type, e.g. markersOfType('shop'). */
+  /** Markers of one type, e.g. markersOfType('objective'). */
   markersOfType(type) {
     return this.markers.filter((m) => m.type === type);
   }
@@ -312,7 +312,7 @@ export class LevelData {
     });
   }
 
-  /** Optional named gameplay points: shop, objective, defence posts, later pickups ... */
+  /** Optional named gameplay points: objective, defence posts, pickups ... */
   static _readMarkers(raw, v) {
     const seen = new Set();
     return v.array(raw, 'markers', 'level', false).map((m, i) => {

@@ -1,6 +1,6 @@
 # 程式架構與擴充方式
 
-預設仍是場景展示；`?play=1` 才動態載入單人玩法骨架，各提供一個武器、敵人與商品範例，尚無連線。玩法資料與外觀保持分離，替換模型不能改變碰撞。契約、設計模式與組員擴充步驟見 [GAMEPLAY.md](GAMEPLAY.md)。
+預設仍是場景展示；`?play=1` 才動態載入單人玩法骨架，提供武器、敵人、地上物品與彈藥箱，尚無連線。玩法資料與外觀保持分離，替換模型不能改變碰撞。契約、設計模式與組員擴充步驟見 [GAMEPLAY.md](GAMEPLAY.md)。
 
 ## 啟動與版本
 
@@ -31,7 +31,8 @@
 | `entities/` | 純邏輯 Entity、Damageable 組合、DamageInfo 值物件與 DamagePipeline 責任鏈 |
 | `weapons/`、`player/` | Weapon 模板、HitscanFire 策略、Pistol 範例、WeaponHolder、玩家戰鬥與瀏覽器輸入；PlayerBody 是共用尺寸來源 |
 | `enemies/`、`enemies/behaviour/` | Enemy 基底、Brain 策略、最小行為樹、Walker 範例、註冊 Factory 與 ObjectPool |
-| `economy/`、`ui/` | Wallet、Economy、ShopItem 與唯一補彈範例；`ui/hud/` 的 SurvivalHud 繼承既有 Hud（不替換錯誤面板），由一組 HudWidget 組成 |
+| `pickups/` | 地上武器、投擲物與治療物的拾取，以及可重用的彈藥箱；`InteractionList` 統一 E 鍵互動 |
+| `ui/` | `ui/hud/` 的 SurvivalHud 繼承既有 Hud（不替換錯誤面板），由一組 HudWidget 組成 |
 | `audio/` | 音效：`SoundBoard`、`SpatialMix`、`SoundRule` 和它的子類是純邏輯；`WebAudioOutput`、`Synth`、`Sound` 子類用 WebAudio，只在 `play=1` 由 `installAudio` 組起來 |
 
 原有檔名及類別名保留；同檔原本公開的輔助類別（例如 `Aabb`、`LevelError`、`AppOptions`、`BuiltLevel`）也用具名 export 匯出。

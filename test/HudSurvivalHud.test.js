@@ -32,7 +32,7 @@ function setup() {
   const events = new EventBus();
   const weapon = { ammo: 12, magazine: 12, reserve: 60, reloading: false };
   const player = { id: 'me', position: { x: 0, y: 0, z: 0 }, controller: { yaw: 0 },
-    damageable: { health: 100, maxHealth: 100 }, wallet: { balance: 50 }, weapons: { current: weapon } };
+    damageable: { health: 100, maxHealth: 100 }, weapons: { current: weapon } };
   const session = { state: 'playing', wave: 2, canMove: true,
     context: { time: 0, enemies: [{ id: 'z1', position: { x: 4, y: 0, z: 0 } }], players: [player] } };
   const hud = SurvivalHud.standard(root, events, 'me');
@@ -47,7 +47,7 @@ test('SurvivalHud keeps the viewer error display and draws health, ammunition an
   assert.equal(ammo.magazine.textContent, '12');
   assert.equal(ammo.reserve.textContent, '60');
   assert.equal(ammo.rounds.length, 12);
-  assert.equal(line.el.textContent, '$50   1 LEFT');
+  assert.equal(line.el.textContent, '1 LEFT');
   assert.equal(doc.head.children.length, 2, 'fonts and hud.css are added with the HUD, not by index.html');
 
   hud.showError('failure', ['detail']);
@@ -142,10 +142,10 @@ test('SurvivalHud.dispose removes its nodes and stops listening', () => {
 });
 
 test('StatusLine describes every game state in one line', () => {
-  const base = { wave: 3, money: 125, enemies: 4, breakSeconds: 6 };
+  const base = { wave: 3, enemies: 4, breakSeconds: 6 };
   assert.equal(StatusLine.describe({ ...base, state: 'lobby' }), 'CLICK TO START');
-  assert.equal(StatusLine.describe({ ...base, state: 'playing' }), '$125   4 LEFT');
-  assert.equal(StatusLine.describe({ ...base, state: 'wave-break' }), '$125   NEXT WAVE IN 6   E AT SHOP: AMMO $25');
+  assert.equal(StatusLine.describe({ ...base, state: 'playing' }), '4 LEFT');
+  assert.equal(StatusLine.describe({ ...base, state: 'wave-break' }), 'NEXT WAVE IN 6');
   assert.equal(StatusLine.describe({ ...base, state: 'game-over' }), 'REFRESH TO RETRY');
 });
 
@@ -232,12 +232,12 @@ test('PromptWidget shows, updates and hides a prompt sent as an event', () => {
   events.emit(EVENTS.PROMPT_CHANGED, { id: 'door', text: 'HOLD E   CLEAR THE WAY', progress: 1.4 });
   assert.equal(prompt.fill.style.transform, 'scaleX(1.0000)', 'progress stays inside the line');
 
-  events.emit(EVENTS.PROMPT_CHANGED, { id: 'shop', text: null });
+  events.emit(EVENTS.PROMPT_CHANGED, { id: 'ammo-crate', text: null });
   assert.equal(has('is-on'), true, 'somebody else cannot hide it');
   events.emit(EVENTS.PROMPT_CHANGED, { id: 'door', text: null });
   assert.equal(has('is-on'), false);
 
-  events.emit(EVENTS.PROMPT_CHANGED, { id: 'shop', text: 'E   BUY AMMO' });
+  events.emit(EVENTS.PROMPT_CHANGED, { id: 'ammo-crate', text: 'E   REFILL AMMO' });
   assert.equal(has('is-on'), true);
   assert.equal(has('has-line'), false, 'no progress, no line');
   hud.dispose();

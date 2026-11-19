@@ -6,16 +6,14 @@ const WHEEL_NOTCH = 50;
 
 export class PlayerCombat {
   /** @param {RecoilKick|null} recoil  kicks the view when this player's gun fires */
-  constructor(controller, camera, ctx, ownerId, purchaseItemId, recoil = null) {
+  constructor(controller, camera, ctx, ownerId, recoil = null) {
     this.recoil = recoil;
     this.controller = controller;
     this.camera = camera;
     this.context = ctx;
     this.ownerId = ownerId;
-    this.purchaseItemId = purchaseItemId;
     this._direction = new THREE.Vector3();
     this._ownerRequest = Object.freeze({ ownerId });
-    this._purchaseRequest = Object.freeze({ ownerId, itemId: purchaseItemId });
     this.trigger = new WeaponTrigger(ctx, ownerId);
     this._onMouseDown = event => {
       if (!this.controller.locked) return;
@@ -38,9 +36,8 @@ export class PlayerCombat {
       if (event.repeat || !this.controller.locked) return;
       if (event.code === 'KeyR') ctx.events.emit(EVENTS.RELOAD_REQUESTED, this._ownerRequest);
       else if (event.code === 'KeyE') {
-        // E is "use": the session ignores whichever of the two does not apply where the player stands.
+        // E uses the nearest ground item or ammunition box.
         ctx.events.emit(EVENTS.PICKUP_REQUESTED, this._ownerRequest);
-        ctx.events.emit(EVENTS.PURCHASE_REQUESTED, this._purchaseRequest);
       }
       else if (/^Digit[1-9]$/.test(event.code)) {
         ctx.events.emit(EVENTS.SWITCH_REQUESTED, { ownerId, index: Number(event.code.slice(-1)) - 1 });

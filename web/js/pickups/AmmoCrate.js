@@ -4,7 +4,7 @@ import { EVENTS } from '../game/events.js';
 /**
  * An ammunition box standing in the level. Using it fills every gun the player carries (magazine and
  * reserve); then the box needs `cooldownSeconds` before it can be used again, by anyone.
- * It is never used up, so it does not make the shop's ammo pointless: the shop is there when the box is not.
+ * The box stays in the level and can be reused after its cooldown.
  */
 export class AmmoCrate extends Entity {
   constructor(id, position, { radius = 1.2, cooldownSeconds = 60 } = {}) {

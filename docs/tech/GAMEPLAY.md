@@ -1,6 +1,6 @@
 # 玩法骨架
 
-這一版建立共用契約，以及 `Pistol`、`Walker`、`AmmoRefillItem` 最小範例，並已加入 `Rifle`、`Shotgun`。其他敵人、商品、章節任務與多人連線列在 [TODO.md](../../TODO.md)，照下面的步驟擴充，不把舊 prototype 整套搬回來。
+這一版建立共用契約，以及 `Pistol`、`Walker` 最小範例，並已加入 `Rifle`、`Shotgun`。其他敵人、道具、章節任務與多人連線列在 [TODO.md](../../TODO.md)，照下面的步驟擴充，不把舊 prototype 整套搬回來。
 
 ## 啟動與範圍
 
@@ -11,9 +11,9 @@ http://localhost:8080/web/index.html?level=ch2&play=1
 
 - 只有 **`play=1`** 開啟玩法；沒有此參數、`play=0`、`play=true` 都仍是原有走動展示。
 - `shot` 優先於 `play`，連 `?level=ch2&play=1&shot=gate_view` 也只拍原場景，不建立玩法實體或 HUD。
-- 點畫面取得滑鼠鎖定才從 Lobby 開始。WASD 移動、Shift 跑步、左鍵開火（步槍按住連射）、R 換彈、1–7 或滑鼠滾輪換道具欄（滾輪跳過空格）、E 撿地上的槍、F 手電筒。放開左鍵、失去視窗焦點或解除鎖定會停止連射。
+- 點畫面取得滑鼠鎖定才從 Lobby 開始。WASD 移動、Shift 跑步、左鍵開火（步槍按住連射）、R 換彈、1–7 或滑鼠滾輪換道具欄（滾輪跳過空格）、E 撿地上的槍、投擲物與治療物，或使用彈藥箱；F 手電筒。放開左鍵、失去視窗焦點或解除鎖定會停止連射。
 - Esc 解除鎖定會暫停玩法時鐘；重新點畫面繼續。不要用系統時間決定射速或換彈，以免暫停期間偷偷完成。
-- 波次清空後依波次表整備 6～10 秒；靠近關卡 `type: "shop"` marker 按 E，以 $25 補滿目前武器的彈匣與備彈。波次中或離商店太遠不能買。
+- 波次清空後依波次表整備 6～10 秒；槍、投擲物與治療物從地上撿，彈藥由彈藥箱補充。撿取與補彈在戰鬥及整備期間都可進行。
 - 生命歸零進入 GameOver，凍結戰鬥，重新整理才重開。暫無救援、復活、獲勝／開大門條件，也不實作故事章節目標。
 - 預設使用資料驅動的混合波次，陸續出怪且限制同時在場數量（見下方 G3 波次表）；數值不是最終遊戲平衡。單人離線而已，沒有網路協定。
 
@@ -28,7 +28,6 @@ classDiagram
   GameSession --> WaveDirector
   GameSession --> CrowdSeparation
   GameSession --> EnemyFactory
-  GameSession --> Economy
   GameSession --> DamagePipeline
   GameContext o-- EventBus
   GameContext o-- CollisionWorld
@@ -67,9 +66,6 @@ classDiagram
   WaveDirector <|-- ExampleWaveDirector
   WaveDirector <|-- TimedWaveDirector
   TimedWaveDirector *-- WaveTable
-  CombatPlayer *-- Wallet
-  Economy --> ShopItem
-  ShopItem <|-- AmmoRefillItem
   Hud <|-- SurvivalHud
   SurvivalHud o-- HudWidget
   SurvivalHud *-- PlayerStatus
@@ -90,7 +86,7 @@ classDiagram
 |---|---|
 | `game/installGameplay.js` | 唯一玩法組合入口，建立實例、註冊範例；Three.js 灰盒外觀也在此建立，使用既有 `greybox.dummy` 顏色，沒有新增燈或陰影 |
 | `game/GameContext.js` | `scene`、`collision`、`pathFinder`、`events`、`pools`、`players`、`enemies`、`rng`、`time`、`aim`、`session`；容器不是全域變數 |
-| `game/GameSession.js` | 唯一模擬權威：輸入命令、傷害套用、擊殺獎金、購物限制、波次與 GameOver；App 擁有它並推進時鐘 |
+| `game/GameSession.js` | 唯一模擬權威：輸入命令、傷害套用、擊殺計數、物品互動、波次與 GameOver；App 擁有它並推進時鐘 |
 | `game/states/` | 薄的 State 子類，將生命週期／更新交回 Session，使用現有 `core/StateMachine` |
 | `game/WaveDirector.js` | `start(wave, ctx)`、`update(dt, ctx)` 與 `nextSpawn(ctx, reusableResult)`；`remaining` 是尚未產生的數量。基底 update 為空操作，ExampleWaveDirector 保留即時出完 2 → 3 → 4 隻 walker 的範例行為 |
 | `game/TimedWaveDirector.js`、`game/WaveTable.js` | 新 director 子類以模擬時鐘控制間隔、在場上限與輪流種類；WaveTable 在建構時驗證並複製資料，依明確規則延伸後續波次 |
@@ -103,24 +99,23 @@ classDiagram
 | `weapons/Weapon.js` | `fire(ctx)` 固定檢查／扣彈／策略／通知流程，子類實作 `createShot(ctx)`，可覆寫 `onFired(ctx, hit)`；冷卻與換彈都用 `ctx.time` deadline |
 | `weapons/HitscanFire.js` | Fire-mode Strategy：`fire(shot, ctx, ownerId)`，輸出命中摘要或 null；只讀敵人 `hitVolume`／`headHeight` 契約，牆比敵人近就擋住子彈 |
 | `weapons/WeaponHolder.js` | `add`、`switchTo`、`current`、`update`。切走的槍仍會完成換彈，切槍不重設冷卻 |
-| `player/CombatPlayer.js`、`player/PlayerCombat.js` | 前者接合走動控制器、Damageable、WeaponHolder、Wallet；後者是瀏覽器輸入與重用瞄準向量，不決定命中結果 |
+| `player/CombatPlayer.js`、`player/PlayerCombat.js` | 前者接合走動控制器、Damageable、WeaponHolder；後者是瀏覽器輸入與重用瞄準向量，不決定命中結果 |
 | `player/PlayerBody.js` | `PLAYER_BODY` 是玩家半徑 0.35 m、身高 1.8 m、視線高度 1.7 m 的單一來源，PlayerController、LevelData、PathFinder 共用 |
 | `enemies/Enemy.js` | Entity 子類與 Damageable 組合，持有 Brain、重用路徑、碰撞結果與命中盒；`activate/deactivate` 為物件池生命週期 |
 | `enemies/Brain.js`、`enemies/behaviour/Nodes.js` | Brain Strategy 與最小 reactive 行為樹；Sequence 遇非成功就停止，Selector 遇非失敗就停止，running 會向上傳遞；下次 tick 從首個子節點重新判斷，沒有有記憶的游標 |
 | `enemies/EnemyFactory.js` | `register(type, EnemySubclass)`、`create(type, spawn)`、`release(enemy)`、`dispose()`；每種類型獨立 ObjectPool，拒絕重複註冊與重複歸還 |
-| `economy/` | Wallet 驗證整數金額；Economy 控制交易並在 apply 失敗時退費；ShopItem 的 `canBuy/apply` 以多型擴充，不在 Economy 寫商品 switch |
 | `ui/hud/SurvivalHud.js` | 遊戲內介面，繼承既有 Hud（`showError`、`#error`、debug/perf 顯示保留），裡面裝一組 `HudWidget`。只有 `play=1` 才建立；字型、`css/hud.css` 也是這時才加進頁面 |
 | `ui/hud/HudWidget.js` 和各元件 | 每個元件一個類別、一個檔案：血量、彈藥、準星、受傷效果、提示文字、事件字卡、隊友、頂端狀態列。`bind()` 訂閱事件處理「某一刻發生的事」，`sync(status)` 收目前的數字、有變才寫 DOM；元件不持有遊戲物件 |
-| `ui/hud/PlayerStatus.js` | HUD 唯一會讀 Session 的類別，每幀把血量、彈藥、金錢、波次、位置、隊友抄成普通數字。事件沒帶的數字（子彈數、是否換彈中）從這裡來；之後連線時 Client 可以用 Host 的快照填同樣的欄位 |
+| `ui/hud/PlayerStatus.js` | HUD 唯一會讀 Session 的類別，每幀把血量、彈藥、波次、位置、隊友抄成普通數字。事件沒帶的數字（子彈數、是否換彈中）從這裡來；之後連線時 Client 可以用 Host 的快照填同樣的欄位 |
 | `ui/hud/logic/` | 不碰 DOM 的純邏輯，各有測試：`Attention`（多久淡回去）、`HealthMeter`（低於 30% 算低血量）、`AmmoMeter`、`HitMark`、`DamagePulse`、`HitDirection`、`CardQueue`、`BrushStroke` |
 
 ### 傷害與行為的邊界
 
 1. 武器或敵人只送出 `DamageInfo` 的 `DAMAGE_REQUESTED`，不能自己改對方的 health。
 2. Session 驗證目前是 Playing、來源仍活著、目標存在、敵我不同，才套用 DamagePipeline 並呼叫目標 Damageable。
-3. Damageable 發送傷害／死亡通知；Session 對自己追蹤的敵人只結算一次獎金，其他 UI／特效可訂閱通知，但不要再加一次錢。
+3. Damageable 發送傷害／死亡通知；Session 用 `deathRecorded` 對自己追蹤的敵人只記錄一次死亡，玩家造成的死亡才計入擊殺數；UI／特效可訂閱通知。
 4. 已死敵人在下一個 simulation step 歸還 Factory，重新借出時用新的 id、生命與 deadline，舊的命中不能傷害新的生命。
-5. 目前 **Session 就是未來 Host 的放置點**。未來 Client 只送輸入，Host Session 決定傷害、擊殺、金錢與狀態，再傳送快照；不要讓各 Client 的 HUD 或 Weapon 各自裁定獎勵。這次不新增網路協定或連線實作。
+5. 目前 **Session 就是未來 Host 的放置點**。未來 Client 只送輸入，Host Session 決定傷害、擊殺與狀態，再傳送快照；不要讓各 Client 的 HUD 或 Weapon 各自裁定擊殺。這次不新增網路協定或連線實作。
 
 ## 設計模式對照
 
@@ -150,7 +145,6 @@ classDiagram
 | `RELOAD_REQUESTED` | `player.reload-requested` | `{ownerId}`；輸入 → Session |
 | `SWITCH_REQUESTED` | `player.switch-requested` | `{ownerId,index}`；輸入 → Session |
 | `SECONDARY_REQUESTED` | `player.secondary-requested` | `{ownerId}`；滑鼠右鍵 → Session，呼叫手上物品的 `secondary(ctx)`（繃帶：治療前方隊友） |
-| `PURCHASE_REQUESTED` | `shop.purchase-requested` | `{ownerId,itemId}`；輸入 → Session |
 | `DAMAGE_REQUESTED` | `entity.damage-requested` | `DamageInfo`；攻擊策略 → Session |
 | `ENTITY_DAMAGED` | `entity.damaged` | `{entity,info,amount,health}`；Damageable 通知，amount 為實際扣血 |
 | `ENTITY_DIED` | `entity.died` | 同上；Damageable 通知，單一生命只發一次 |
@@ -162,8 +156,6 @@ classDiagram
 | `WEAPON_FIRED` | `weapon.fired` | `{ownerId,weaponId,hit}`；Weapon 通知，miss 時 hit 為 null |
 | `WEAPON_RELOADED` | `weapon.reloaded` | `{ownerId,weaponId}`；Weapon 換彈完成通知 |
 | `WEAPON_CHANGED` | `weapon.changed` | `{ownerId,weaponId}`；WeaponHolder 通知 |
-| `WALLET_CHANGED` | `wallet.changed` | `{ownerId,balance,delta}`；Wallet 通知 |
-| `ITEM_PURCHASED` | `shop.purchased` | `{ownerId,itemId,cost}`；Economy 成功通知 |
 | `STATE_CHANGED` | `game.state-changed` | `{state,wave}`；Session 通知，state 是 lobby／playing／wave-break／game-over |
 | `WAVE_STARTED` | `wave.started` | `{wave,count}`；Session 通知，count 是整波預計總數（含尚未出生者），在第一隻出生前發送 |
 | `WAVE_CLEARED` | `wave.cleared` | `{wave,kills}`；Session 通知，kills 為本局累計 |
@@ -201,7 +193,6 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 - 地上的槍是關卡 `type: "weapon"` marker。位置固定；`item` 寫了就放那一把，**不寫就每局用 `ctx.rng` 從 `WeaponCatalog` 發一把**（`installGameplay` 註冊 `rifle`、`shotgun`、`smg`、`revolver`）。發法是 `ItemDeck`：每個 pool 像洗好的一副牌，每種都先出現一次才會重複，所以點數夠的話每種武器地上都有一把，只是每局位置不同。**規則：所有撿得到的武器（槍和撿來的近戰）都要在這份名單裡**，新武器在 `WeaponCatalog` 註冊就會自動加入。開局就有、不會丟的手槍和球棒不在名單裡。**投擲物和治療物不放進這份名單**：之後各有自己的清單和 marker 種類（`throwable`、`healing`），三種分開抽。**每個場景（每個關卡檔）至少 8 個 `weapon`、4 個 `healing`、4 個 `throwable`、2 個 `melee` marker 和 3 個 `ammo` 彈藥箱**，`test/LevelPickupSpots.test.js` 會檢查；`healing`、`throwable` 的點從各自的 pool 抽（見下一節）。`PickupField.fromLevel` 每個 marker 建一個 `WeaponPickup`，裡面放的是真的 Weapon 物件。
 - E 送 `PICKUP_REQUESTED`；Session 在玩家能移動時（Playing、WaveBreak）呼叫 `PickupField.take`：撿最近、搆得到的那把，用 `LoadoutHolder.equip` 放進主武器格並拿在手上，原本那把留在同一個位置，子彈數不變。撿到同款的槍也是交換，**不會補子彈**。成功發 `WEAPON_PICKED_UP`。
 - 畫面：`WeaponPickupViews` 為每個 pickup 畫一個躺在地上、大小照槍的方塊，外面加一圈會脈動的亮色邊框（inverted hull：稍大的方塊只畫背面，不吃霧），不加燈。HUD 的提示從 `PlayerStatus.pickup` 來（`E  PICK UP RIFLE` 或 `E  SWAP FOR RIFLE`）；撿到時不跳字卡。拿球棒時 `PlayerStatus.armed` 為 false，彈藥欄不顯示。
-- E 目前同時送 `PURCHASE_REQUESTED`，站的位置不對的那個會被 Session 拒絕。
 
 ## 治療物、投擲物、跳躍、後座力（G16、G20）
 
@@ -245,8 +236,8 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 1. 從 `weapons/Weapon.js`、`weapons/Pistol.js`、`test/Weapon.test.js` 開始，新增自己的檔案與具名 export，不更動 Pistol 範例來冒充新武器。
 2. 繼承 Weapon，constructor 呼叫 super，提供唯一 `id`、`magazine`、`reserve`、`reloadSeconds`、`cooldownSeconds`、`fireMode`。子彈數是非負整數、彈匣與時間必須為正值。
 3. 覆寫 `createShot(ctx)`，回傳 `{damage,range}`。固定規格可在模組層 Object.freeze 一次；不要每幀建物件。沿用 HitscanFire，或自行寫 `fire(shot,ctx,ownerId)` Strategy。
-4. 命中時只發 DAMAGE_REQUESTED，不直接讀 Walker 類別、加錢或扣血。視覺／音效用 onFired 或訂閱 WEAPON_FIRED，別把 Three.js 引進純邏輯基底。
-5. 在共用組合入口 `game/installGameplay.js` 匯入新類別，呼叫 `player.weapons.add(new 你的類別())`。WeaponHolder 已支援數字鍵切換，不需改 Enemy 或 Economy。
+4. 命中時只發 DAMAGE_REQUESTED，不直接讀 Walker 類別或扣血。視覺／音效用 onFired 或訂閱 WEAPON_FIRED，別把 Three.js 引進純邏輯基底。
+5. 在共用組合入口 `game/installGameplay.js` 匯入新類別，呼叫 `player.weapons.add(new 你的類別())`。WeaponHolder 已支援數字鍵切換，不需改 Enemy。
 6. 自己補假時鐘測試（射速、空彈、換彈、切槍），用 Conventional Commit 提交，一把武器一組 commit。
 
 ### G23 衝鋒槍和左輪
@@ -274,23 +265,14 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 
 ## 新增敵人類型
 
-已註冊 `walker`、`runner`、`tank`、`exploder`。Runner：40 HP、速度 3.4、近戰 10；Tank：240 HP、速度 0.8、近戰 30；兩者沿用每秒一次近戰。Exploder：50 HP、速度 1.8，接觸玩家且視線無遮擋時立即自爆；半徑 3 公尺（含玩家身體半徑）內、無牆壁遮擋的存活玩家各受 40 爆炸傷害，再向自己送出致死傷害，全部走 `DAMAGE_REQUESTED` → Session → DamagePipeline。自爆不給擊殺獎金，每次池重生只可自爆一次；被射殺不引爆。數值是此版灰盒平衡，不實作參考文件的敵人屬性成長；預設混合出怪使用上方 G3 波次資料。
+已註冊 `walker`、`runner`、`tank`、`exploder`。Runner：40 HP、速度 3.4、近戰 10；Tank：240 HP、速度 0.8、近戰 30；兩者沿用每秒一次近戰。Exploder：50 HP、速度 1.8，接觸玩家且視線無遮擋時立即自爆；半徑 3 公尺（含玩家身體半徑）內、無牆壁遮擋的存活玩家各受 40 爆炸傷害，再向自己送出致死傷害，全部走 `DAMAGE_REQUESTED` → Session → DamagePipeline。自爆不計入玩家擊殺數，每次池重生只可自爆一次；被射殺不引爆。數值是此版灰盒平衡，不實作參考文件的敵人屬性成長；預設混合出怪使用上方 G3 波次資料。
 
 1. 從 `enemies/Enemy.js`、`enemies/Walker.js`、`enemies/Brain.js`、`test/Enemy.test.js` 開始，新增自己的 Enemy 子類。
-2. constructor 接收 Factory 傳入的 dependencies，呼叫 `super(dependencies,{health,speed,reward,brain})`。所有新生命狀態在 activate 重設；有自訂狀態時覆寫 activate 並先呼叫 super。
+2. constructor 接收 Factory 傳入的 dependencies，呼叫 `super(dependencies,{health,speed,brain})`。所有新生命狀態在 activate 重設；有自訂狀態時覆寫 activate 並先呼叫 super。
 3. 自訂 Brain 的 `update(enemy,dt,ctx)`，或組合 Sequence／Selector／Condition／Action，明確回傳 STATUS。移動沿用 moveToward，攻擊沿用事件傷害，不直接操作玩家或 HUD 的具體類別。
 4. 在組合入口呼叫 `factory.register('你的唯一類型', 你的類別)`，再由 WaveDirector 回傳相同 type。Factory 本身不用新增 switch；不要在 update 使用 new Enemy。
 5. 範例由共用 PathFinder 的 radius／height 決定碰撞及灰盒大小；若要不同體型，要一起調整對應的尋路 clearance 與 hitVolume 契約，不能只放大 mesh。
 6. 自己測試註冊、池回收、重新出生狀態、路徑可達與牆後攻擊。調整 WaveDirector 的難度／出怪表時，不改關卡 JSON 來掩蓋碰撞問題。
-
-## 新增商店商品
-
-1. 從 `economy/ShopItem.js`、`economy/AmmoRefillItem.js`、`test/Economy.test.js` 開始，新增自己的 ShopItem 子類。
-2. constructor 使用唯一 id 與整數 cost，覆寫 `canBuy(player,ctx)` 時先呼叫 super 檢查資金，再檢查商品條件；判斷過程不可產生副作用。
-3. `apply(player,ctx)` 成功必須回傳 true；拒絕回傳 false。先完整驗證再改狀態，不要改到一半拋錯；Economy 只保證退還金錢，無法回復商品自行改動的其他狀態。
-4. 只呼叫介面或發事件，不依賴 Pistol 或 Walker。商品也不能自行扣錢，成功交易由 Economy 發 ITEM_PURCHASED。
-5. 將實例加入組合入口的 items 陣列；UI 發 `{ownerId,itemId}` 的 PURCHASE_REQUESTED。狀態與距離檢查仍由 Session 執行，現在 E 僅綁定補彈範例。
-6. 測試買不起、條件不符、成功一次、apply 失敗退費，以及波次中／遠離商店的 Session 拒絕路徑，再提交修改。
 
 ## 新增狀態
 

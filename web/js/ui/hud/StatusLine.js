@@ -1,7 +1,7 @@
 import { HudWidget } from './HudWidget.js';
 
 /**
- * One quiet line at the top: money and what the game is waiting for
+ * One quiet line at the top: what the game is waiting for
  * (the facts the player looks up now and then; moments are announced by EventCard).
  */
 export class StatusLine extends HudWidget {
@@ -22,8 +22,7 @@ export class StatusLine extends HudWidget {
   static describe(status) {
     if (status.state === 'game-over') return 'REFRESH TO RETRY';
     if (status.state === 'lobby') return 'CLICK TO START';
-    const head = '$' + status.money + '   ';
-    if (status.state === 'wave-break') return head + 'NEXT WAVE IN ' + status.breakSeconds + '   E AT SHOP: AMMO $25';
-    return head + status.enemies + ' LEFT';
+    if (status.state === 'wave-break') return 'NEXT WAVE IN ' + status.breakSeconds;
+    return status.enemies + ' LEFT';
   }
 }

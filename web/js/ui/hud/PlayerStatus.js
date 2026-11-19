@@ -32,7 +32,6 @@ export class PlayerStatus {
      */
     this.slots = [];
     this.selected = -1;
-    this.money = 0;
     this.state = null;
     this.wave = 0;
     this.enemies = 0;
@@ -113,7 +112,6 @@ export class PlayerStatus {
     this.pickupNote = offer ? offer.note ?? null : null;
     this._readSlots(player);
     this._readAction(context, player);
-    this.money = player?.wallet ? player.wallet.balance : 0;
     this.state = session.state;
     this.wave = session.wave;
     this.enemies = context.enemies.length;

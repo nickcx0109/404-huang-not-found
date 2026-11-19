@@ -11,8 +11,6 @@ import { SURVIVAL_WAVES } from '../web/js/game/waves/survival.js';
 import { EnemyFactory } from '../web/js/enemies/EnemyFactory.js';
 import { Walker } from '../web/js/enemies/Walker.js';
 import { CombatPlayer } from '../web/js/player/CombatPlayer.js';
-import { Wallet } from '../web/js/economy/Wallet.js';
-import { Economy } from '../web/js/economy/Economy.js';
 import { DamageInfo } from '../web/js/entities/DamageInfo.js';
 import { EVENTS } from '../web/js/game/events.js';
 
@@ -128,7 +126,6 @@ test('WaveTable owns immutable data and rejects malformed fields with their loca
 test('GameSession keeps playing through empty spawn gaps, clears only the exhausted wave and uses each row break', () => {
   const ctx = context();
   const player = new CombatPlayer('player', { x: 0, z: 0 }, ctx.events);
-  player.wallet = new Wallet(player.id, ctx.events);
   ctx.players.push(player);
   const data = structuredClone(SURVIVAL_WAVES);
   data.waves = [
@@ -138,7 +135,7 @@ test('GameSession keeps playing through empty spawn gaps, clears only the exhaus
   const factory = new EnemyFactory(ctx).register('walker', Walker);
   const director = new TimedWaveDirector(data);
   let separations = 0;
-  const session = new GameSession(ctx, { factory, director, economy: new Economy(), separation: { apply: actual => {
+  const session = new GameSession(ctx, { factory, director, separation: { apply: actual => {
     assert.equal(actual, ctx);
     separations++;
   } } });
@@ -184,11 +181,10 @@ test('GameSession keeps running when every spawn sample is blocked and spawns on
   const blocker = new Aabb(4, 0, 4, 6, 3, 6);
   ctx.collision.add(blocker);
   const player = new CombatPlayer('p1', { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }, ctx.events);
-  player.wallet = new Wallet(player.id, ctx.events);
   ctx.players.push(player);
   const factory = new EnemyFactory(ctx).register('walker', Walker).register('runner', Walker)
     .register('tank', Walker).register('exploder', Walker);
-  const session = new GameSession(ctx, { factory, director: new TimedWaveDirector(SURVIVAL_WAVES), economy: new Economy() });
+  const session = new GameSession(ctx, { factory, director: new TimedWaveDirector(SURVIVAL_WAVES) });
   session.start();
   assert.doesNotThrow(() => { for (let tick = 0; tick < 20; tick++) session.update(0.05); });
   assert.equal(session.state, 'playing');

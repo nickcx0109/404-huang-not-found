@@ -90,7 +90,7 @@ node tools/serve.mjs
 - 目前有灰盒替身的名稱，大小用 `size`，沒有就跟著 collider。新的替身加在**自己那一章**繼承 `PropSet` 的檔案裡（`static builders` 的 `name: builder`），由基底統一註冊；一個名稱只能由一個檔案擁有。
   - `web/js/props/CommonProps.js`（共用）：`crate`（方塊）、`pillar`（圓柱）、`road`（路面，要給 `size`）、`building`、`low_wall`、`fence`、`car_wreck`（廢車）、`car_parked`（停著的車）、`truck_wreck`、`van_wreck`、`street_lamp`。
   - `web/js/props/Ch1Props.js`：`tree`（枯樹）、`escape_car`（尾燈會亮的車，用 palette 的重點色）。
-  - `web/js/props/Ch2Props.js`：`mvidia_gate`（大門）、`mvidia_sign`（發光招牌，不要 collider，`size` 是 `[板寬, 字高, 厚度]`）、`gate_panel`（門禁面板）、`guard_booth`、`shop_terminal`（商店）、`sandbags`、`barricade`、`warning_light`（警示燈，給 `size` 就立在那麼高的桿子上，`rotY` 是光一開始照的方向）、`hq_wall`。
+  - `web/js/props/Ch2Props.js`：`mvidia_gate`（大門）、`mvidia_sign`（發光招牌，不要 collider，`size` 是 `[板寬, 字高, 厚度]`）、`gate_panel`（門禁面板）、`guard_booth`、`shop_terminal`（場景裝飾終端機）、`sandbags`、`barricade`、`warning_light`（警示燈，給 `size` 就立在那麼高的桿子上，`rotY` 是光一開始照的方向）、`hq_wall`。
   - `web/js/props/Ch3Props.js`：還沒有。
   - `test_crate` 沒有替身，只有模型（流程測試用，在 test 關卡）。
 - `warning_light` 只有關卡裡**排在最前面的幾個**有真的燈（數量是 palette 的 `alarm.light.count`），其餘只有發光的燈罩。動態燈上限 4 盞（含手電筒），要調整就改 palette，不用改關卡。
@@ -119,18 +119,18 @@ node tools/serve.mjs
 
 ### `markers`（選填）
 
-具名的玩法位置：商店、目標、防守點，之後的補給點、檢查點、燃料桶放置點也放這裡。只是資料，不會畫出東西（`debug=1` 時畫成青色方框）。
+具名的玩法位置：地上的武器和道具點、彈藥箱、目標、防守點，之後的檢查點、燃料桶放置點也放這裡。只是資料，不會畫出東西（`debug=1` 時畫成青色方框）。
 
 | 欄位 | 必填 | 說明 |
 |---|---|---|
-| `type` | 是 | 種類，例如 `shop`、`objective`、`post` |
+| `type` | 是 | 種類，例如 `weapon`、`objective`、`post` |
 | `x`, `z` | 是 | 位置 |
 | `id` | 否 | 不能重複，不寫會自動叫 `m0`、`m1`… |
 | `r` | 否 | 範圍半徑，預設 1 |
 | `yaw` | 否 | 朝向（度），預設 0 |
 | `item` | 否 | 這個點給的東西，英數字、`-`、`_`。`type: "weapon"` 用它指定地上的槍：`rifle`、`shotgun`、`smg`、`revolver`；不寫就每局隨機 |
 
-程式用 `level.markersOfType('shop')` 取。
+程式用 `level.markersOfType('objective')` 取。
 
 地上的槍：`{ "id": "gun_left_post", "type": "weapon", "x": -6.8, "z": 6.4, "r": 1.2 }`，位置固定、每局隨機一把；要固定哪一把就加 `"item": "rifle"`。`r` 是撿得到的距離（從玩家身體邊緣算）。只有 `play=1` 會畫出來（地上的槍加亮色邊框），寫了沒註冊的 `item` 會在開始玩的時候報錯。
 

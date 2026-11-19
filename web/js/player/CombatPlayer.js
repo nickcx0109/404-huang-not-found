@@ -11,7 +11,6 @@ export class CombatPlayer extends Entity {
     this.body = PLAYER_BODY;
     this.damageable = new Damageable(this, 100, events);
     this.weapons = weapons;
-    this.wallet = null;
   }
 
   update(dt, ctx) {
