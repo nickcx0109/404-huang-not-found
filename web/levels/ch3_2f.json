@@ -354,7 +354,23 @@
     {"id": "fuel_19", "type": "fuel", "x": -13.2, "z": 5.6, "r": 0.8},
     {"id": "fuel_20", "type": "fuel", "x": 14.4, "z": -10.8, "r": 0.8},
     {"id": "to_ch3", "type": "exit", "x": -15, "z": -46.9, "r": 0.6, "yaw": -90},
-    {"id": "to_ch3_roof", "type": "exit", "x": -12.2, "z": -46.9, "r": 0.8, "yaw": 180}
+    {"id": "to_ch3_roof", "type": "exit", "x": -12.2, "z": -46.9, "r": 0.8, "yaw": 180},
+    {"id": "gun_01", "type": "weapon", "x": 6.3, "z": 6.8, "r": 1.2},
+    {"id": "heal_01", "type": "healing", "x": -3.2, "z": -5.2, "r": 1.2},
+    {"id": "throw_01", "type": "throwable", "x": 14.8, "z": 0.3, "r": 1.2},
+    {"id": "gun_02", "type": "weapon", "x": -14.2, "z": -4.7, "r": 1.2},
+    {"id": "heal_02", "type": "healing", "x": -3.2, "z": 4.8, "r": 1.2},
+    {"id": "throw_02", "type": "throwable", "x": 4.8, "z": -10.7, "r": 1.2},
+    {"id": "gun_03", "type": "weapon", "x": 5.8, "z": -27.2, "r": 1.2},
+    {"id": "heal_03", "type": "healing", "x": -5.7, "z": -27.2, "r": 1.2},
+    {"id": "throw_03", "type": "throwable", "x": 4.8, "z": -1.7, "r": 1.2},
+    {"id": "gun_04", "type": "weapon", "x": -6.2, "z": -13.2, "r": 1.2},
+    {"id": "heal_04", "type": "healing", "x": -7.7, "z": -35.2, "r": 1.2},
+    {"id": "throw_04", "type": "throwable", "x": -12.2, "z": -22.7, "r": 1.2},
+    {"id": "gun_05", "type": "weapon", "x": 7.8, "z": -18.7, "r": 1.2},
+    {"id": "gun_06", "type": "weapon", "x": 14.8, "z": -30.2, "r": 1.2},
+    {"id": "gun_07", "type": "weapon", "x": -8.7, "z": -0.2, "r": 1.2},
+    {"id": "gun_08", "type": "weapon", "x": 7.3, "z": -34.7, "r": 1.2}
   ],
 
   "bookmarks": [
