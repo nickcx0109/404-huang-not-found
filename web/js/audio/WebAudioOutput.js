@@ -7,6 +7,9 @@ import { SynthSounds } from './SynthSounds.js';
  * key, so nothing is created until `unlock()`; until then every cue is quietly skipped. On unlock it
  * builds the synthesized cues, then loads the files listed in the manifest and swaps them in as they
  * arrive. A file that fails to load leaves the synthesized cue in place.
+ *
+ * `pause()` suspends the AudioContext, so loops (the chainsaw) and sounds already playing stop where they
+ * are; `resume()` lets them go on. While paused, a click or key press does not wake the sound up.
  */
 export class WebAudioOutput {
   constructor({ manifestUrl, volume = 0.45 } = {}) {
@@ -16,6 +19,7 @@ export class WebAudioOutput {
     this.library = new Map();
     this.loops = new Map();
     this.disposed = false;
+    this.paused = false;
     this.loads = new AbortController();
   }
 
@@ -26,7 +30,7 @@ export class WebAudioOutput {
   unlock() {
     if (this.disposed) return;
     if (this.synth) {
-      if (this.synth.context.state === 'suspended') this.synth.context.resume();
+      if (!this.paused && this.synth.context.state === 'suspended') this.synth.context.resume();
       return;
     }
     const AudioContextClass = globalThis.AudioContext || globalThis.webkitAudioContext;
@@ -36,10 +40,23 @@ export class WebAudioOutput {
     master.gain.value = this.volume;
     master.connect(context.destination);
     this.synth = new Synth(context, master);
+    if (this.paused) context.suspend();
     SynthSounds.registerInto(this.library);
     if (this.manifestUrl) this._loadFiles().catch(error => {
       if (!this.disposed) console.warn('[audio] sound files not loaded:', error);
     });
+  }
+
+  pause() {
+    if (this.disposed || this.paused) return;
+    this.paused = true;
+    if (this.synth?.context.state === 'running') this.synth.context.suspend();
+  }
+
+  resume() {
+    if (this.disposed || !this.paused) return;
+    this.paused = false;
+    if (this.synth?.context.state === 'suspended') this.synth.context.resume();
   }
 
   play(cue, mix) {

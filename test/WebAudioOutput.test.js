@@ -44,3 +44,59 @@ test('a decode that finishes after disposal cannot restore an old audio buffer',
   finishDecode({ decoded: true });
   assert.equal(await pending, null);
 });
+
+function fakeContext(state = 'running') {
+  const calls = [];
+  return {
+    calls,
+    state,
+    suspend() { calls.push('suspend'); this.state = 'suspended'; },
+    resume() { calls.push('resume'); this.state = 'running'; },
+    close() {},
+  };
+}
+
+test('pause suspends the sound and resume lets it go on; a click while paused keeps it quiet', () => {
+  const output = new WebAudioOutput();
+  const context = fakeContext();
+  output.synth = { context };
+  output.pause();
+  output.pause();
+  assert.deepEqual(context.calls, ['suspend']);
+  output.unlock(); // a key press or click while the game is paused
+  assert.deepEqual(context.calls, ['suspend']);
+  output.resume();
+  output.resume();
+  assert.deepEqual(context.calls, ['suspend', 'resume']);
+  output.pause();
+  output.dispose();
+  output.resume();
+  assert.deepEqual(context.calls, ['suspend', 'resume', 'suspend']);
+});
+
+test('sound unlocked while paused starts suspended', t => {
+  const created = [];
+  t.after(() => { delete globalThis.AudioContext; });
+  globalThis.AudioContext = class {
+    constructor() {
+      this.state = 'running';
+      this.destination = {};
+      this.calls = [];
+      created.push(this);
+    }
+    createGain() { return { gain: { value: 1 }, connect() {} }; }
+    get sampleRate() { return 8; }
+    createBuffer(channels, length) { const data = new Float32Array(length); return { getChannelData: () => data }; }
+    suspend() { this.calls.push('suspend'); this.state = 'suspended'; }
+    resume() { this.calls.push('resume'); this.state = 'running'; }
+    close() {}
+  };
+  const output = new WebAudioOutput({ manifestUrl: null });
+  output.pause();
+  output.unlock();
+  assert.equal(output.ready, true);
+  assert.deepEqual(created[0].calls, ['suspend']);
+  output.resume();
+  assert.deepEqual(created[0].calls, ['suspend', 'resume']);
+  output.dispose();
+});

@@ -16,6 +16,7 @@ const MANIFEST_URL = new URL('../../assets/sfx/manifest.json', import.meta.url).
 /**
  * Sound for `play=1`. Returns a view-like object ({ update, dispose }) for App's gameViews list.
  * Which weapon and zombie makes which sound is all set here; the rules only listen to events.
+ * The game stops while the mouse is not locked, so the sound pauses with it (TODO B14).
  */
 export function installAudio({ events, player, enemies, playerId }) {
   const output = new WebAudioOutput({ manifestUrl: MANIFEST_URL });
@@ -49,14 +50,18 @@ export function installAudio({ events, player, enemies, playerId }) {
   board.install(new WorldSounds(events));
 
   const unlock = () => output.unlock();
+  const followLock = () => (player.locked ? output.resume() : output.pause());
   window.addEventListener('pointerdown', unlock);
   window.addEventListener('keydown', unlock);
+  document.addEventListener('pointerlockchange', followLock);
+  followLock();
   return {
     board,
     update: dt => board.update(dt),
     dispose: () => {
       window.removeEventListener('pointerdown', unlock);
       window.removeEventListener('keydown', unlock);
+      document.removeEventListener('pointerlockchange', followLock);
       board.dispose();
       output.dispose();
     },
