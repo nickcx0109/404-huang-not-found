@@ -154,6 +154,7 @@ classDiagram
 | `ENTITY_DAMAGED` | `entity.damaged` | `{entity,info,amount,health}`；Damageable 通知，amount 為實際扣血 |
 | `ENTITY_DIED` | `entity.died` | 同上；Damageable 通知，單一生命只發一次 |
 | `ENTITY_HEALED` | `entity.healed` | `{entity,sourceId,amount,health}`；`Damageable.heal` 通知，amount 為實際補的血 |
+| `AMMO_REFILLED` | `ammo.refilled` | `{ownerId,crateId}`；彈藥箱補滿時通知 |
 | `ITEM_THROWN` | `item.thrown` | `{ownerId,itemId,effect}`；`ThrowFire` 通知 |
 | `EXPLODED` | `effect.exploded` | `{kind,x,y,z,radius,ownerId}`；手榴彈爆炸通知，`EffectViews` 畫閃光 |
 | `ENEMY_SPAWNED` | `enemy.spawned` | `{enemy,wave}`；Session 通知 |
@@ -196,7 +197,7 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 - 玩家用 `LoadoutHolder`（`WeaponHolder` 子類），固定七格，順序也是數字鍵：1 `primary`（槍）、2 `sidearm`（手槍）、3 `melee`（球棒）、4 `special`（撿到的近戰）、5 `throwable`、6 `healing`、7 `booster`。`cycle(step)` 是滾輪：往前或往後跳到下一個有東西的格子，會繞回來；`CYCLE_REQUESTED` 由 Session 檢查後呼叫。右側的 `InventoryWidget` 從 `PlayerStatus.slots`／`selected` 畫每一格，圖示是 `hud.css` 裡依物品 id 的 mask，沒有 mask 的物品就印名字。武器用 `slot` getter 說自己放哪一格，`Weapon` 預設是 `primary`，所以 `Rifle`、`Shotgun` 不用改。
 - 開局只有 `StarterPistol`（繼承 `Pistol`，備彈 `Infinity`，彈匣打完還是要換彈）和 `Bat`，手上拿手槍。這兩格永遠不會丟。
 - `MeleeWeapon` 是近戰基底：`usesAmmo` 為 false，`fire` 不扣子彈、`reload` 不做事，冷卻照舊。`Bat`：傷害 45、距離 2.2 m（算到敵人身體邊緣）、前方 90 度、冷卻 0.6 秒。命中用 `MeleeSwing` Strategy：最近、在前方扇形內、沒被牆擋的活敵人，送 `kind: 'melee'` 的 `DAMAGE_REQUESTED`，打的是身體，不算爆頭。
-- 地上的槍是關卡 `type: "weapon"` marker。位置固定；`item` 寫了就放那一把，**不寫就每局用 `ctx.rng` 從 `WeaponCatalog` 隨機抽一把**（`installGameplay` 註冊 `rifle`、`shotgun`、`smg`、`revolver`，機率相同）。**規則：所有撿得到的武器（槍和撿來的近戰）都要在這份名單裡**，新武器在 `WeaponCatalog` 註冊就會自動加入。開局就有、不會丟的手槍和球棒不在名單裡。**投擲物和治療物不放進這份名單**：之後各有自己的清單和 marker 種類（`throwable`、`healing`），三種分開抽。**每個場景（每個關卡檔）至少 8 個 `weapon`、4 個 `healing`、4 個 `throwable` marker**，`test/LevelPickupSpots.test.js` 會檢查；`healing`、`throwable` 的點從各自的 pool 抽（見下一節）。`PickupField.fromLevel` 每個 marker 建一個 `WeaponPickup`，裡面放的是真的 Weapon 物件。
+- 地上的槍是關卡 `type: "weapon"` marker。位置固定；`item` 寫了就放那一把，**不寫就每局用 `ctx.rng` 從 `WeaponCatalog` 隨機抽一把**（`installGameplay` 註冊 `rifle`、`shotgun`、`smg`、`revolver`，機率相同）。**規則：所有撿得到的武器（槍和撿來的近戰）都要在這份名單裡**，新武器在 `WeaponCatalog` 註冊就會自動加入。開局就有、不會丟的手槍和球棒不在名單裡。**投擲物和治療物不放進這份名單**：之後各有自己的清單和 marker 種類（`throwable`、`healing`），三種分開抽。**每個場景（每個關卡檔）至少 8 個 `weapon`、4 個 `healing`、4 個 `throwable`、2 個 `melee` marker 和 3 個 `ammo` 彈藥箱**，`test/LevelPickupSpots.test.js` 會檢查；`healing`、`throwable` 的點從各自的 pool 抽（見下一節）。`PickupField.fromLevel` 每個 marker 建一個 `WeaponPickup`，裡面放的是真的 Weapon 物件。
 - E 送 `PICKUP_REQUESTED`；Session 在玩家能移動時（Playing、WaveBreak）呼叫 `PickupField.take`：撿最近、搆得到的那把，用 `LoadoutHolder.equip` 放進主武器格並拿在手上，原本那把留在同一個位置，子彈數不變。撿到同款的槍也是交換，**不會補子彈**。成功發 `WEAPON_PICKED_UP`。
 - 畫面：`WeaponPickupViews` 為每個 pickup 畫一個躺在地上、大小照槍的方塊，外面加一圈會脈動的亮色邊框（inverted hull：稍大的方塊只畫背面，不吃霧），不加燈。HUD 的提示從 `PlayerStatus.pickup` 來（`E  PICK UP RIFLE` 或 `E  SWAP FOR RIFLE`）；撿到時不跳字卡。拿球棒時 `PlayerStatus.armed` 為 false，彈藥欄不顯示。
 - E 目前同時送 `PURCHASE_REQUESTED`，站的位置不對的那個會被 Session 拒絕。
@@ -208,6 +209,16 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 - `Throwable`（第 5 格 `throwable`，最多 2，抽象）用 `ThrowFire` Strategy 丟出：從眼睛沿準心方向，速度 13 m/s 加上 3 m/s 往上，丟出去的東西放進 `ctx.effects`。`Grenade` → `ThrownGrenade`：撞牆、落地會彈，3 秒後爆，半徑 5 m，中心 150、邊緣 30，牆後的擋住。`Molotov` → `ThrownMolotov`：碰到牆或地就破，留下 `FireArea`：半徑 3 m、6 秒、每 0.5 秒 12.5（每秒 25）。傷害都只送 `DAMAGE_REQUESTED`（`kind` 是 `explosion`／`fire`），Session 規則不變，所以不會傷到玩家。
 - `ctx.effects`：`Effect` 子類，`update(dt, ctx)` 回傳 false 就被 `GameSession.updateEffects` 移除（Playing 和 WaveBreak 都跑）。畫面是 `EffectViews`，依 `kind` 註冊做 mesh 的函式，App 每幀呼叫 `update(dt)`。
 - 地上的點：`WeaponCatalog.register(id, { pool })`，pool 就是 marker 種類。`healing` 抽 `bandage`，`throwable` 從 `grenade`、`molotov` 等機率抽；新的治療物、投擲物註冊到對的 pool 就會出現。
+- 傷害自己和隊友：`AreaDamage.damageInRadius` 對範圍內的敵人和玩家（包括丟的人）都送傷害，`DamageInfo.friendlyFire` 為 true。Session 只讓這種傷害從玩家打到玩家，子彈和近戰還是打不到隊友。
+
+## 撿來的近戰和彈藥箱（G18、G19、G13）
+
+- `Katana`（`MeleeWeapon` 子類，第 4 格 `special`）：用 `MeleeSweep` Strategy（`MeleeSwing` 子類），範圍內、前方 150 度、沒被牆擋的殭屍**全部**砍到，各 70，間隔 0.5 秒，距離 2.6 m。
+- `Chainsaw`（第 4 格）：`automatic`，按住每 0.1 秒對前方 60 度、3 m 內最近的殭屍打 20（每秒 200）。每次砍扣電，電量 100 約 30 秒用完，沒電 `fire` 回傳 false。換電就是撿另一把鏈鋸（交換）。`Weapon.charge` 讓道具欄顯示剩餘百分比。
+- 兩者註冊在 `pool: ['weapon', 'melee']`：一般武器點也可能抽到，`melee` 點只抽這兩把。球棒（第 3 格）不會丟。
+- 彈藥箱：關卡 `type: "ammo"` marker → `AmmoCrateField` 裡的 `AmmoCrate`。按 E 把身上所有槍的彈匣和備彈補滿，之後這個箱子休息 60 秒（大家共用）。槍都滿的時候不會用掉。提示：`E  REFILL AMMO`、`AMMO  READY IN 42s`、`AMMO  FULL`。發 `AMMO_REFILLED`。畫面是 `AmmoCrateViews`：橄欖色箱子加綠色脈動邊框，休息時變暗。
+- E 現在交給 `InteractionList`（Composite）：`[PickupField, AmmoCrateField]`，誰在這裡有東西誰回應。兩者都實作 `take(player, ctx)` 和 `offerFor(player, out, time)`；offer 帶 `verb`（PICK UP／SWAP FOR／REFILL）和 `note`（FULL、READY IN …），`PromptWidget` 只照著拼字。
+
 - 跳躍：空白鍵，`PlayerController` 裡組合一個 `JumpMotion`（起跳 4.6 m/s、重力 13，約 0.8 m 高、0.7 秒）。只抬高眼睛，碰撞還是照地面算，所以跳不過矮牆和沙包。
 - 後座力：`RecoilKick` 聽自己的 `WEAPON_FIRED`，依武器 id 查表把視角往上（和隨機往旁邊）踢，60% 在約 0.25 秒內回來，連射會一路往上飄。數值在 `installGameplay`：手槍 1.6°、步槍 0.9°、衝鋒槍 0.6°、霰彈槍 4.5°、左輪 4°。沒登記的（球棒、投擲物）不踢。
 
