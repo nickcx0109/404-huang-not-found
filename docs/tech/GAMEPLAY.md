@@ -11,7 +11,7 @@ http://localhost:8080/web/index.html?level=ch2&play=1
 
 - 只有 **`play=1`** 開啟玩法；沒有此參數、`play=0`、`play=true` 都仍是原有走動展示。
 - `shot` 優先於 `play`，連 `?level=ch2&play=1&shot=gate_view` 也只拍原場景，不建立玩法實體或 HUD。
-- 點畫面取得滑鼠鎖定才從 Lobby 開始。WASD 移動、Shift 跑步、左鍵開火（步槍按住連射）、R 換彈、1 手槍／2 步槍／3 霰彈槍、F 手電筒。放開左鍵、失去視窗焦點或解除鎖定會停止連射。
+- 點畫面取得滑鼠鎖定才從 Lobby 開始。WASD 移動、Shift 跑步、左鍵開火（步槍按住連射）、R 換彈、1 主武器／2 手槍／3 球棒、E 撿地上的槍、F 手電筒。放開左鍵、失去視窗焦點或解除鎖定會停止連射。
 - Esc 解除鎖定會暫停玩法時鐘；重新點畫面繼續。不要用系統時間決定射速或換彈，以免暫停期間偷偷完成。
 - 波次清空後依波次表整備 6～10 秒；靠近關卡 `type: "shop"` marker 按 E，以 $25 補滿目前武器的彈匣與備彈。波次中或離商店太遠不能買。
 - 生命歸零進入 GameOver，凍結戰鬥，重新整理才重開。暫無救援、復活、獲勝／開大門條件，也不實作故事章節目標。
@@ -184,6 +184,16 @@ Session.beginWave 只啟動 director、讀取該波 breakSeconds 並要求當下
 CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配對修正，重疊距離按兩者半徑總和計算；中心相同時固定沿 X 軸分開。推力先對半分配，一方受牆限制時由另一方補足可移動的距離。每次位移透過 CollisionWorld.move（含薄牆分段和邊界夾限），再以 hit 驗證終點。狹小空間可能仍有重疊，不會為了完全分開而穿牆。每幀重用碰撞結果，不配置陣列、向量或新物件；最後同步 hitVolume 與 mesh。此任務只實作設計文件 6.1 第 1 點，沒有包抄、分流或其他 AI 擴充。
 
 資料錯誤會在 WaveTable 建構時拋出帶欄位路徑的錯誤，例如 `waves[0].counts.runner`。四種數量必須完整、為非負安全整數且總數大於零；未知種類會被拒絕，間隔必須為正有限數、上限為 1～40 整數、休息為非負有限數，overflow 也必須完整指定四種增量。後續波次溢出安全整數範圍亦會明確拒絕。
+
+## 開局裝備和地上的槍（G11）
+
+- 玩家用 `LoadoutHolder`（`WeaponHolder` 子類），固定三格，順序也是數字鍵：1 `primary`、2 `sidearm`、3 `melee`。武器用 `slot` getter 說自己放哪一格，`Weapon` 預設是 `primary`，所以 `Rifle`、`Shotgun` 不用改。
+- 開局只有 `StarterPistol`（繼承 `Pistol`，備彈 `Infinity`，彈匣打完還是要換彈）和 `Bat`，手上拿手槍。這兩格永遠不會丟。
+- `MeleeWeapon` 是近戰基底：`usesAmmo` 為 false，`fire` 不扣子彈、`reload` 不做事，冷卻照舊。`Bat`：傷害 45、距離 2.2 m（算到敵人身體邊緣）、前方 90 度、冷卻 0.6 秒。命中用 `MeleeSwing` Strategy：最近、在前方扇形內、沒被牆擋的活敵人，送 `kind: 'melee'` 的 `DAMAGE_REQUESTED`，打的是身體，不算爆頭。
+- 地上的槍是關卡 `type: "weapon"` marker，`item` 對到 `WeaponCatalog` 註冊的名字（`installGameplay` 註冊 `rifle`、`shotgun`）。`PickupField.fromLevel` 每個 marker 建一個 `WeaponPickup`，裡面放的是真的 Weapon 物件。
+- E 送 `PICKUP_REQUESTED`；Session 在玩家能移動時（Playing、WaveBreak）呼叫 `PickupField.take`：撿最近、搆得到的那把，用 `LoadoutHolder.equip` 放進主武器格並拿在手上，原本那把留在同一個位置，子彈數不變。撿到同款的槍也是交換，**不會補子彈**。成功發 `WEAPON_PICKED_UP`。
+- 畫面：`WeaponPickupViews` 為每個 pickup 畫一個自發光、會轉的方塊、地上脈動的光圈和淡淡的光柱（光圈和光柱不吃霧），不加燈。HUD 的提示從 `PlayerStatus.pickup` 來（`E  PICK UP RIFLE` 或 `E  SWAP FOR RIFLE`），撿到時跳一張字卡。拿球棒時 `PlayerStatus.armed` 為 false，彈藥欄不顯示。
+- E 目前同時送 `PURCHASE_REQUESTED`，站的位置不對的那個會被 Session 拒絕。
 
 ## 新增武器
 
