@@ -76,7 +76,7 @@
 - [ ] **B12** `Emitters` 沒有公開的方法讓章節道具登記每幀動畫；`Ch1Props.js` 的營火閃爍暫時直接用內部的 `_animations` 陣列（欄位改名的話火只是不閃，不會壞）
 - [ ] **B15** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、道具欄會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
 - [ ] **B13** `WEAPON_FIRED`、`WEAPON_RELOADED`、`WEAPON_CHANGED` 的 payload 沒有子彈數，也沒有「開始換彈」的事件；補彈（`refill`）也不發事件。HUD 現在靠 `ui/hud/PlayerStatus.js` 每幀從 Session 抄數字。做連線（G8）時要嘛在事件裡帶上數字，要嘛讓快照填 `PlayerStatus`。
-- [ ] **B14** 暫停（滑鼠解鎖）時 `gameViews` 不更新，`SoundBoard` 的時間也停住：拿著電鋸暫停會一直響待機聲，暫停前正在鋸就一直響鋸的聲音，回到遊戲才停。可以在解鎖時暫停 AudioContext，或讓 `installAudio` 自己聽 `pointerlockchange`。
+- [~] **B14**（進行中：@nickcx0109，分支 fix/audio-pause） 暫停（滑鼠解鎖）時 `gameViews` 不更新，`SoundBoard` 的時間也停住：拿著電鋸暫停會一直響待機聲，暫停前正在鋸就一直響鋸的聲音，回到遊戲才停。可以在解鎖時暫停 AudioContext，或讓 `installAudio` 自己聽 `pointerlockchange`。
 
 ## 其他
 
