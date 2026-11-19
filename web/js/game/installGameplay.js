@@ -59,9 +59,6 @@ export function installGameplay(app) {
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id);
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);
-  const unsubscribePickup = ctx.events.on(EVENTS.WEAPON_PICKED_UP, ({ ownerId, weaponId }) => {
-    if (ownerId === player.id) ctx.events.emit(EVENTS.ANNOUNCED, { text: catalog.nameOf(weaponId) });
-  });
   const unsubscribe = ctx.events.on(EVENTS.GAME_OVER, () => {
     app.player.enabled = false;
     app.hud.setStartVisible(false);
@@ -70,7 +67,6 @@ export function installGameplay(app) {
   });
   const dispose = () => {
     unsubscribe();
-    unsubscribePickup();
     pickupViews.dispose();
     app.combat.dispose();
     app.game.dispose();
