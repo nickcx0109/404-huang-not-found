@@ -14,7 +14,8 @@ http://localhost:8080/web/index.html?level=ch2&play=1
 - 點畫面取得滑鼠鎖定才從 Lobby 開始。WASD 移動、Shift 跑步、左鍵開火（步槍按住連射）、R 換彈、1–7 或滑鼠滾輪換道具欄（滾輪跳過空格）、E 撿地上的槍、投擲物與治療物，或使用彈藥箱；F 手電筒。放開左鍵、失去視窗焦點或解除鎖定會停止連射。
 - Esc 解除鎖定會暫停玩法時鐘；重新點畫面繼續。不要用系統時間決定射速或換彈，以免暫停期間偷偷完成。
 - 波次清空後依波次表整備 6～10 秒；槍、投擲物與治療物從地上撿，彈藥由彈藥箱補充。撿取與補彈在戰鬥及整備期間都可進行。
-- 生命歸零進入 GameOver，凍結戰鬥，重新整理才重開。暫無救援、復活、獲勝／開大門條件，也不實作故事章節目標。
+- Lobby 顯示標題、操作提示與 CLICK TO START；按鈕仍先要求滑鼠鎖定，成功後才送 START_REQUESTED。生命歸零進入 GameOver，顯示到達波次與擊殺數；RESTART 按鈕或 Enter 不重新整理就回到全新 Lobby，再點擊開始。
+- Victory 同樣凍結戰鬥並提供結算與重開，供 G6 呼叫 `session.win()`；目前只有測試和 debug 會觸發。暫無救援、復活、獲勝／開大門條件，也不實作故事章節目標。
 - 預設使用資料驅動的混合波次，陸續出怪且限制同時在場數量（見下方 G3 波次表）；數值不是最終遊戲平衡。單人離線而已，沒有網路協定。
 
 ## 類別關係
@@ -37,6 +38,7 @@ classDiagram
   State <|-- PlayingState
   State <|-- WaveBreakState
   State <|-- GameOverState
+  State <|-- VictoryState
   StateMachine --> State
   Entity <|-- CombatPlayer
   Entity <|-- Enemy
@@ -78,13 +80,19 @@ classDiagram
   HudWidget <|-- EventCard
   HudWidget <|-- TeamWidget
   HudWidget <|-- StatusLine
+  HudWidget <|-- ScreenWidget
+  ScreenWidget <|-- LobbyScreen
+  ScreenWidget <|-- ResultScreen
+  ResultScreen <|-- GameOverScreen
+  ResultScreen <|-- VictoryScreen
 ```
 
 ## 檔案與介面
 
 | 位置 | 契約與責任 |
 |---|---|
-| `game/installGameplay.js` | 唯一玩法組合入口，建立實例、註冊範例；Three.js 灰盒外觀也在此建立，使用既有 `greybox.dummy` 顏色，沒有新增燈或陰影 |
+| `game/installGameplay.js` | 唯一玩法組合入口；`createGameplayRun(app)` 建立每局實例並回傳 `{session,dispose}`，初次安裝與重開共用，不複製組合程式。Three.js 灰盒外觀使用既有 `greybox.dummy` 顏色 |
+| `game/GameplayLifecycle.js` | 不依賴 DOM 的每局資源管理者：訂閱 RESTART_REQUESTED，先 dispose 舊局，再呼叫注入的 createRun；離頁時連自己的訂閱也清掉 |
 | `game/GameContext.js` | `scene`、`collision`、`pathFinder`、`events`、`pools`、`players`、`enemies`、`rng`、`time`、`aim`、`session`；容器不是全域變數 |
 | `game/GameSession.js` | 唯一模擬權威：輸入命令、傷害套用、擊殺計數、物品互動、波次與 GameOver；App 擁有它並推進時鐘 |
 | `game/states/` | 薄的 State 子類，將生命週期／更新交回 Session，使用現有 `core/StateMachine` |
@@ -123,7 +131,7 @@ classDiagram
 |---|---|
 | Template Method | `Weapon.fire` 固定開火流程，`Pistol.createShot` 提供射擊規格，`onFired` 為選用 hook |
 | Strategy | Weapon 注入 fire-mode 物件，Enemy 注入 Brain，Session 注入 separation.apply(ctx) 物件；可替換行為而不用改使用者 |
-| State | 四種 State 經由現有 StateMachine 管理；不能在 enter／exit 遞迴切換，要在 update 請 Session 轉換 |
+| State | 五種 State 經由現有 StateMachine 管理；不能在 enter／exit 遞迴切換，要在 update 請 Session 轉換；結束狀態的 canRestart hook 供通用重開流程使用 |
 | Observer | 所有玩法通知及輸入命令名稱統一在 `game/events.js`，用 App 的 EventBus 解耦 |
 | Chain of Responsibility | DamagePipeline 串接 DamageRule.next，先前規則輸出交給下一個；目前只提供爆頭範例 |
 | Object Pool | EnemyFactory 每種類型使用既有 ObjectPool；死亡隱藏、重設、歸還，跨波次重用 mesh 與路徑 buffer |
@@ -141,6 +149,7 @@ classDiagram
 | 常數 | 字串 | Payload／方向 |
 |---|---|---|
 | `START_REQUESTED` | `game.start-requested` | 無；輸入 → Session（僅 Lobby） |
+| `RESTART_REQUESTED` | `game.restart-requested` | 無；結算按鈕／Enter → GameplayLifecycle；只接受目前狀態的 canRestart 為 true，建立新 Lobby |
 | `FIRE_REQUESTED` | `player.fire-requested` | `{ownerId}`；輸入 → Session |
 | `RELOAD_REQUESTED` | `player.reload-requested` | `{ownerId}`；輸入 → Session |
 | `SWITCH_REQUESTED` | `player.switch-requested` | `{ownerId,index}`；輸入 → Session |
@@ -156,10 +165,11 @@ classDiagram
 | `WEAPON_FIRED` | `weapon.fired` | `{ownerId,weaponId,hit}`；Weapon 通知，miss 時 hit 為 null |
 | `WEAPON_RELOADED` | `weapon.reloaded` | `{ownerId,weaponId}`；Weapon 換彈完成通知 |
 | `WEAPON_CHANGED` | `weapon.changed` | `{ownerId,weaponId}`；WeaponHolder 通知 |
-| `STATE_CHANGED` | `game.state-changed` | `{state,wave}`；Session 通知，state 是 lobby／playing／wave-break／game-over |
+| `STATE_CHANGED` | `game.state-changed` | `{state,wave}`；Session 通知，state 是 lobby／playing／wave-break／game-over／victory |
 | `WAVE_STARTED` | `wave.started` | `{wave,count}`；Session 通知，count 是整波預計總數（含尚未出生者），在第一隻出生前發送 |
 | `WAVE_CLEARED` | `wave.cleared` | `{wave,kills}`；Session 通知，kills 為本局累計 |
 | `GAME_OVER` | `game.over` | `{wave,kills}`；Session 通知 |
+| `VICTORY` | `game.victory` | `{wave,kills}`；VictoryState 進入時由 Session 通知，一局只進入一次 |
 | `PROMPT_CHANGED` | `hud.prompt-changed` | `{id,text,progress}`；任何模組 → HUD，在畫面下方顯示一行提示。`progress` 是 0–1（省略就不畫進度線）；`text` 給 `null` 表示收掉這個 `id` 的提示 |
 | `ANNOUNCED` | `hud.announced` | `{text}`；任何模組 → HUD，在畫面中上顯示一張字卡，約 2 秒後淡出 |
 
@@ -276,6 +286,28 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 
 ## 新增狀態
 
+```mermaid
+stateDiagram-v2
+  [*] --> Lobby
+  Lobby --> Playing: START_REQUESTED + simulation step
+  Playing --> WaveBreak: all enemies cleared
+  WaveBreak --> Playing: break deadline
+  Playing --> GameOver: no player alive
+  Playing --> Victory: session.win()
+  WaveBreak --> Victory: session.win()
+  GameOver --> Lobby: RESTART_REQUESTED / dispose old run + create new run
+  Victory --> Lobby: RESTART_REQUESTED / dispose old run + create new run
+```
+
+### G5 頁內重開
+
+- `GameOverState`、`VictoryState` 設定 `canRestart = true`；Lifecycle 只問這個 hook，不依名稱分派。`win()` 僅在玩家仍可行動的 Playing／WaveBreak 接受，不會自動判定過關，也不允許死後改成勝利。
+- `GameSession.dispose()` 取消自己的全部 EventBus 訂閱、停止 StateMachine、釋放 Factory（含池裡的敵人 mesh／geometry／material）、清空 enemies／effects／pools 並將舊 `ctx.session` 清為 null。
+- 組合層先取消結束事件，再釋放地上道具外觀、特效、彈藥箱、音效、MovementLock、PlayerCombat、第一人稱武器和 HUD。延後完成的武器載入會檢查舊 Context 是否仍有 Session，不會把舊 overlay／事件訂閱接回新局。
+- 然後共用 `createGameplayRun` 建立新 Context、玩家（100 HP、滿彈無限備彈起始手槍＋球棒、其他格空）、新武器牌堆／地上物與 readyAt=0 的彈藥箱；time／wave／kills 都歸零。保留關卡與靜態場景，玩家回到原出生點，清除按鍵、跳躍和移動速度。道具位置沿用 marker，隨機內容重新發牌。
+- 音效輸出 dispose 會中止尚未完成的 manifest／音檔 fetch，已開始的 decode 完成後也不再寫回舊音庫；第一人稱 WeaponRig 停止尚未完成的 equip 並釋放已建立／延後載入的 model 資源，避免快速重開時接回舊局。
+- 重開回 Lobby，不自動鎖滑鼠；再點 CLICK TO START 才走既有 pointer-lock/start 流程。沒有 play=1 或使用 shot 時不安裝這些功能。
+
 1. 從 `core/State.js`、`game/states/`、`test/GameSession.test.js` 開始，在 states/ 新增 State 子類，提供唯一 name。
 2. enter／exit 只處理該狀態生命週期，update(dt,ctx) 委派給 Session 對應方法；不可在 enter／exit 內呼叫 changeState。
 3. 決定哪些命令可用、是否移動、如何離開、是否處理死亡。在 Session.states 建立實例，將條件與轉換集中於 Session，避免 UI、敵人各自判斷勝負。
@@ -291,6 +323,8 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 5. 在 `SurvivalHud.standard()` 加一行 `.add(new 你的類別(doc))`。其他模組要顯示提示或字卡，不用匯入 HUD，發 `PROMPT_CHANGED`、`ANNOUNCED` 事件就好。
 6. 顏色只用 `hud.css` 最上面那四個，不加方框和面板；動畫只動 `transform` 和 `opacity`，並在 `prefers-reduced-motion` 那一段關掉。
 
+G5 的 `LobbyScreen`、`GameOverScreen`、`VictoryScreen` 都在 `SurvivalHud.standard()` 註冊。共用 `ScreenWidget` 處理節點／顯示和清理、`ResultScreen` 共用結果格式；各自的 `describe(status)` 與 `format(status)` 可在 Node 不建立 DOM 就測試。數字只經 `PlayerStatus`（含 kills／canRestart）傳入。全畫面遮罩仍使用同一組四種色彩、不畫結算面板；Lobby 的 onStartClick 注入鎖滑鼠 callback，結算按鈕只送重開命令，不讀寫 Session。
+
 ## 效能與生命週期
 
 - Enemy 是一隻一個 mesh、沒有新增動態燈／投影，沿用原有霧、遠平面與後製。灰盒使用既有 palette 顏色，不更動美術。
@@ -299,7 +333,7 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 - 玩法專用 finder 多留 0.002 m clearance，避免貼牆格點的浮點誤差讓敵人卡住；不改展示模式的網格結果。遠距路徑每 1.5 秒、近距每 0.75 秒才重算，移動仍按每幀 dt 更新。
 - 這不是最終大量殭屍方案：24／40／64 隻、品質分級、自動降解析度、Worker flow field 還是 PERFORMANCE_PLAN 的後續工作，不在這次擴寫。
 - DamageInfo、事件摘要、換波出怪等只在離散事件配置；不要新增每幀的 map/filter、new Vector3 或尋路陣列。HUD 每幀只比對數字，有變才寫 DOM，不重建節點。
-- Session.dispose 取消訂閱並釋放 Factory；Factory.dispose 清理所有曾建立的 mesh／材質／幾何。頁面離開會清理輸入與 HUD。若日後加入頁內重開，應先走完整 dispose，再建立新 Session。
+- Session.dispose 取消訂閱並釋放 Factory；Factory.dispose 清理所有曾建立的 mesh／材質／幾何（包含已回池者）。頁內重開與離頁都經 GameplayLifecycle 清理完整每局資源，離頁才釋放共用 PlayerController。
 - LevelData 以真正圓柱與 AABB 的最近點檢查出生點；移動仍沿用原本較保守的方柱碰撞。新驗證使 `mood.json` 的 `spawns.zombies[1]` 警告與 `tree_56` 重疊，未改該關卡；ch2／test 無新警告。
 
 ## 驗證與除錯
@@ -313,6 +347,6 @@ node tools/art/shots.mjs --level test --format png --out <OS-temp>/test
 
 Windows 若 npm.ps1 被執行政策擋住，改用 `npm.cmd test`／`npm.cmd run serve`，不要改 PowerShell 政策。
 
-加 `&debug=1` 才有 `window.__gameDebug`：`start()`、`snapshot()`、`aimAt(enemyId)`、`fire()`、`reload()`、`advance(seconds)`。advance 每次至多 120 秒、內部切成最多 0.05 秒的模擬步；fire 仍走正常命中、遮擋、扣彈、冷卻及 Session 傷害流程，不能直接送錢或殺敵。這不是公開遊戲 API，無 debug 參數不建立它。自動測試若用 advance，先停止一般 rAF，避免同時推進兩個時鐘。
+加 `&debug=1` 才有 `window.__gameDebug`：`ready()` 等待本局武器載入，`start()` 在 debug 直接開始並推進零秒讓第一波出生；`snapshot()` 含 state／wave／kills／health／ammo／inventory／enemies／sceneChildren／listeners；`aimAt(enemyId)`、`fire()`、`reload()`、`advance(seconds)` 沿用原功能。`kill()` 用 DamageInfo 對玩家送致死傷害並推進零秒進入 GameOver；`win()` 只呼叫 Session.win；`restart()` 可從任意狀態強制 dispose 並重建 Lobby，供壓力測試，正常 UI 仍只接受結算狀態。advance 每次至多 120 秒、內部切成最多 0.05 秒的模擬步；fire 仍走正常命中、遮擋、扣彈、冷卻及 Session 傷害流程。這不是公開遊戲 API，無 debug 參數不建立它。自動測試若用 advance，先停止一般 rAF，避免同時推進兩個時鐘。
 
 G3 驗收：126 個 node:test 全過，包含每波數量／種類／間隔／上限、延伸波次、資料錯誤、Session 空場等待／逐波休息，以及重疊敵人分離、薄牆與命中盒同步。修改前後 ch2 共 8 組 shot PNG 的 SHA-256 全部相同（無 play=1）。以 npm run serve 啟動後，瀏覽器在 `?level=ch2&play=1&debug=1` 停止一般 rAF，再使用 start／advance／snapshot：模擬時間 0.05／1.24／1.25／2.45 秒，場上為 1／1／2／3 隻；再前進 10 秒仍為 3 隻、remaining 為 1，符合第一波 1.2 秒間隔與 3 隻上限。PNG 放 OS temp，不加入版本控制；驗收後關閉 server。

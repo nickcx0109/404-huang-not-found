@@ -1,5 +1,6 @@
 export const EVENTS = Object.freeze({
   START_REQUESTED: 'game.start-requested',
+  RESTART_REQUESTED: 'game.restart-requested',
   FIRE_REQUESTED: 'player.fire-requested',
   RELOAD_REQUESTED: 'player.reload-requested',
   SWITCH_REQUESTED: 'player.switch-requested',
@@ -22,6 +23,7 @@ export const EVENTS = Object.freeze({
   WAVE_STARTED: 'wave.started',
   WAVE_CLEARED: 'wave.cleared',
   GAME_OVER: 'game.over',
+  VICTORY: 'game.victory',
   PROMPT_CHANGED: 'hud.prompt-changed',
   ANNOUNCED: 'hud.announced',
 });

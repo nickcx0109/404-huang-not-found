@@ -33,7 +33,9 @@ export class PlayerStatus {
     this.slots = [];
     this.selected = -1;
     this.state = null;
+    this.canRestart = false;
     this.wave = 0;
+    this.kills = 0;
     this.enemies = 0;
     this.breakSeconds = 0;
     this.canMove = false;
@@ -113,7 +115,9 @@ export class PlayerStatus {
     this._readSlots(player);
     this._readAction(context, player);
     this.state = session.state;
+    this.canRestart = Boolean(session.canRestart);
     this.wave = session.wave;
+    this.kills = session.kills ?? 0;
     this.enemies = context.enemies.length;
     this.breakSeconds = session.state === 'wave-break' ? Math.max(0, Math.ceil(session.breakEndsAt - context.time)) : 0;
     this.canMove = Boolean(session.canMove);

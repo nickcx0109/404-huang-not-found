@@ -5,6 +5,7 @@ import { LobbyState } from './states/LobbyState.js';
 import { PlayingState } from './states/PlayingState.js';
 import { WaveBreakState } from './states/WaveBreakState.js';
 import { GameOverState } from './states/GameOverState.js';
+import { VictoryState } from './states/VictoryState.js';
 import { EVENTS } from './events.js';
 
 export class GameSession {
@@ -27,7 +28,7 @@ export class GameSession {
     this.disposed = false;
     this._spawn = { type: '', x: 0, y: 0, z: 0 };
     this.states = { lobby: new LobbyState(), playing: new PlayingState(),
-      waveBreak: new WaveBreakState(), gameOver: new GameOverState() };
+      waveBreak: new WaveBreakState(), gameOver: new GameOverState(), victory: new VictoryState() };
     this.machine = new StateMachine(ctx);
     this._subscriptions = [
       ctx.events.on(EVENTS.START_REQUESTED, () => { if (this.state === 'lobby') this.startRequested = true; }),
@@ -60,6 +61,8 @@ export class GameSession {
 
   get state() { return this.machine.current?.name ?? null; }
 
+  get canRestart() { return this.machine.current?.canRestart === true; }
+
   get canMove() {
     return (this.state === 'playing' || this.state === 'wave-break') && this.anyPlayerAlive;
   }
@@ -70,7 +73,14 @@ export class GameSession {
   }
 
   start() {
+    if (this.disposed) return;
     this.context.events.emit(EVENTS.START_REQUESTED);
+  }
+
+  win() {
+    if (!this.canMove || this.disposed) return false;
+    this.changeState(this.states.victory);
+    return true;
   }
 
   /** True when this player may not walk: the item in their hand keeps them still. */
@@ -194,6 +204,10 @@ export class GameSession {
 
   finish() {
     this.context.events.emit(EVENTS.GAME_OVER, { wave: this.wave, kills: this.kills });
+  }
+
+  finishVictory() {
+    this.context.events.emit(EVENTS.VICTORY, { wave: this.wave, kills: this.kills });
   }
 
   dispose() {

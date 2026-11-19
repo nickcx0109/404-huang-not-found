@@ -20,7 +20,7 @@ export class StatusLine extends HudWidget {
 
   /** The line for a status, as plain text. */
   static describe(status) {
-    if (status.state === 'game-over') return 'REFRESH TO RETRY';
+    if (status.canRestart) return 'CLICK RESTART OR PRESS ENTER';
     if (status.state === 'lobby') return 'CLICK TO START';
     if (status.state === 'wave-break') return 'NEXT WAVE IN ' + status.breakSeconds;
     return status.enemies + ' LEFT';

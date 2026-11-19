@@ -39,6 +39,10 @@ export class FirstPersonWeapon {
       events: ctx.events,
       registry: standardViewModels(STANDARD_MODELS),
     });
+    if (!ctx.session || ctx.session.disposed) {
+      rig.dispose();
+      return null;
+    }
     rig.resize(app.camera.aspect);
     const driver = new HeldWeaponDriver(ctx.events, player.id, player.weapons, rig);
     const world = rig.config.muzzleFlash.world;

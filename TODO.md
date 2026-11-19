@@ -19,10 +19,6 @@
 
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker` 這兩個範例。
 
-- [~] **G5 開始、結束、重開畫面**（進行中：@nickcx0109，分支 feat/game-screens）
-  - 起點：`web/js/game/states/`、`GameSession.js`，`test/GameSession.test.js`。
-  - 內容：Lobby 顯示開始畫面；GameOver 顯示結算（波次、擊殺）並可以不重新整理就重開（先完整 dispose 再建新的 Session）；新增 Victory 狀態給 G6 用。
-  - 完成：狀態切換和重開都有測試，重開後沒有殘留的敵人或事件訂閱。
 - [ ] **G6 第二章過關條件：守門開鎖**
   - 起點：`docs/story/chapter-2.md`、`web/levels/ch2.json`、`web/js/game/`。
   - 內容：開鎖倒數（故事文件還沒訂時間，先自己訂一個值放在關卡或波次資料裡，在 PR 說明寫出來；`docs/story/` 不要改），撐到倒數結束進 Victory；HUD 顯示剩餘時間。過關條件做成可以換的類別（例如 `Objective`），第一章、第三章之後也用得到。
@@ -97,6 +93,8 @@
 ## 已完成
 
 格式：`代號 標題（PR #編號）`。
+
+- G5 開始、結束、重開畫面（PR #待補）
 
 - 遊戲骨架：武器、敵人、狀態、商店各一個範例，修好碰撞 #1、#2（PR #6）
 - S1 第一章灰盒（PR #8）
