@@ -19,7 +19,7 @@
 
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker` 這兩個範例。
 
-- [ ] **G5 開始、結束、重開畫面**
+- [~] **G5 開始、結束、重開畫面**（進行中：@nickcx0109，分支 feat/game-screens）
   - 起點：`web/js/game/states/`、`GameSession.js`，`test/GameSession.test.js`。
   - 內容：Lobby 顯示開始畫面；GameOver 顯示結算（波次、擊殺）並可以不重新整理就重開（先完整 dispose 再建新的 Session）；新增 Victory 狀態給 G6 用。
   - 完成：狀態切換和重開都有測試，重開後沒有殘留的敵人或事件訂閱。
