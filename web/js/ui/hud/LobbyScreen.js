@@ -7,7 +7,7 @@ export class LobbyScreen extends ScreenWidget {
 
   static describe(status) {
     if (status.state !== 'lobby') return null;
-    return { title: '404 HUANG NOT FOUND', summary: 'SURVIVE THE WAVES',
+    return { title: '404 HUANG NOT FOUND', summary: status.goal ?? 'SURVIVE THE WAVES',
       hint: 'WASD MOVE / MOUSE AIM & FIRE / R RELOAD / E PICK UP / 1-7 ITEMS / ESC PAUSE',
       action: 'CLICK TO START' };
   }

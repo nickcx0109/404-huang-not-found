@@ -38,6 +38,9 @@ export class PlayerStatus {
     this.kills = 0;
     this.enemies = 0;
     this.breakSeconds = 0;
+    /** The level's goal line for the start screen, and its countdown { label, seconds } or null. */
+    this.goal = 'SURVIVE THE WAVES';
+    this.objective = null;
     this.canMove = false;
     /** Where the player stands and looks: metres, and radians (0 looks toward -Z, positive turns left). */
     this.x = 0;
@@ -121,6 +124,8 @@ export class PlayerStatus {
     this.enemies = context.enemies.length;
     this.breakSeconds = session.state === 'wave-break' ? Math.max(0, Math.ceil(session.breakEndsAt - context.time)) : 0;
     this.canMove = Boolean(session.canMove);
+    this.goal = session.objective?.goal ?? 'SURVIVE THE WAVES';
+    this.objective = session.objective?.status ?? null;
     this.x = player ? player.position.x : 0;
     this.z = player ? player.position.z : 0;
     this.yaw = player?.controller ? player.controller.yaw : 0;

@@ -7,10 +7,12 @@ import { WaveBreakState } from './states/WaveBreakState.js';
 import { GameOverState } from './states/GameOverState.js';
 import { VictoryState } from './states/VictoryState.js';
 import { EVENTS } from './events.js';
+import { EndlessObjective } from './objectives/EndlessObjective.js';
 
 export class GameSession {
   constructor(ctx, { factory, director, breakSeconds = 8,
-    damagePipeline = new DamagePipeline([new HeadshotRule()]), separation = null, pickups = null }) {
+    damagePipeline = new DamagePipeline([new HeadshotRule()]), separation = null, pickups = null,
+    objective = new EndlessObjective() }) {
     if (ctx.session) throw new Error('Context already has an authority');
     if (!Number.isFinite(breakSeconds) || breakSeconds < 0) throw new RangeError('Invalid break duration');
     this.context = ctx;
@@ -20,6 +22,8 @@ export class GameSession {
     this.separation = separation;
     /** Weapons on the ground (a PickupField), or null when the level has none. */
     this.pickups = pickups;
+    /** How this level is won (an Objective); the default never wins. */
+    this.objective = objective;
     this.damagePipeline = damagePipeline;
     this.breakSeconds = breakSeconds;
     this.wave = 0;
@@ -156,7 +160,7 @@ export class GameSession {
     this.updateEffects(dt);
     this.separation?.apply(this.context);
     if (!this.anyPlayerAlive) this.changeState(this.states.gameOver);
-    else {
+    else if (!this.advanceObjective(dt)) {
       this.spawnDue(dt);
       if (this.director.remaining === 0 && this.context.enemies.length === 0) this.changeState(this.states.waveBreak);
     }
@@ -170,7 +174,16 @@ export class GameSession {
   updateBreak(dt) {
     for (const player of this.context.players) player.update(dt, this.context);
     this.updateEffects(dt);
+    if (this.advanceObjective(dt)) return;
     if (this.context.time + 1e-9 >= this.breakEndsAt) this.changeState(this.states.playing);
+  }
+
+  /** Runs the objective for one step; true when it ended the game (the state changed). */
+  advanceObjective(dt) {
+    if (!this.anyPlayerAlive) return false;
+    const before = this.machine.current;
+    this.objective.update(dt, this);
+    return this.machine.current !== before;
   }
 
   resolveDamage(info) {

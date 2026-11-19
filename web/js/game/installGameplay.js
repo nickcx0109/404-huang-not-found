@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GameContext } from './GameContext.js';
 import { GameSession } from './GameSession.js';
 import { GameplayLifecycle } from './GameplayLifecycle.js';
+import { Objectives } from './objectives/Objectives.js';
 import { DamageInfo } from '../entities/DamageInfo.js';
 import { TimedWaveDirector } from './TimedWaveDirector.js';
 import { CrowdSeparation } from './CrowdSeparation.js';
@@ -109,7 +110,9 @@ export function createGameplayRun(app) {
     .register('tank', Tank)
     .register('exploder', Exploder);
   app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(difficulty.waves(SURVIVAL_WAVES)),
-    separation: new CrowdSeparation(), pickups: new InteractionList([pickups, crates]) });
+    separation: new CrowdSeparation(), pickups: new InteractionList([pickups, crates]),
+    // G6: how this level is won comes from its file (ch2: hold the gate for a while); none = endless.
+    objective: Objectives.standard().create(app.level.objective) });
   // Degrees of upward kick per shot and the most it swings sideways.
   const recoil = new RecoilKick(ctx.events, player.id, { rng: ctx.rng })
     .register('pistol', { pitch: 1.6, yaw: 0.4 })
@@ -191,6 +194,7 @@ function installDebug(app, lifecycle) {
         time: ctx.time, health: ctx.players[0].damageable.health,
         ammo: ctx.players[0].weapons.current.ammo,
         inventory: ctx.players[0].weapons.weapons.map(weapon => weapon?.id ?? null),
+        objective: app.game.objective.status?.seconds ?? null,
         sceneChildren: app.scene.children.length,
         listeners: Array.from(ctx.events._listeners.values()).reduce((total, entries) => total + entries.size, 0),
         enemies: ctx.enemies.map(enemy => ({ id: enemy.id, health: enemy.damageable.health,

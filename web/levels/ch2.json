@@ -133,6 +133,7 @@
     ]
   },
 
+  "objective": { "type": "hold", "seconds": 180, "label": "GATE OPENS IN", "goal": "HOLD THE GATE UNTIL THE LOCK OPENS" },
   "markers": [
     { "id": "gate_lock", "type": "objective", "x": 4.6, "z": 16.5, "r": 1 },
     { "id": "post_left", "type": "post", "x": -8.6, "z": 4.6, "r": 1.2, "yaw": 90 },
