@@ -31,7 +31,7 @@ export class AmmoMeter {
     const magazine = armed ? status.magazine : 0;
     const reserve = armed ? status.reserve : 0;
     const reloading = armed && Boolean(status.reloading);
-    if (armed && (!Number.isInteger(ammo) || !Number.isInteger(magazine) || !Number.isInteger(reserve) ||
+    if (armed && (!Number.isInteger(ammo) || !Number.isInteger(magazine) || !(Number.isInteger(reserve) || reserve === Infinity) ||
         ammo < 0 || magazine <= 0 || reserve < 0 || ammo > magazine)) {
       throw new RangeError('Invalid ammunition numbers');
     }

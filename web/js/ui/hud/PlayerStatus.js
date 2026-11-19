@@ -1,3 +1,6 @@
+/** Scratch record for the pickup offer; its two values are copied out at once, so one is enough. */
+const OFFER = { name: '', swap: false };
+
 /**
  * The plain numbers the HUD draws for one player.
  * This is the only HUD class that looks at the session: widgets get a PlayerStatus, never game objects,
@@ -12,6 +15,9 @@ export class PlayerStatus {
     this.magazine = 0;
     this.reserve = 0;
     this.reloading = false;
+    /** The weapon on the ground the player could take now: its screen name, and whether it would replace one. */
+    this.pickup = null;
+    this.pickupSwap = false;
     this.money = 0;
     this.state = null;
     this.wave = 0;
@@ -38,11 +44,15 @@ export class PlayerStatus {
     const weapon = player?.weapons.current ?? null;
     this.health = player ? player.damageable.health : 0;
     this.maxHealth = player ? player.damageable.maxHealth : 1;
-    this.armed = weapon !== null;
+    // Melee weapons have no rounds to show, so the ammo display treats them as unarmed.
+    this.armed = weapon !== null && weapon.usesAmmo !== false;
     this.ammo = weapon ? weapon.ammo : 0;
     this.magazine = weapon ? weapon.magazine : 0;
     this.reserve = weapon ? weapon.reserve : 0;
     this.reloading = weapon ? Boolean(weapon.reloading) : false;
+    const offer = player && session.canMove ? session.pickups?.offerFor(player, OFFER) : null;
+    this.pickup = offer ? offer.name : null;
+    this.pickupSwap = offer ? offer.swap : false;
     this.money = player?.wallet ? player.wallet.balance : 0;
     this.state = session.state;
     this.wave = session.wave;

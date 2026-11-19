@@ -48,7 +48,7 @@ export class AmmoWidget extends HudWidget {
     if (!meter.set(status)) return;
     if (meter.resized) this._buildRounds(meter.icons);
     this.magazine.textContent = meter.armed ? String(meter.ammo) : '';
-    this.reserve.textContent = meter.armed ? String(meter.reserve) : '';
+    this.reserve.textContent = !meter.armed ? '' : meter.reserve === Infinity ? '∞' : String(meter.reserve);
     this._light(meter.litIcons);
     this._showNotice(meter.notice);
     this.el.classList.toggle('is-empty', meter.empty);

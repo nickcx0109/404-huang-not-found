@@ -1,6 +1,8 @@
 import { EVENTS } from '../../game/events.js';
 import { HudWidget } from './HudWidget.js';
 
+const PICKUP_PROMPT = 'weapon-pickup';
+
 /**
  * Prompt, bottom centre: one small line of text ("HOLD E ...") and, when the action takes time,
  * a thin line that fills up. Anyone can show one by emitting EVENTS.PROMPT_CHANGED:
@@ -16,10 +18,19 @@ export class PromptWidget extends HudWidget {
     this._id = null;
     this._text = null;
     this._progress = null;
+    this._pickupText = null;
   }
 
   bind(events) {
     this.listen(events, EVENTS.PROMPT_CHANGED, detail => this.show(detail));
+  }
+
+  /** The weapon-on-the-ground prompt comes from PlayerStatus, not from an event: it follows where the player stands. */
+  sync(status) {
+    const text = status.pickup === null ? null : (status.pickupSwap ? 'E  SWAP FOR ' : 'E  PICK UP ') + status.pickup;
+    if (text === this._pickupText) return;
+    this._pickupText = text;
+    this.show({ id: PICKUP_PROMPT, text });
   }
 
   show({ id, text = null, progress = null }) {
