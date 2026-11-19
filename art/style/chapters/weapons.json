@@ -39,8 +39,8 @@
   "viewmodel": {
     "fov": 52,
     "surface": { "roughness": 0.6, "metalness": 0.15 },
-    "fill": { "intensity": 0.5 },
-    "key": { "color": "#fff0d2", "direction": [-0.5, 0.9, 0.6], "intensity": 0.3, "flashlightBoost": 0.4 },
+    "fill": { "intensity": 1.2 },
+    "key": { "color": "#fff0d2", "direction": [-0.5, 0.9, 0.6], "intensity": 1.1, "flashlightBoost": 0.5 },
     "muzzleFlash": { "color": "#ffc46a", "intensity": 9, "light": 3.5, "seconds": 0.05 }
   }
 }
