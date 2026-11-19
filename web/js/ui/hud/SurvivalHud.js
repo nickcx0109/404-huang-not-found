@@ -10,6 +10,7 @@ import { PromptWidget } from './PromptWidget.js';
 import { EventCard } from './EventCard.js';
 import { TeamWidget } from './TeamWidget.js';
 import { InventoryWidget } from './InventoryWidget.js';
+import { SlashWidget } from './SlashWidget.js';
 
 /**
  * The in-game HUD: a composite of HudWidget objects on one layer above the 3D view.
@@ -36,7 +37,7 @@ export class SurvivalHud extends Hud {
     this.layer.setAttribute('aria-hidden', 'true');
     root.appendChild(this.layer);
     const instructions = this.start.querySelector('p');
-    if (instructions) instructions.textContent = '滑鼠：視角／左鍵開火　WASD：移動　R：換彈　1–9：換武器';
+    if (instructions) instructions.textContent = '滑鼠：視角／左鍵開火、使用　右鍵：治療隊友　WASD：移動　空白鍵：跳　R：換彈　E：撿起　1–7、滾輪：換武器';
   }
 
   /** The HUD with every finished widget. */
@@ -52,7 +53,8 @@ export class SurvivalHud extends Hud {
       .add(new PromptWidget(doc))
       .add(new EventCard(doc))
       .add(new TeamWidget(doc))
-      .add(new InventoryWidget(doc));
+      .add(new InventoryWidget(doc))
+      .add(new SlashWidget(doc));
   }
 
   add(widget) {

@@ -134,7 +134,10 @@ classDiagram
 | Object Pool | EnemyFactory 每種類型使用既有 ObjectPool；死亡隱藏、重設、歸還，跨波次重用 mesh 與路徑 buffer |
 | Composite | `SurvivalHud` 裝著一組 `HudWidget`，每幀對每個元件呼叫 `sync` 和 `tick`；加元件不用改其他元件 |
 | Template Method（介面） | `HudWidget.tick` 固定「計時的 class → 子類的 `advance` → 共用的淡入淡出」，子類只覆寫 `bind`、`sync`、`advance` |
-| Factory／Registry | EnemyFactory 依字串類型建構已註冊子類；不靠大量 if/else 或匯入各種具體敵人 |
+| Factory／Registry | EnemyFactory 依字串類型建構已註冊子類；不靠大量 if/else 或匯入各種具體敵人。`WeaponCatalog`（含 pool）、`EffectViews.register`、`RecoilKick.register` 也是註冊表 |
+| Template Method（投擲物） | `ThrownObject.update` 固定「重力 → 撞牆 → 落地 → afterMove」，`ThrownGrenade`、`ThrownMolotov` 只覆寫 `onWall`、`onGround`、`afterMove` |
+| 多型 hook | `Weapon.secondary`、`holster`、`progress`、`depleted`、`canAbsorb`、`absorb`、`refuses` 預設什麼都不做，`CarriedItem`、`Bandage` 覆寫；`LoadoutHolder`、Session、HUD 只呼叫介面，不判斷種類 |
+| Observer＋Strategy（音效） | `SoundRule` 子類（`WeaponSounds`、`HitSounds`、`PlayerSounds`、`PickupSounds`、`ZombieSounds`、`WorldSounds`）訂閱事件、叫 `SoundBoard.play`；聲音本身是 `Sound` 子類（`SampleSound` 音檔、`SynthSound` 程式合成），武器和殭屍完全不知道有音效 |
 
 ## 事件清單
 
@@ -146,10 +149,15 @@ classDiagram
 | `FIRE_REQUESTED` | `player.fire-requested` | `{ownerId}`；輸入 → Session |
 | `RELOAD_REQUESTED` | `player.reload-requested` | `{ownerId}`；輸入 → Session |
 | `SWITCH_REQUESTED` | `player.switch-requested` | `{ownerId,index}`；輸入 → Session |
+| `SECONDARY_REQUESTED` | `player.secondary-requested` | `{ownerId}`；滑鼠右鍵 → Session，呼叫手上物品的 `secondary(ctx)`（繃帶：治療前方隊友） |
 | `PURCHASE_REQUESTED` | `shop.purchase-requested` | `{ownerId,itemId}`；輸入 → Session |
 | `DAMAGE_REQUESTED` | `entity.damage-requested` | `DamageInfo`；攻擊策略 → Session |
 | `ENTITY_DAMAGED` | `entity.damaged` | `{entity,info,amount,health}`；Damageable 通知，amount 為實際扣血 |
 | `ENTITY_DIED` | `entity.died` | 同上；Damageable 通知，單一生命只發一次 |
+| `ENTITY_HEALED` | `entity.healed` | `{entity,sourceId,amount,health}`；`Damageable.heal` 通知，amount 為實際補的血 |
+| `AMMO_REFILLED` | `ammo.refilled` | `{ownerId,crateId}`；彈藥箱補滿時通知 |
+| `ITEM_THROWN` | `item.thrown` | `{ownerId,itemId,effect}`；`ThrowFire` 通知 |
+| `EXPLODED` | `effect.exploded` | `{kind,x,y,z,radius,ownerId}`；手榴彈爆炸通知，`EffectViews` 畫閃光 |
 | `ENEMY_SPAWNED` | `enemy.spawned` | `{enemy,wave}`；Session 通知 |
 | `WEAPON_FIRED` | `weapon.fired` | `{ownerId,weaponId,hit}`；Weapon 通知，miss 時 hit 為 null |
 | `WEAPON_RELOADED` | `weapon.reloaded` | `{ownerId,weaponId}`；Weapon 換彈完成通知 |
@@ -190,10 +198,39 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 - 玩家用 `LoadoutHolder`（`WeaponHolder` 子類），固定七格，順序也是數字鍵：1 `primary`（槍）、2 `sidearm`（手槍）、3 `melee`（球棒）、4 `special`（撿到的近戰）、5 `throwable`、6 `healing`、7 `booster`。`cycle(step)` 是滾輪：往前或往後跳到下一個有東西的格子，會繞回來；`CYCLE_REQUESTED` 由 Session 檢查後呼叫。右側的 `InventoryWidget` 從 `PlayerStatus.slots`／`selected` 畫每一格，圖示是 `hud.css` 裡依物品 id 的 mask，沒有 mask 的物品就印名字。武器用 `slot` getter 說自己放哪一格，`Weapon` 預設是 `primary`，所以 `Rifle`、`Shotgun` 不用改。
 - 開局只有 `StarterPistol`（繼承 `Pistol`，備彈 `Infinity`，彈匣打完還是要換彈）和 `Bat`，手上拿手槍。這兩格永遠不會丟。
 - `MeleeWeapon` 是近戰基底：`usesAmmo` 為 false，`fire` 不扣子彈、`reload` 不做事，冷卻照舊。`Bat`：傷害 45、距離 2.2 m（算到敵人身體邊緣）、前方 90 度、冷卻 0.6 秒。命中用 `MeleeSwing` Strategy：最近、在前方扇形內、沒被牆擋的活敵人，送 `kind: 'melee'` 的 `DAMAGE_REQUESTED`，打的是身體，不算爆頭。
-- 地上的槍是關卡 `type: "weapon"` marker，`item` 對到 `WeaponCatalog` 註冊的名字（`installGameplay` 註冊 `rifle`、`shotgun`）。`PickupField.fromLevel` 每個 marker 建一個 `WeaponPickup`，裡面放的是真的 Weapon 物件。
+- 地上的槍是關卡 `type: "weapon"` marker。位置固定；`item` 寫了就放那一把，**不寫就每局用 `ctx.rng` 從 `WeaponCatalog` 發一把**（`installGameplay` 註冊 `rifle`、`shotgun`、`smg`、`revolver`）。發法是 `ItemDeck`：每個 pool 像洗好的一副牌，每種都先出現一次才會重複，所以點數夠的話每種武器地上都有一把，只是每局位置不同。**規則：所有撿得到的武器（槍和撿來的近戰）都要在這份名單裡**，新武器在 `WeaponCatalog` 註冊就會自動加入。開局就有、不會丟的手槍和球棒不在名單裡。**投擲物和治療物不放進這份名單**：之後各有自己的清單和 marker 種類（`throwable`、`healing`），三種分開抽。**每個場景（每個關卡檔）至少 8 個 `weapon`、4 個 `healing`、4 個 `throwable`、2 個 `melee` marker 和 3 個 `ammo` 彈藥箱**，`test/LevelPickupSpots.test.js` 會檢查；`healing`、`throwable` 的點從各自的 pool 抽（見下一節）。`PickupField.fromLevel` 每個 marker 建一個 `WeaponPickup`，裡面放的是真的 Weapon 物件。
 - E 送 `PICKUP_REQUESTED`；Session 在玩家能移動時（Playing、WaveBreak）呼叫 `PickupField.take`：撿最近、搆得到的那把，用 `LoadoutHolder.equip` 放進主武器格並拿在手上，原本那把留在同一個位置，子彈數不變。撿到同款的槍也是交換，**不會補子彈**。成功發 `WEAPON_PICKED_UP`。
 - 畫面：`WeaponPickupViews` 為每個 pickup 畫一個躺在地上、大小照槍的方塊，外面加一圈會脈動的亮色邊框（inverted hull：稍大的方塊只畫背面，不吃霧），不加燈。HUD 的提示從 `PlayerStatus.pickup` 來（`E  PICK UP RIFLE` 或 `E  SWAP FOR RIFLE`）；撿到時不跳字卡。拿球棒時 `PlayerStatus.armed` 為 false，彈藥欄不顯示。
 - E 目前同時送 `PURCHASE_REQUESTED`，站的位置不對的那個會被 Session 拒絕。
+
+## 治療物、投擲物、跳躍、後座力（G16、G20）
+
+- `CarriedItem`（`Weapon` 子類，抽象）：一小疊物品，`count`／`maxCount`，不用子彈。用完 `depleted`，`LoadoutHolder.update` 把它拿出格子，手上的換到下一格。撿到同一種就疊（`canAbsorb`／`absorb`），放不下的留在地上；滿了就不能撿（`refuses`）；別種就整疊交換。槍不疊，同款也是交換。
+- `Bandage`（第 6 格 `healing`，最多 2）：左鍵治療自己、右鍵（`SECONDARY_REQUESTED`）治療前方 2.5 m、70 度內的隊友；3 秒後補 40，這時才扣一個。滿血不能用；換武器（`holster`）、自己或對方死掉都會取消，不扣。`progress(time)` 給 HUD：`PlayerStatus.action` 是「自我治療」「正在治療 ○○」「○○ 正在治療你」，`PromptWidget` 在下方畫字和進度線。
+- `Throwable`（第 5 格 `throwable`，最多 2，抽象）用 `ThrowFire` Strategy 丟出：從眼睛沿準心方向，速度 13 m/s 加上 3 m/s 往上，丟出去的東西放進 `ctx.effects`。`Grenade` → `ThrownGrenade`：撞牆、落地會彈，3 秒後爆，半徑 5 m，中心 150、邊緣 30，牆後的擋住。`Molotov` → `ThrownMolotov`：碰到牆或地就破，留下 `FireArea`：半徑 3 m、6 秒、每 0.5 秒 12.5（每秒 25）。傷害都只送 `DAMAGE_REQUESTED`（`kind` 是 `explosion`／`fire`），Session 規則不變，所以不會傷到玩家。
+- `ctx.effects`：`Effect` 子類，`update(dt, ctx)` 回傳 false 就被 `GameSession.updateEffects` 移除（Playing 和 WaveBreak 都跑）。畫面是 `EffectViews`，依 `kind` 註冊做 mesh 的函式，App 每幀呼叫 `update(dt)`。
+- 地上的點：`WeaponCatalog.register(id, { pool })`，pool 就是 marker 種類。`healing` 抽 `bandage`，`throwable` 從 `grenade`、`molotov` 等機率抽；新的治療物、投擲物註冊到對的 pool 就會出現。
+- 傷害自己和隊友：`AreaDamage.damageInRadius` 對範圍內的敵人和玩家（包括丟的人）都送傷害，`DamageInfo.friendlyFire` 為 true。Session 只讓這種傷害從玩家打到玩家，子彈和近戰還是打不到隊友。
+
+## 撿來的近戰和彈藥箱（G18、G19、G13）
+
+- `Katana`（`MeleeWeapon` 子類，第 4 格 `special`）：用 `MeleeSweep` Strategy（`MeleeSwing` 子類），範圍內、前方 150 度、沒被牆擋的殭屍**全部**砍到，各 70，間隔 0.5 秒，距離 2.6 m。
+- `Chainsaw`（第 4 格）：`automatic`，按住每 0.1 秒對前方 60 度、3 m 內最近的殭屍打 20（每秒 200）。每次砍扣電，電量 100 約 30 秒用完，沒電 `fire` 回傳 false。換電就是撿另一把鏈鋸（交換）。`Weapon.charge` 讓道具欄顯示剩餘百分比。
+- 兩者註冊在 `pool: ['weapon', 'melee']`：一般武器點也可能抽到，`melee` 點只抽這兩把。球棒（第 3 格）不會丟。
+- 彈藥箱：關卡 `type: "ammo"` marker → `AmmoCrateField` 裡的 `AmmoCrate`。按 E 把身上所有槍的彈匣和備彈補滿，之後這個箱子休息 60 秒（大家共用）。槍都滿的時候不會用掉。提示：`E  REFILL AMMO`、`AMMO  READY IN 42s`、`AMMO  FULL`。發 `AMMO_REFILLED`。畫面是 `AmmoCrateViews`：橄欖色箱子加綠色脈動邊框，休息時變暗。
+- E 現在交給 `InteractionList`（Composite）：`[PickupField, AmmoCrateField]`，誰在這裡有東西誰回應。兩者都實作 `take(player, ctx)` 和 `offerFor(player, out, time)`；offer 帶 `verb`（PICK UP／SWAP FOR／REFILL）和 `note`（FULL、READY IN …），`PromptWidget` 只照著拼字。
+
+- 跳躍：空白鍵，`PlayerController` 裡組合一個 `JumpMotion`（起跳 4.6 m/s、重力 13，約 0.8 m 高、0.7 秒）。只抬高眼睛，碰撞還是照地面算，所以跳不過矮牆和沙包。
+- 後座力：`RecoilKick` 聽自己的 `WEAPON_FIRED`，依武器 id 查表把視角往上（和隨機往旁邊）踢，60% 在約 0.25 秒內回來，連射會一路往上飄。數值在 `installGameplay`：手槍 1.6°、步槍 0.9°、衝鋒槍 0.6°、霰彈槍 4.5°、左輪 4°。沒登記的（球棒、投擲物）不踢。
+
+## 音效（G10）
+
+- 只有 `play=1` 才裝：`installGameplay` 呼叫 `audio/installAudio.js`，它回傳的物件放進 `gameViews` 每幀 `update`。瀏覽器規定要先點一下或按鍵才會出聲，`WebAudioOutput.unlock()` 在第一次 `pointerdown`／`keydown` 才建立 AudioContext。
+- 分兩層：`SoundBoard`（純邏輯，有測試）決定播什麼、多大聲、左右聲道；`WebAudioOutput`（瀏覽器）決定聽起來怎樣。`SoundBoard` 用 `SpatialMix` 把世界座標換成左右 pan 和距離音量（30 m 外聽不到），`cooldown` 防止同一個音效疊太多次，`hold`／`loop` 管電鋸這種持續的聲音。
+- 規則都是 `SoundRule` 子類，只聽事件：`WeaponSounds`（自己的 `WEAPON_FIRED`、`WEAPON_CHANGED`、`WEAPON_RELOADED`，用 `register(武器 id, { fire, hit, held, working })` 查表）、`HitSounds`（自己子彈的命中、爆頭、擊殺）、`PlayerSounds`（受傷、治療、丟東西）、`PickupSounds`（`register(武器 id, 音效)`：槍是金屬卡榫聲、刀和電鋸是拿起重物的聲音，沒登記的補給品是塞進包包的沙沙聲；彈藥箱是壓子彈的喀喀聲。不用叮咚提示音）、`ZombieSounds`（`register(敵人類別, { spawn, groan, death })`，沒登記的用 `Enemy` 的；隨機一隻每 1.5～3.5 秒叫一聲）、`WorldSounds`（爆炸、波次開始、清完、結束）。
+- 音檔在 `web/assets/sfx/`：刀、電鋸、爆炸、殭屍從舊專案複製（CC0）；五把槍的槍聲（`gun/`）來自 gunsoundeffect.com。來源都在 `CREDITS.md`。`manifest.json` 是「音效名稱 → 檔名（陣列就隨機挑）」。沒有音檔的（換彈、受傷等）用 `SynthSounds.js` 的合成配方，音檔載入前或載入失敗也會先用合成的。
+- 新增武器的聲音：`installAudio` 裡 `WeaponSounds` 加一行 `register`；有音檔就放進 `sfx/`、寫進 `manifest.json`，沒有就在 `SynthSounds.js` 加一個配方。
+- 還沒有：開始換彈的聲音（沒有這個事件，見 B13，現在只有換完的「喀」）；隊友的聲音（等 G8）。
 
 ## 新增武器
 
@@ -204,6 +241,12 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 5. 在共用組合入口 `game/installGameplay.js` 匯入新類別，呼叫 `player.weapons.add(new 你的類別())`。WeaponHolder 已支援數字鍵切換，不需改 Enemy 或 Economy。
 6. 自己補假時鐘測試（射速、空彈、換彈、切槍），用 Conventional Commit 提交，一把武器一組 commit。
 
+### G23 衝鋒槍和左輪
+
+- `SubmachineGun`（id `smg`）：傷害 13、40 發彈匣／240 備彈、0.06 秒冷卻（約每分鐘 1000 發）、1.6 秒換彈、散布 0.02、射程 45 m，按住連射。
+- `Revolver`：傷害 90（打身體一發倒 walker）、6 發／36 備彈、0.75 秒冷卻、2.4 秒換彈、射程 70 m，一次點一發。
+- 兩把都放主武器格，只能在地上撿到。
+
 ### G1 武器與散布
 
 - `Rifle`：傷害 24、30 發彈匣／210 備彈、0.095 秒冷卻、1.7 秒換彈、單顆彈丸散布 0.006，可按住連射。
@@ -211,6 +254,15 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 - 上述數值取自舊 prototype 的 player/player.js；射程沿用現有武器契約的 60 公尺，不引用 reference/ 模組，也不移植後座力、熱量或移動散布加成。
 - `SpreadFire` 以均勻圓盤取樣偏移，轉換到瞄準方向的正交平面後正規化，各彈丸委派既有 `HitscanFire`，因此沿用最近命中、牆壁遮擋、爆頭與 Session 傷害流程。回傳第一顆命中摘要，全部未命中則回傳 null，不修改共用 ctx.aim。
 - 亂數可用 `new SpreadFire({rng})` 注入，否則採用 `ctx.rng`；測試不依賴 Math.random。`WeaponTrigger` 僅送輸入命令，Session 仍決定是否允許開火，Weapon 仍管理彈藥與模擬時鐘 deadline。
+
+### 第一人稱武器模型（G25，接 G9 的 `WeaponRig`）
+
+- 只有 `?play=1` 才建立：`installGameplay` 建 `weapons/FirstPersonWeapon.js`，設成 `app.overlay`。`App` 每幀呼叫 `overlay.update`，`PostFX.render` 在場景畫完、後製之前畫它。沒有 `play=1` 時 `overlay` 不存在，畫面不變。
+- 誰畫什麼：`views/standardViewModels.js` 把武器 id 對到 `WeaponView` 子類（握的位置、動畫片段），`models/standardModels.js` 對到模型工廠。手槍是 G9 的 `pistol.glb`，其他十把用 `models/ModelKit.js` 拿 Three.js 幾何體拼，顏色取 `art/style/chapters/weapons.json` 的 `_assets.colors`。
+- 什麼時候動：`views/HeldWeaponDriver.js`（不依賴 Three.js）聽 `WEAPON_CHANGED`（拿出）、`WEAPON_FIRED`（開槍、揮砍、丟出）、`WEAPON_RELOADED`（換彈結束）。換彈開始和繃帶進度沒有事件，每幀讀武器的 `reloading`、`progress(time)`。換彈動畫會依武器的 `reloadSeconds` 調快或調慢。不改任何武器的邏輯。
+- 槍口火光只在模型有 `muzzle` 標記時出現（只有槍有）。武士刀每刀左右交替，和 `SlashWidget` 的刀光同步；刀光畫在 HUD 的 canvas 上，在模型前面，不會被擋住。
+- 新增一把武器的樣子：寫一個 `WeaponView` 子類（`views/RifleView.js` 當範例，常用動畫用 `views/ClipKit.js`），寫模型工廠，然後在上面兩個檔案各加一行。
+- 除錯：`?play=1&debug=1` 時 `window.__weaponView.equip('katana')` 換成任一把，`freeze('fire', 0.05)` 停在某個動畫瞬間，`now()` 看現在播什麼。
 
 ## 新增敵人類型
 

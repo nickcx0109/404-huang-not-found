@@ -365,11 +365,14 @@ export class PostFX {
   /**
    * Renders the scene with post-processing to the canvas.
    * @param {number} time seconds; only animates the grain
+   * @param {{render: function(THREE.WebGLRenderer): void}} [overlay]  drawn over the scene
+   *   before post-processing (the weapon in the player's hands)
    */
-  render(scene, camera, time) {
+  render(scene, camera, time, overlay) {
     const renderer = this.renderer;
     renderer.setRenderTarget(this.sceneTarget);
     renderer.render(scene, camera);
+    if (overlay) overlay.render(renderer);
 
     const u = this._final.uniforms;
     if (this.bloom.enabled && this.bloomTargets.length > 0) {

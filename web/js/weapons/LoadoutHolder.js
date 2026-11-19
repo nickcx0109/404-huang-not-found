@@ -40,10 +40,25 @@ export class LoadoutHolder extends WeaponHolder {
     return weapon;
   }
 
-  /** Whether `weapon` can be taken from the ground: only into a slot that is not kept for good. */
+  /**
+   * Whether `weapon` can be taken from the ground: only into a slot that is not kept for good, and not
+   * when the same item is already carried as a full stack.
+   */
   canEquip(weapon) {
     const index = LOADOUT_SLOTS.indexOf(weapon?.slot);
-    return index >= 0 && !KEPT.has(weapon.slot) && !this.weapons.includes(weapon);
+    if (index < 0 || KEPT.has(weapon.slot) || this.weapons.includes(weapon)) return false;
+    return !this.weapons[index]?.refuses(weapon);
+  }
+
+  /** Whether `weapon` cannot be taken because the same item is already carried as a full stack. */
+  isFull(weapon) {
+    return Boolean(this.inSlot(weapon?.slot)?.refuses(weapon));
+  }
+
+  /** Whether taking `weapon` would replace what is in its slot (false when the slot is empty or the item stacks). */
+  wouldSwap(weapon) {
+    const previous = this.inSlot(weapon?.slot);
+    return previous !== null && !previous.canAbsorb(weapon);
   }
 
   /**
@@ -54,6 +69,13 @@ export class LoadoutHolder extends WeaponHolder {
     if (!this.canEquip(weapon)) throw new Error('Cannot equip ' + weapon?.id);
     const index = LoadoutHolder.slotIndex(weapon);
     const previous = this.weapons[index];
+    // The same item tops up the stack in the slot; whatever does not fit stays on the ground.
+    if (previous?.canAbsorb(weapon)) {
+      const usedUp = previous.absorb(weapon);
+      this.events.emit(EVENTS.WEAPON_CHANGED, { ownerId: this.ownerId, weaponId: previous.id });
+      return usedUp ? null : weapon;
+    }
+    if (this.index !== index) this.current?.holster();
     previous?.drop();
     weapon.ownerId = this.ownerId;
     this.weapons[index] = weapon;
@@ -83,7 +105,16 @@ export class LoadoutHolder extends WeaponHolder {
     return false;
   }
 
+  /** Updates every slot; an item stack that ran out leaves its slot, and if it was in hand the next slot is taken. */
   update(dt, ctx) {
-    for (const weapon of this.weapons) weapon?.update(dt, ctx);
+    for (let index = 0; index < this.weapons.length; index++) {
+      const weapon = this.weapons[index];
+      if (!weapon) continue;
+      weapon.update(dt, ctx);
+      if (!weapon.depleted) continue;
+      weapon.drop();
+      this.weapons[index] = null;
+      if (index === this.index && !this.cycle(1)) this.index = -1;
+    }
   }
 }

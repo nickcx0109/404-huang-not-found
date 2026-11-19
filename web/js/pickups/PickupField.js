@@ -1,7 +1,11 @@
 import { EVENTS } from '../game/events.js';
 import { WeaponPickup } from './WeaponPickup.js';
 
-/** Level marker type that places a weapon on the ground; its `item` names a WeaponCatalog entry. */
+/**
+ * Level marker type that places a weapon on the ground. Its optional `item` names a WeaponCatalog entry;
+ * without one the spot is fixed but the gun lying there is drawn at random each game.
+ * `healing` and `throwable` markers work the same way, each drawing from its own pool of the catalog.
+ */
 export const WEAPON_MARKER = 'weapon';
 
 /**
@@ -15,13 +19,20 @@ export class PickupField {
     this.pickups = pickups;
   }
 
-  /** Builds one pickup per `type: "weapon"` marker. Unknown items are an error, not a silent skip. */
-  static fromLevel(level, catalog) {
+  /**
+   * Builds one pickup per marker whose type is a pool of the catalog (`weapon`, `healing`, `throwable`).
+   * Unknown items are an error, not a silent skip.
+   * @param {() => number} rng  draws the gun for markers without an item (the session's rng, so a host decides)
+   * @param {(pool: string) => string} [pick]  chooses the item for a marker without one; by default each
+   *   spot draws on its own, so the same gun may lie twice. Pass an ItemDeck's next to deal every item once first.
+   */
+  static fromLevel(level, catalog, rng = Math.random, pick = pool => catalog.randomId(rng, pool)) {
     const pickups = [];
     for (const marker of level.markers ?? []) {
-      if (marker.type !== WEAPON_MARKER) continue;
-      if (!catalog.has(marker.item)) throw new RangeError('Marker ' + marker.id + ': unknown weapon item "' + marker.item + '"');
-      pickups.push(new WeaponPickup(marker.id, { x: marker.x, y: 0, z: marker.z }, catalog.create(marker.item), marker.r));
+      if (!catalog.hasPool(marker.type)) continue;
+      const item = marker.item ?? pick(marker.type);
+      if (!catalog.has(item)) throw new RangeError('Marker ' + marker.id + ': unknown weapon item "' + item + '"');
+      pickups.push(new WeaponPickup(marker.id, { x: marker.x, y: 0, z: marker.z }, catalog.create(item), marker.r));
     }
     return new PickupField(catalog, pickups);
   }
@@ -56,12 +67,33 @@ export class PickupField {
     return true;
   }
 
-  /** What taking the nearest pickup would do, for the HUD prompt: { name, swap } or null. */
-  offerFor(player, out = { name: '', swap: false }) {
-    const pickup = this.nearestFor(player);
+  /**
+   * What taking the nearest pickup would do, for the HUD prompt: { name, swap, full } or null.
+   * When nothing can be taken but the player stands at an item they already carry a full stack of,
+   * the offer says so (`full`), so the prompt can tell why E does nothing.
+   */
+  offerFor(player, out = {}) {
+    const pickup = this.nearestFor(player) ?? this._nearestFull(player);
     if (!pickup) return null;
     out.name = this.catalog.nameOf(pickup.weapon.id);
-    out.swap = player.weapons.inSlot?.(pickup.weapon.slot) != null;
+    out.full = player.weapons.isFull?.(pickup.weapon) ?? false;
+    out.swap = !out.full && (player.weapons.wouldSwap?.(pickup.weapon) ?? false);
+    out.verb = out.swap ? 'SWAP FOR' : 'PICK UP';
+    out.note = out.full ? 'FULL' : null;
     return out;
+  }
+
+  _nearestFull(player) {
+    let best = null;
+    let bestDistance = Infinity;
+    for (const pickup of this.pickups) {
+      if (!pickup.reachableBy(player) || !player.weapons.isFull?.(pickup.weapon)) continue;
+      const distance = pickup.distanceTo(player);
+      if (distance < bestDistance) {
+        best = pickup;
+        bestDistance = distance;
+      }
+    }
+    return best;
   }
 }

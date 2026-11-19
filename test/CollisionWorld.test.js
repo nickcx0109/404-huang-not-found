@@ -75,3 +75,16 @@ test('CollisionWorld slides along walls, permits walking below beams, and clamps
   const bounded = overhead.move(0, 0, 10, -10, 0.35, 0, 1.8);
   assert.deepEqual(bounded, { x: 2.65, z: -2.65, hitX: true, hitZ: true });
 });
+
+test('raycastFace reports the face a ray enters through', () => {
+  const world = new CollisionWorld();
+  world.add(new Aabb(-1, 0, -1, 1, 1, 1, 'box'));
+  const top = world.raycastFace({ x: 0, y: 3, z: 0 }, { x: 0, y: -1, z: 0 }, 5);
+  assert.equal(top.distance, 2);
+  assert.deepEqual(top.normal, { x: 0, y: 1, z: 0 });
+  const side = world.raycastFace({ x: -4, y: 0.5, z: 0.2 }, { x: 1, y: 0, z: 0 }, 5);
+  assert.equal(side.distance, 3);
+  assert.deepEqual(side.normal, { x: -1, y: 0, z: 0 });
+  assert.equal(world.raycastFace({ x: -4, y: 0.5, z: 0 }, { x: 1, y: 0, z: 0 }, 2), null, 'too short');
+  assert.equal(world.raycastFace({ x: 0, y: 3, z: 0 }, { x: 1, y: 0, z: 0 }, 5), null, 'misses');
+});
