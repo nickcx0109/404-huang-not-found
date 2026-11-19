@@ -27,8 +27,28 @@ const RECIPES = {
   kill: (s, m) => s.tone(m, { f: 520, f2: 260, dur: 0.12, type: 'triangle', vol: 0.12 }),
   hurt: (s, m) => { s.tone(m, { f: 210, f2: 90, dur: 0.2, type: 'sawtooth', vol: 0.14 }); s.noise(m, { dur: 0.12, f: 600, vol: 0.3 }); },
   heal: (s, m) => { s.tone(m, { f: 520, dur: 0.12, type: 'sine', vol: 0.12 }); s.tone(m, { f: 780, dur: 0.18, type: 'sine', vol: 0.1, delay: 0.1 }); },
-  pickup: (s, m) => { s.tone(m, { f: 660, dur: 0.07, type: 'triangle', vol: 0.15 }); s.tone(m, { f: 990, dur: 0.1, type: 'triangle', vol: 0.15, delay: 0.07 }); },
-  ammo_refill: (s, m) => { s.noise(m, { dur: 0.06, f: 2500, type: 'bandpass', q: 4, vol: 0.2 }); s.noise(m, { dur: 0.06, f: 2800, type: 'bandpass', q: 4, vol: 0.2, delay: 0.12 }); s.tone(m, { f: 880, dur: 0.1, type: 'triangle', vol: 0.12, delay: 0.22 }); },
+  // Pickups are hands and objects, not chimes: a grip, then whatever the thing does.
+  pickup_gun: (s, m) => {
+    s.noise(m, { dur: 0.07, f: 1200, vol: 0.14 });                                  // hand on the grip
+    s.noise(m, { dur: 0.04, f: 3200, type: 'bandpass', q: 6, vol: 0.4, delay: 0.06 }); // metal clack
+    s.tone(m, { f: 1700, f2: 900, dur: 0.025, type: 'square', vol: 0.04, delay: 0.06 });
+    s.noise(m, { dur: 0.06, f: 2300, type: 'bandpass', q: 5, vol: 0.32, delay: 0.17 }); // slide back
+  },
+  pickup_melee: (s, m) => {
+    s.noise(m, { dur: 0.08, f: 1000, vol: 0.14 });
+    s.noise(m, { dur: 0.12, f: 420, f2: 160, vol: 0.4, delay: 0.05 });                 // heavy thing lifted
+    s.tone(m, { f: 140, f2: 80, dur: 0.09, type: 'sine', vol: 0.25, delay: 0.05 });
+  },
+  pickup_item: (s, m) => {
+    s.noise(m, { dur: 0.12, f: 1600, type: 'bandpass', q: 0.7, vol: 0.2 });           // into the bag
+    s.noise(m, { dur: 0.14, f: 2300, type: 'bandpass', q: 0.7, vol: 0.16, delay: 0.09 });
+  },
+  ammo_refill: (s, m) => {
+    for (const [delay, f] of [[0, 2600], [0.11, 2900], [0.22, 2500]]) {               // rounds pressed in
+      s.noise(m, { dur: 0.04, f, type: 'bandpass', q: 6, vol: 0.28, delay });
+    }
+    s.noise(m, { dur: 0.06, f: 1800, type: 'bandpass', q: 4, vol: 0.32, delay: 0.36 }); // magazine seated
+  },
   throw: (s, m) => s.noise(m, { dur: 0.25, f: 500, f2: 1600, type: 'bandpass', q: 1.2, vol: 0.25 }),
   explosion: (s, m) => { s.noise(m, { dur: 1.0, f: 700, f2: 50, vol: 1.0 }); s.tone(m, { f: 70, f2: 28, dur: 0.7, type: 'sine', vol: 0.9 }); },
   zombie_groan: (s, m) => s.tone(m, { f: 95 + Math.random() * 35, f2: 70 + Math.random() * 20, dur: 0.5 + Math.random() * 0.4, type: 'sawtooth', vol: 0.05 }),

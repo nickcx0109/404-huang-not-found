@@ -3,6 +3,7 @@ import { WebAudioOutput } from './WebAudioOutput.js';
 import { WeaponSounds } from './WeaponSounds.js';
 import { HitSounds } from './HitSounds.js';
 import { PlayerSounds } from './PlayerSounds.js';
+import { PickupSounds } from './PickupSounds.js';
 import { ZombieSounds } from './ZombieSounds.js';
 import { WorldSounds } from './WorldSounds.js';
 import { Enemy } from '../enemies/Enemy.js';
@@ -37,6 +38,9 @@ export function installAudio({ events, player, enemies, playerId }) {
     .register('chainsaw', { held: 'chainsaw_idle', working: 'chainsaw_cut' }));
   board.install(new HitSounds(events, playerId));
   board.install(new PlayerSounds(events, playerId));
+  board.install(new PickupSounds(events, playerId)
+    .register(['rifle', 'shotgun', 'smg', 'revolver'], 'pickup_gun')
+    .register(['katana', 'chainsaw'], 'pickup_melee'));
   board.install(new ZombieSounds(events, enemies)
     .register(Enemy, { groan: 'zombie_groan', death: 'zombie_death' })
     .register(Runner, { spawn: 'zombie_scream', groan: 'zombie_groan', death: 'zombie_death' })

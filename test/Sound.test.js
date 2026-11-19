@@ -8,6 +8,7 @@ import { SoundRule } from '../web/js/audio/SoundRule.js';
 import { WeaponSounds } from '../web/js/audio/WeaponSounds.js';
 import { HitSounds } from '../web/js/audio/HitSounds.js';
 import { PlayerSounds } from '../web/js/audio/PlayerSounds.js';
+import { PickupSounds } from '../web/js/audio/PickupSounds.js';
 import { ZombieSounds } from '../web/js/audio/ZombieSounds.js';
 import { WorldSounds } from '../web/js/audio/WorldSounds.js';
 import { DamageInfo } from '../web/js/entities/DamageInfo.js';
@@ -156,11 +157,21 @@ test('PlayerSounds follows only the local player', () => {
   events.emit(EVENTS.ENTITY_DAMAGED, { entity: { id: 'p1' }, amount: 5 });
   events.emit(EVENTS.ENTITY_DAMAGED, { entity: { id: 'z1' }, amount: 5 });
   events.emit(EVENTS.ENTITY_HEALED, { entity: { id: 'p1' }, amount: 20 });
-  events.emit(EVENTS.WEAPON_PICKED_UP, { ownerId: 'p1' });
-  events.emit(EVENTS.WEAPON_PICKED_UP, { ownerId: 'p2' });
-  events.emit(EVENTS.AMMO_REFILLED, { ownerId: 'p1' });
   events.emit(EVENTS.ITEM_THROWN, { ownerId: 'p1' });
-  assert.deepEqual(output.cues, ['hurt', 'heal', 'pickup', 'ammo_refill', 'throw']);
+  events.emit(EVENTS.ITEM_THROWN, { ownerId: 'p2' });
+  assert.deepEqual(output.cues, ['hurt', 'heal', 'throw']);
+});
+
+test('PickupSounds plays what was picked up, with a fallback for supplies', () => {
+  const { events, output, board } = setup();
+  board.install(new PickupSounds(events, 'p1')
+    .register(['rifle', 'shotgun'], 'pickup_gun')
+    .register('katana', 'pickup_melee'));
+  for (const weaponId of ['rifle', 'katana', 'bandage']) events.emit(EVENTS.WEAPON_PICKED_UP, { ownerId: 'p1', weaponId });
+  events.emit(EVENTS.WEAPON_PICKED_UP, { ownerId: 'p2', weaponId: 'shotgun' });
+  events.emit(EVENTS.AMMO_REFILLED, { ownerId: 'p1' });
+  events.emit(EVENTS.AMMO_REFILLED, { ownerId: 'p2' });
+  assert.deepEqual(output.cues, ['pickup_gun', 'pickup_melee', 'pickup_item', 'ammo_refill']);
 });
 
 test('ZombieSounds voices each kind from where it stands and falls back to the Enemy voice', () => {

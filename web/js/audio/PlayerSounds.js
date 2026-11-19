@@ -1,7 +1,7 @@
 import { EVENTS } from '../game/events.js';
 import { SoundRule } from './SoundRule.js';
 
-/** What happens to the local player: getting hurt, healed, picking things up, throwing. */
+/** What happens to the local player: getting hurt, healed, throwing. Pickups are PickupSounds. */
 export class PlayerSounds extends SoundRule {
   constructor(events, playerId) {
     super(events);
@@ -14,12 +14,6 @@ export class PlayerSounds extends SoundRule {
     });
     this.listen(EVENTS.ENTITY_HEALED, ({ entity }) => {
       if (entity.id === this.playerId) this.board.play('heal');
-    });
-    this.listen(EVENTS.WEAPON_PICKED_UP, ({ ownerId }) => {
-      if (ownerId === this.playerId) this.board.play('pickup');
-    });
-    this.listen(EVENTS.AMMO_REFILLED, ({ ownerId }) => {
-      if (ownerId === this.playerId) this.board.play('ammo_refill');
     });
     this.listen(EVENTS.ITEM_THROWN, ({ ownerId }) => {
       if (ownerId === this.playerId) this.board.play('throw');
