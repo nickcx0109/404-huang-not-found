@@ -19,7 +19,7 @@
 
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker` 這兩個範例。
 
-- [ ] **G26 拿掉商店和金錢**
+- [~] **G26 拿掉商店和金錢**（進行中：@nickcx0109，分支 refactor/remove-shop）
   - 決定：不做商店。槍、投擲物、治療物都從地上撿，子彈從彈藥箱補（G11、G13、G14 已完成）。
   - 內容：拿掉 `web/js/economy/`（`Wallet`、`Economy`、`ShopItem`、`AmmoRefillItem`）、`GameSession` 的 `economy` 和 `PURCHASE_REQUESTED`／`ITEM_PURCHASED` 事件、殺敵給錢、HUD 的金額和「E AT SHOP」提示、關卡裡的 `shop` 標記；`shop_terminal` 模型留著當場景裝飾（不然沒開 `play=1` 的畫面會變）。GAMEPLAY.md、ARCHITECTURE.md 裡講商店的段落一起改。
   - 完成：`npm test` 通過，沒有留下引用 economy 的程式；`shots.mjs --level ch2` 的截圖和改之前一樣。
