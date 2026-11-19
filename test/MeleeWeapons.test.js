@@ -56,3 +56,26 @@ test('Katana goes in slot 4, can be swapped, and the bat stays', () => {
   assert.equal(holder.inSlot('melee').id, 'bat');
   assert.equal(holder.equip(new Katana()), katana, 'a second katana swaps');
 });
+
+test('Chainsaw: held, 200 damage a second to the closest zombie in front, battery for about 30 seconds', async () => {
+  const { Chainsaw } = await import('../web/js/weapons/Chainsaw.js');
+  const { ctx, hits } = arena();
+  ctx.enemies.push(zombie('near', 0, -1.5), zombie('next', 0.3, -2.5));
+  const saw = new Chainsaw();
+  saw.ownerId = 'p1';
+  assert.equal(saw.slot, 'special');
+  assert.equal(saw.automatic, true);
+  let cuts = 0;
+  for (; ctx.time < 1 - 1e-9; ctx.time = Math.round((ctx.time + 0.01) * 100) / 100) if (saw.fire(ctx)) cuts++;
+  assert.equal(cuts, 10);
+  assert.equal(hits.reduce((sum, info) => sum + (info.targetId === 'near' ? info.amount : 0), 0), 200);
+  assert.equal(hits.some(info => info.targetId === 'next'), false, 'one at a time');
+  let seconds = 1;
+  while (saw.fire(ctx) || saw.battery > 0) {
+    ctx.time = Math.round((ctx.time + 0.1) * 100) / 100;
+    seconds += 0.1;
+    if (seconds > 60) break;
+  }
+  assert.ok(Math.abs(seconds - 30) < 0.5, 'about 30 seconds: ' + seconds);
+  assert.equal(saw.fire(ctx), false, 'flat battery');
+});
