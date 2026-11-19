@@ -9,7 +9,7 @@ import { EVENTS } from './events.js';
 
 export class GameSession {
   constructor(ctx, { factory, director, economy, items = [], breakSeconds = 8,
-    damagePipeline = new DamagePipeline([new HeadshotRule()]), separation = null }) {
+    damagePipeline = new DamagePipeline([new HeadshotRule()]), separation = null, pickups = null }) {
     if (ctx.session) throw new Error('Context already has an authority');
     if (!Number.isFinite(breakSeconds) || breakSeconds < 0) throw new RangeError('Invalid break duration');
     this.context = ctx;
@@ -17,6 +17,8 @@ export class GameSession {
     this.factory = factory;
     this.director = director;
     this.separation = separation;
+    /** Weapons on the ground (a PickupField), or null when the level has none. */
+    this.pickups = pickups;
     this.economy = economy;
     this.items = new Map(items.map(item => [item.id, item]));
     this.damagePipeline = damagePipeline;
@@ -43,6 +45,7 @@ export class GameSession {
         const player = this.playerById(request.ownerId);
         if (this.canMove && player?.damageable.alive) player.weapons.switchTo(request.index);
       }),
+      ctx.events.on(EVENTS.PICKUP_REQUESTED, request => this.pickUp(request.ownerId)),
       ctx.events.on(EVENTS.PURCHASE_REQUESTED, request => this.buy(request.ownerId, request.itemId)),
       ctx.events.on(EVENTS.DAMAGE_REQUESTED, info => this.resolveDamage(info)),
       ctx.events.on(EVENTS.ENTITY_DIED, detail => this.recordDeath(detail)),
@@ -160,6 +163,13 @@ export class GameSession {
       this.kills++;
       this.economy.reward(player, entity.reward);
     }
+  }
+
+  /** Takes the nearest weapon on the ground, swapping it with the one in that slot. Allowed whenever players can move. */
+  pickUp(ownerId) {
+    const player = this.playerById(ownerId);
+    if (!this.pickups || !this.canMove || !player?.damageable.alive) return false;
+    return this.pickups.take(player, this.context);
   }
 
   buy(ownerId, itemId) {

@@ -1271,7 +1271,9 @@
     {"id": "supply_truck", "type": "supply", "x": 5.2, "z": -56, "r": 1.2},
     {"id": "supply_cabin", "type": "supply", "x": 50, "z": -103.4, "r": 1.2},
     {"id": "supply_bulbs", "type": "supply", "x": 87.4, "z": -189.2, "r": 1.2},
-    {"id": "car", "type": "objective", "x": 90, "z": -194.4, "r": 2.5, "yaw": 0}
+    {"id": "car", "type": "objective", "x": 90, "z": -194.4, "r": 2.5, "yaw": 0},
+    {"id": "gun_camp", "type": "weapon", "item": "rifle", "x": -2.6, "z": -36.4, "r": 1.2},
+    {"id": "gun_cabin", "type": "weapon", "item": "shotgun", "x": 50, "z": -100.8, "r": 1.2}
   ],
 
   "bookmarks": [

@@ -322,9 +322,16 @@ export class LevelData {
       const id = m.id === undefined ? 'm' + i : String(m.id);
       if (seen.has(id)) v.error(path + '.id', 'duplicate id "' + id + '"');
       seen.add(id);
+      // What the marker hands out, e.g. the weapon of a "weapon" marker. Optional; null when absent.
+      let item = null;
+      if (m.item !== undefined) {
+        if (typeof m.item === 'string' && NAME_PATTERN.test(m.item)) item = m.item;
+        else v.error(path + '.item', 'must be a name such as "rifle"');
+      }
       return Object.freeze({
         id,
         type: String(m.type),
+        item,
         x: v.number(m, 'x', path),
         z: v.number(m, 'z', path),
         r: v.number(m, 'r', path, { fallback: 1, min: 0 }),

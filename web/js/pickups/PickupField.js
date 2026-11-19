@@ -1,0 +1,67 @@
+import { EVENTS } from '../game/events.js';
+import { WeaponPickup } from './WeaponPickup.js';
+
+/** Level marker type that places a weapon on the ground; its `item` names a WeaponCatalog entry. */
+export const WEAPON_MARKER = 'weapon';
+
+/**
+ * All weapons lying on the ground in one level. Taking one swaps it with whatever the player had in
+ * that slot: the old weapon is left in the same place with its own rounds, so nothing is refilled.
+ * Pure logic: views read `pickups` and listen for WEAPON_PICKED_UP.
+ */
+export class PickupField {
+  constructor(catalog, pickups = []) {
+    this.catalog = catalog;
+    this.pickups = pickups;
+  }
+
+  /** Builds one pickup per `type: "weapon"` marker. Unknown items are an error, not a silent skip. */
+  static fromLevel(level, catalog) {
+    const pickups = [];
+    for (const marker of level.markers ?? []) {
+      if (marker.type !== WEAPON_MARKER) continue;
+      if (!catalog.has(marker.item)) throw new RangeError('Marker ' + marker.id + ': unknown weapon item "' + marker.item + '"');
+      pickups.push(new WeaponPickup(marker.id, { x: marker.x, y: 0, z: marker.z }, catalog.create(marker.item), marker.r));
+    }
+    return new PickupField(catalog, pickups);
+  }
+
+  /** The closest pickup the player can reach and is allowed to take, or null. */
+  nearestFor(player) {
+    let best = null;
+    let bestDistance = Infinity;
+    for (const pickup of this.pickups) {
+      if (!pickup.reachableBy(player) || !player.weapons.canEquip?.(pickup.weapon)) continue;
+      const distance = pickup.distanceTo(player);
+      if (distance < bestDistance) {
+        best = pickup;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Swaps the nearest reachable pickup with the player's weapon in that slot.
+   * @returns {boolean} whether a weapon was taken
+   */
+  take(player, ctx) {
+    const pickup = this.nearestFor(player);
+    if (!pickup) return false;
+    const weapon = pickup.weapon;
+    const dropped = player.weapons.equip(weapon);
+    pickup.swap(dropped);
+    ctx.events.emit(EVENTS.WEAPON_PICKED_UP, { ownerId: player.id, pickupId: pickup.id,
+      weaponId: weapon.id, droppedId: dropped ? dropped.id : null });
+    return true;
+  }
+
+  /** What taking the nearest pickup would do, for the HUD prompt: { name, swap } or null. */
+  offerFor(player, out = { name: '', swap: false }) {
+    const pickup = this.nearestFor(player);
+    if (!pickup) return null;
+    out.name = this.catalog.nameOf(pickup.weapon.id);
+    out.swap = player.weapons.inSlot?.(pickup.weapon.slot) != null;
+    return out;
+  }
+}
