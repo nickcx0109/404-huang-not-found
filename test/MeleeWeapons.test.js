@@ -79,3 +79,14 @@ test('Chainsaw: held, 200 damage a second to the closest zombie in front, batter
   assert.ok(Math.abs(seconds - 30) < 0.5, 'about 30 seconds: ' + seconds);
   assert.equal(saw.fire(ctx), false, 'flat battery');
 });
+
+test('The chainsaw battery shows in the inventory as whole percent', async () => {
+  const { Chainsaw } = await import('../web/js/weapons/Chainsaw.js');
+  const { PlayerStatus } = await import('../web/js/ui/hud/PlayerStatus.js');
+  const saw = new Chainsaw({ battery: 72.4 });
+  assert.ok(Math.abs(saw.charge - 0.724) < 1e-9);
+  assert.equal(new Katana().charge, null);
+  const status = new PlayerStatus();
+  status._readSlots({ weapons: { weapons: [saw, null], index: 0 } });
+  assert.deepEqual(status.slots, [{ id: 'chainsaw', count: null, charge: 73 }, { id: null, count: null, charge: null }]);
+});

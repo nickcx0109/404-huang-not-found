@@ -20,6 +20,10 @@ export class Chainsaw extends MeleeWeapon {
     return 'special';
   }
 
+  get charge() {
+    return this.battery / this.maxBattery;
+  }
+
   /** Keeps cutting while the button is held. */
   get automatic() {
     return true;

@@ -95,6 +95,11 @@ export class Weapon {
     return null;
   }
 
+  /** How much is left of something that runs down without rounds (a chainsaw's battery), 0..1, or null. */
+  get charge() {
+    return null;
+  }
+
   /** True once there is nothing left of the weapon to use (an item stack that ran out); the holder then drops it. */
   get depleted() {
     return false;

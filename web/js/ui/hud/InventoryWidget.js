@@ -25,7 +25,7 @@ export class InventoryWidget extends HudWidget {
     if (slots.length !== this.rows.length) this._build(slots.length);
     let changed = false;
     for (let index = 0; index < slots.length; index++) {
-      const { id, count } = slots[index];
+      const { id, count, charge = null } = slots[index];
       const row = this.rows[index];
       if (id !== row.id) {
         if (row.id !== null) row.icon.classList.remove('hud-inventory__icon--' + row.id);
@@ -35,9 +35,10 @@ export class InventoryWidget extends HudWidget {
         row.el.classList.toggle('is-empty', id === null);
         changed = true;
       }
-      if (count !== row.count) {
+      if (count !== row.count || charge !== row.charge) {
         row.count = count;
-        row.amount.textContent = count === null ? '' : '×' + count;
+        row.charge = charge;
+        row.amount.textContent = count !== null ? '×' + count : charge !== null ? charge + '%' : '';
         changed = true;
       }
     }
@@ -59,7 +60,7 @@ export class InventoryWidget extends HudWidget {
       this.part('span', 'hud-inventory__key', el).textContent = String(index + 1);
       const icon = this.part('i', 'hud-inventory__icon', el);
       const amount = this.part('span', 'hud-inventory__count', el);
-      this.rows.push({ el, icon, amount, id: null, count: null });
+      this.rows.push({ el, icon, amount, id: null, count: null, charge: null });
     }
     this._selected = -2;
   }

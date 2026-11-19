@@ -52,10 +52,12 @@ export class PlayerStatus {
   _readSlots(player) {
     const held = player?.weapons?.weapons ?? [];
     for (let index = 0; index < held.length; index++) {
-      const record = this.slots[index] ?? (this.slots[index] = { id: null, count: null });
+      const record = this.slots[index] ?? (this.slots[index] = { id: null, count: null, charge: null });
       const item = held[index];
       record.id = item ? item.id : null;
       record.count = item && Number.isInteger(item.count) ? item.count : null;
+      // Shown in whole percent, so the HUD only redraws when the number on screen changes.
+      record.charge = item && Number.isFinite(item.charge) ? Math.ceil(item.charge * 100) : null;
     }
     this.slots.length = held.length;
     this.selected = player?.weapons ? player.weapons.index ?? -1 : -1;

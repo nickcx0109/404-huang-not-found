@@ -328,4 +328,8 @@ test('InventoryWidget lists every slot, marks the one in hand and shows stack co
   assert.equal(widget.rows[2].icon.classList.contains('hud-inventory__icon--bat'), false, 'the old icon is taken off');
   assert.equal(widget.rows[2].icon.textContent, 'BANDAGE', 'no mask yet: the name is printed');
   assert.equal(widget.rows[2].amount.textContent, '\u00d72');
+
+  status.slots[2] = { id: 'chainsaw', count: null, charge: 73 };
+  widget.sync(status);
+  assert.equal(widget.rows[2].amount.textContent, '73%', 'a battery shows how much is left');
 });
