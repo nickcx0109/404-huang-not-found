@@ -9,7 +9,7 @@
 | 3 | 🟠 | `web/levels/mood.json:81`、`web/js/PropFactory.js:52-54` | 綁了 collider 的道具，旋轉或縮放後，外觀會超出碰撞盒 | mood 的 `car_wreck` 轉 28°，玩家可以走進車角約 0.18 m | LevelData 驗證時發出警告；或讓碰撞盒依旋轉後的外框計算 |
 | 4 | 🟡 | `tools/serve.mjs:63` | 隱藏檔過濾只擋開頭是 `.` 的路徑；Windows 的 8.3 短檔名（如 `GIT~1`）可以繞過 | 用 `HOST=0.0.0.0` 開放給區網時，別人可能讀到 `.git/config`、`.env` | 解析成真實路徑後再檢查，或只開放 `web/`、`art/` 等白名單資料夾 |
 | 5 | ✅ 已修復 | `web/js/PostFX.js`、`core/bloomLevels.js` | 明確的 levels: 0 關閉 bloom，不建立 targets 或執行 bloom pass；缺省為 3，非零層數限制為 1～4 | 純函式測試涵蓋 0、缺省、邊界與無效值 | `fix(postfx): treat bloom.levels 0 as a valid value` |
-| 6 | 🟡 | `tools/art/shots.mjs:150` | `waitForFunction` 逾時時直接丟錯，跳出整個迴圈 | 某一張卡住，後面的截圖全部不拍 | 每張各自 try/catch，算進 `failures`；`--gpu` 的 d3d11 參數只適用於 Windows |
+| 6 | ✅ 已修復 | `tools/art/shots.mjs` `takeShot` | 每張各自 try/catch，逾時或頁面錯誤只算那一張失敗，其他照拍，最後仍以失敗數結束（exit 1）；`--timeout <秒>` 可調等待時間（預設 120） | 用 `--timeout 0.01` 驗證過：8 張都記為 FAIL、迴圈沒有中斷 | `fix(tools): keep taking screenshots after one shot times out`；`--gpu` 的 d3d11 參數只適用於 Windows 仍未處理 |
 | 7 | ✅ 已修復 | `web/js/App.js` | dt 仍限制在 0～maxFrameTime；fps 統計用真實的幀時間，但超過 0.5 秒（第一幀、切回分頁）或時鐘倒退的間隔不算進統計 | 低於 20 fps 的機器也量得準，切分頁不會讓數字跳 | `fix(app): clamp elapsed time for fps statistics`、`fix(app): keep real frame times in fps stats` |
 | 8 | ✅ 已修復 | `web/js/App.js` `_countLights` | `stats.lights` 改成 getter，只有被讀到時（資訊文字、`?perf`、`shots.mjs`）才走訪場景，不再每幀數燈 | 讀到的永遠是當下的燈數，動態加入的燈也算得到 | `fix(app): count lights only when stats are read` |
 | 9 | ⚪ 效能 | `web/js/StaticBatcher.js:33` | 同材質的東西整關合併成一個 mesh，邊界球涵蓋整個關卡 | 相機和手電筒陰影都沒辦法剔除，看不到的東西也照畫。**第一章 300 m 的山路會受影響** | 改成按區塊（例如 20 m 一格）合併 |
