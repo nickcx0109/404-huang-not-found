@@ -6,8 +6,8 @@ const SKIN = 0.05;
 
 /**
  * Template for an object flying through the air: gravity, walls (the level's boxes) and the ground at y = 0.
- * Subclasses decide what happens when it touches something (`onWall`, `onGround`) and when it is done
- * (`afterMove`). Each returns false to end the object.
+ * Subclasses decide what happens when it touches something (`onWall` with the face's outward normal,
+ * `onGround`) and when it is done (`afterMove`). Each returns false to end the object.
  */
 export class ThrownObject extends Effect {
   constructor(kind, { position, velocity, ownerId = null, time = 0 }) {
@@ -35,13 +35,13 @@ export class ThrownObject extends Effect {
       ray.x = v.x * dt / distance;
       ray.y = v.y * dt / distance;
       ray.z = v.z * dt / distance;
-      const hit = ctx.collision.raycast(this.position, ray, distance + SKIN);
-      if (hit <= distance + SKIN) {
-        const travel = Math.max(0, hit - SKIN);
+      const hit = ctx.collision.raycastFace(this.position, ray, distance + SKIN);
+      if (hit) {
+        const travel = Math.max(0, hit.distance - SKIN);
         this.position.x += ray.x * travel;
         this.position.y += ray.y * travel;
         this.position.z += ray.z * travel;
-        return this.onWall(ctx);
+        return this.onWall(ctx, hit.normal, dt);
       }
       this.position.x += v.x * dt;
       this.position.y += v.y * dt;
@@ -49,20 +49,20 @@ export class ThrownObject extends Effect {
     }
     if (this.position.y <= 0) {
       this.position.y = 0;
-      return this.onGround(ctx);
+      return this.onGround(ctx, dt);
     }
     return true;
   }
 
-  /** Touched a wall or a box. Default: stop dead and fall. */
-  onWall(ctx) {
+  /** Touched a wall or a box face whose outward normal is `normal`. Default: stop dead and fall. */
+  onWall(ctx, normal, dt) {
     this.velocity.x = 0;
     this.velocity.z = 0;
     return true;
   }
 
   /** Touched the ground. Default: stop. */
-  onGround(ctx) {
+  onGround(ctx, dt) {
     this.velocity.x = 0;
     this.velocity.y = 0;
     this.velocity.z = 0;

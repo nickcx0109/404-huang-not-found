@@ -124,3 +124,49 @@ test('Blasts and fire hurt players too, the thrower included', () => {
   assert.equal(by.p3, undefined, 'out of range');
   assert.equal(by.p1.friendlyFire, true);
 });
+
+test('A grenade rolls on after it lands instead of stopping dead', () => {
+  const { ctx } = world();
+  const grenade = new ThrownGrenade({ position: { x: 0, y: 0.5, z: 0 }, velocity: { x: 0, y: 0, z: -8 } });
+  ctx.effects.push(grenade);
+  run(ctx, 1);
+  assert.ok(grenade.position.z < -4, 'kept rolling: ' + grenade.position.z);
+  assert.equal(grenade.position.y, 0);
+  run(ctx, 1.5);
+  const resting = grenade.position.z;
+  run(ctx, 0.4);
+  assert.equal(grenade.position.z, resting, 'and then comes to rest');
+});
+
+test('A grenade bounces up off the ground several times', () => {
+  const { ctx } = world();
+  const grenade = new ThrownGrenade({ position: { x: 0, y: 3, z: 0 }, velocity: { x: 0, y: 0, z: 0 } });
+  ctx.effects.push(grenade);
+  let landings = 0;
+  let wasDown = false;
+  for (let i = 0; i < 50; i++) {
+    run(ctx, 0.05);
+    const down = grenade.position.y < 0.01;
+    if (down && !wasDown) landings++;
+    wasDown = down;
+  }
+  assert.ok(landings >= 2, 'bounced, landings: ' + landings);
+});
+
+test('A grenade landing on a box rolls off its top instead of sticking to it', () => {
+  const { ctx } = world([new Aabb(-1, 0, -3, 1, 1, 0, 'crate')]);
+  const grenade = new ThrownGrenade({ position: { x: 0, y: 2, z: 1 }, velocity: { x: 0, y: 0, z: -6 } });
+  ctx.effects.push(grenade);
+  run(ctx, 2.5);
+  assert.ok(grenade.position.z < -3, 'rolled past the far edge: ' + grenade.position.z);
+  assert.equal(grenade.position.y, 0, 'and dropped to the floor');
+});
+
+test('A grenade glancing off a wall keeps sliding along it', () => {
+  const { ctx } = world([new Aabb(-20, 0, -3.2, 20, 3, -3, 'wall')]);
+  const grenade = new ThrownGrenade({ position: { x: 0, y: 1, z: 0 }, velocity: { x: 8, y: 0, z: -8 } });
+  ctx.effects.push(grenade);
+  run(ctx, 0.6);
+  assert.ok(grenade.velocity.z > 0, 'bounced back from the wall');
+  assert.ok(grenade.velocity.x > 0, 'still moving the same way along it');
+});
