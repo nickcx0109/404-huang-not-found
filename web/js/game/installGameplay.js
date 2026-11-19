@@ -13,6 +13,7 @@ import { Tank } from '../enemies/Tank.js';
 import { Exploder } from '../enemies/Exploder.js';
 import { CombatPlayer } from '../player/CombatPlayer.js';
 import { PlayerCombat } from '../player/PlayerCombat.js';
+import { MovementLock } from '../player/MovementLock.js';
 import { StarterPistol } from '../weapons/StarterPistol.js';
 import { Bat } from '../weapons/Bat.js';
 import { Rifle } from '../weapons/Rifle.js';
@@ -94,7 +95,7 @@ export function installGameplay(app) {
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id, recoil);
   app.effectViews = EffectViews.standard(ctx.scene, ctx, ctx.events);
   app.crateViews = new AmmoCrateViews(ctx.scene, crates, () => ctx.time);
-  app.gameViews = [app.effectViews, app.crateViews];
+  app.gameViews = [app.effectViews, app.crateViews, new MovementLock(app.player, app.game, player.id)];
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);
   const unsubscribe = ctx.events.on(EVENTS.GAME_OVER, () => {

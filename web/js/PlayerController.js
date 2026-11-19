@@ -43,6 +43,8 @@ export class PlayerController {
     this.velocityZ = 0;
     /** Keys only move the player while enabled (pointer locked). */
     this.enabled = false;
+    /** While true the keys stop moving and jumping the player (set from the game, e.g. while healing). */
+    this.rooted = false;
     this.onLockChange = null;
     this._movement = { x: 0, z: 0, hitX: false, hitZ: false };
     /** Space jumps; the jump only lifts the eyes, walls still stop the player as if on the ground. */
@@ -92,7 +94,7 @@ export class PlayerController {
   update(dt) {
     const o = this.options;
     const k = this._keys;
-    const active = this.enabled;
+    const active = this.enabled && !this.rooted;
 
     let forward = active ? (k.forward ? 1 : 0) - (k.back ? 1 : 0) : 0;
     let strafe = active ? (k.right ? 1 : 0) - (k.left ? 1 : 0) : 0;
@@ -150,7 +152,7 @@ export class PlayerController {
   _setKey(event, down) {
     const action = KEY_BINDINGS[event.code];
     if (!action) return;
-    if (action === 'jump' && down && !event.repeat && this.enabled) this.jump.jump();
+    if (action === 'jump' && down && !event.repeat && this.enabled && !this.rooted) this.jump.jump();
     this._keys[action] = down;
     if (this.enabled) event.preventDefault();
   }
