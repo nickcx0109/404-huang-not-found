@@ -23,6 +23,7 @@ export class WeaponHolder {
   switchTo(index) {
     if (!Number.isInteger(index) || index < 0 || index >= this.weapons.length) return false;
     if (index === this.index) return true;
+    this.current?.holster();
     this.index = index;
     this.events.emit(EVENTS.WEAPON_CHANGED, { ownerId: this.ownerId, weaponId: this.current.id });
     return true;

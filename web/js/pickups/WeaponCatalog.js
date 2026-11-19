@@ -11,12 +11,14 @@ export class WeaponCatalog {
   /**
    * @param {string} id   marker `item` name and weapon id, e.g. 'rifle'
    * @param {{create: () => import('../weapons/Weapon.js').Weapon, name?: string,
-   *          look?: {length: number, height: number, width: number}}} entry
+   *          look?: {length: number, height: number, width: number}, pool?: string}} entry
+   *   pool: the level marker type whose spots draw this item at random ('weapon', 'healing', 'throwable')
    */
-  register(id, { create, name = id.toUpperCase(), look = { length: 0.8, height: 0.12, width: 0.2 } }) {
+  register(id, { create, name = id.toUpperCase(), look = { length: 0.8, height: 0.12, width: 0.2 }, pool = 'weapon' }) {
     if (typeof id !== 'string' || id === '' || this.entries.has(id)) throw new TypeError('Invalid or duplicate weapon id: ' + id);
     if (typeof create !== 'function') throw new TypeError('Weapon entry needs create()');
-    this.entries.set(id, Object.freeze({ id, create, name, look: Object.freeze({ ...look }) }));
+    if (typeof pool !== 'string' || pool === '') throw new TypeError('Weapon entry needs a pool name');
+    this.entries.set(id, Object.freeze({ id, create, name, pool, look: Object.freeze({ ...look }) }));
     return this;
   }
 
@@ -36,10 +38,16 @@ export class WeaponCatalog {
     return weapon;
   }
 
-  /** One registered id picked with `rng` (a function returning 0 <= x < 1), each equally likely. */
-  randomId(rng) {
-    if (this.entries.size === 0) throw new RangeError('No weapons registered');
-    const ids = [...this.entries.keys()];
+  /** Whether some entry draws from `pool`, i.e. markers of that type hand out items from this catalog. */
+  hasPool(pool) {
+    for (const entry of this.entries.values()) if (entry.pool === pool) return true;
+    return false;
+  }
+
+  /** One id from `pool` picked with `rng` (a function returning 0 <= x < 1), each equally likely. */
+  randomId(rng, pool = 'weapon') {
+    const ids = [...this.entries.values()].filter(entry => entry.pool === pool).map(entry => entry.id);
+    if (ids.length === 0) throw new RangeError('No weapons registered in pool ' + pool);
     const roll = rng();
     if (!(roll >= 0 && roll < 1)) throw new RangeError('rng must return a number in [0, 1)');
     return ids[Math.floor(roll * ids.length)];

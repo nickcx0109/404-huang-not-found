@@ -41,6 +41,10 @@ export class GameSession {
         const player = this.playerById(request.ownerId);
         if (this.canMove && player?.damageable.alive) player.weapons.current?.reload(ctx);
       }),
+      ctx.events.on(EVENTS.SECONDARY_REQUESTED, request => {
+        const player = this.playerById(request.ownerId);
+        if (this.canMove && player?.damageable.alive) player.weapons.current?.secondary(ctx);
+      }),
       ctx.events.on(EVENTS.SWITCH_REQUESTED, request => {
         const player = this.playerById(request.ownerId);
         if (this.canMove && player?.damageable.alive) player.weapons.switchTo(request.index);
@@ -125,8 +129,19 @@ export class GameSession {
     }
   }
 
+  /** Moves every effect in the world one step and drops the ones that are over. */
+  updateEffects(dt) {
+    const effects = this.context.effects;
+    for (let index = 0; index < effects.length; index++) {
+      if (effects[index].update(dt, this.context)) continue;
+      effects.splice(index, 1);
+      index--;
+    }
+  }
+
   updatePlaying(dt) {
     this.simulate(dt);
+    this.updateEffects(dt);
     this.separation?.apply(this.context);
     if (!this.anyPlayerAlive) this.changeState(this.states.gameOver);
     else {
@@ -142,6 +157,7 @@ export class GameSession {
 
   updateBreak(dt) {
     for (const player of this.context.players) player.update(dt, this.context);
+    this.updateEffects(dt);
     if (this.context.time + 1e-9 >= this.breakEndsAt) this.changeState(this.states.playing);
   }
 
@@ -197,6 +213,7 @@ export class GameSession {
     this.machine.change(null);
     this.factory.dispose();
     this.context.enemies.length = 0;
+    this.context.effects.length = 0;
     this.context.session = null;
   }
 }

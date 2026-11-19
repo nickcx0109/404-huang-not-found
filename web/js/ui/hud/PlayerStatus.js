@@ -18,6 +18,9 @@ export class PlayerStatus {
     /** The weapon on the ground the player could take now: its screen name, and whether it would replace one. */
     this.pickup = null;
     this.pickupSwap = false;
+    /** A timed action involving this player (bandaging yourself, a teammate, or being bandaged): its text and 0..1, or null. */
+    this.action = null;
+    this.actionProgress = 0;
     /**
      * What the player carries, one plain record per slot { id, count }: id is the item id or null for an
      * empty slot, count is how many of a stackable item (null for a weapon). `selected` is the slot in hand.
@@ -53,6 +56,32 @@ export class PlayerStatus {
     this.selected = player?.weapons ? player.weapons.index ?? -1 : -1;
   }
 
+  /** Finds a timed action this player does or receives; the text says who is bandaging whom. */
+  _readAction(context, player) {
+    this.action = null;
+    this.actionProgress = 0;
+    if (!player) return;
+    for (const other of context.players) {
+      const progress = other.weapons?.current?.progress?.(context.time);
+      if (!progress) continue;
+      let text = null;
+      if (other === player) {
+        text = progress.targetId === player.id ? '自我治療' :
+          '正在治療 ' + PlayerStatus.nameOf(context.players.find(mate => mate.id === progress.targetId));
+      } else if (progress.targetId === player.id) {
+        text = PlayerStatus.nameOf(other) + ' 正在治療你';
+      }
+      if (text === null) continue;
+      if (this.action !== text) this.action = text;
+      this.actionProgress = progress.fraction;
+      return;
+    }
+  }
+
+  static nameOf(player) {
+    return String(player?.name ?? player?.id ?? '').toUpperCase().slice(0, 12);
+  }
+
   /**
    * Copies the current numbers out of the session into this object (reused, nothing is allocated per frame).
    * @returns {PlayerStatus} this
@@ -73,6 +102,7 @@ export class PlayerStatus {
     this.pickup = offer ? offer.name : null;
     this.pickupSwap = offer ? offer.swap : false;
     this._readSlots(player);
+    this._readAction(context, player);
     this.money = player?.wallet ? player.wallet.balance : 0;
     this.state = session.state;
     this.wave = session.wave;

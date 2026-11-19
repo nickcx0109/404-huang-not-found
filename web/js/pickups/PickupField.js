@@ -4,6 +4,7 @@ import { WeaponPickup } from './WeaponPickup.js';
 /**
  * Level marker type that places a weapon on the ground. Its optional `item` names a WeaponCatalog entry;
  * without one the spot is fixed but the gun lying there is drawn at random each game.
+ * `healing` and `throwable` markers work the same way, each drawing from its own pool of the catalog.
  */
 export const WEAPON_MARKER = 'weapon';
 
@@ -19,14 +20,15 @@ export class PickupField {
   }
 
   /**
-   * Builds one pickup per `type: "weapon"` marker. Unknown items are an error, not a silent skip.
+   * Builds one pickup per marker whose type is a pool of the catalog (`weapon`, `healing`, `throwable`).
+   * Unknown items are an error, not a silent skip.
    * @param {() => number} rng  draws the gun for markers without an item (the session's rng, so a host decides)
    */
   static fromLevel(level, catalog, rng = Math.random) {
     const pickups = [];
     for (const marker of level.markers ?? []) {
-      if (marker.type !== WEAPON_MARKER) continue;
-      const item = marker.item ?? catalog.randomId(rng);
+      if (!catalog.hasPool(marker.type)) continue;
+      const item = marker.item ?? catalog.randomId(rng, marker.type);
       if (!catalog.has(item)) throw new RangeError('Marker ' + marker.id + ': unknown weapon item "' + item + '"');
       pickups.push(new WeaponPickup(marker.id, { x: marker.x, y: 0, z: marker.z }, catalog.create(item), marker.r));
     }
@@ -68,7 +70,7 @@ export class PickupField {
     const pickup = this.nearestFor(player);
     if (!pickup) return null;
     out.name = this.catalog.nameOf(pickup.weapon.id);
-    out.swap = player.weapons.inSlot?.(pickup.weapon.slot) != null;
+    out.swap = player.weapons.wouldSwap?.(pickup.weapon) ?? false;
     return out;
   }
 }

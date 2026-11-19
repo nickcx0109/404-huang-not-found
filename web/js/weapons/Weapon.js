@@ -79,6 +79,45 @@ export class Weapon {
     this.reloadEndsAt = null;
   }
 
+  /** Right mouse button. Most weapons have no second action; items like the bandage override it. */
+  secondary(ctx) {
+    return false;
+  }
+
+  /** Called when the player puts this weapon away for another slot. Reloads carry on; timed uses override this. */
+  holster(ctx) {}
+
+  /**
+   * A timed action in progress (e.g. a bandage being applied), as { fraction, ownerId, targetId }, or null.
+   * The HUD draws it as a progress bar.
+   */
+  progress(time) {
+    return null;
+  }
+
+  /** True once there is nothing left of the weapon to use (an item stack that ran out); the holder then drops it. */
+  get depleted() {
+    return false;
+  }
+
+  /**
+   * Whether picking up `other` would top this one up instead of replacing it. Guns never stack:
+   * taking a second rifle swaps it like any other gun.
+   */
+  canAbsorb(other) {
+    return false;
+  }
+
+  /** Whether this weapon, already carried, makes picking up `other` pointless (a full stack of the same item). */
+  refuses(other) {
+    return false;
+  }
+
+  /** Takes what it can from `other` (see canAbsorb). @returns {boolean} whether `other` is now used up */
+  absorb(other) {
+    return false;
+  }
+
   /** Called when the weapon leaves a player's hands (dropped on the ground): an unfinished reload is lost. */
   drop() {
     this.ownerId = null;
