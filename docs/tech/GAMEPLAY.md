@@ -160,7 +160,6 @@ classDiagram
 | `EXPLODED` | `effect.exploded` | `{kind,x,y,z,radius,ownerId}`；手榴彈爆炸通知，`EffectViews` 畫閃光 |
 | `ENEMY_SPAWNED` | `enemy.spawned` | `{enemy,wave}`；Session 通知 |
 | `WEAPON_FIRED` | `weapon.fired` | `{ownerId,weaponId,hit}`；Weapon 通知，miss 時 hit 為 null |
-| `WEAPON_RELOAD_STARTED` | `weapon.reload-started` | `{ownerId,weaponId,seconds}`；Weapon 開始換彈（真的開始才發，彈匣滿或沒備彈不發） |
 | `WEAPON_RELOADED` | `weapon.reloaded` | `{ownerId,weaponId}`；Weapon 換彈完成通知 |
 | `WEAPON_CHANGED` | `weapon.changed` | `{ownerId,weaponId}`；WeaponHolder 通知 |
 | `WALLET_CHANGED` | `wallet.changed` | `{ownerId,balance,delta}`；Wallet 通知 |
@@ -228,11 +227,10 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 
 - 只有 `play=1` 才裝：`installGameplay` 呼叫 `audio/installAudio.js`，它回傳的物件放進 `gameViews` 每幀 `update`。瀏覽器規定要先點一下或按鍵才會出聲，`WebAudioOutput.unlock()` 在第一次 `pointerdown`／`keydown` 才建立 AudioContext。
 - 分兩層：`SoundBoard`（純邏輯，有測試）決定播什麼、多大聲、左右聲道；`WebAudioOutput`（瀏覽器）決定聽起來怎樣。`SoundBoard` 用 `SpatialMix` 把世界座標換成左右 pan 和距離音量（30 m 外聽不到），`cooldown` 防止同一個音效疊太多次，`hold`／`loop` 管電鋸這種持續的聲音。
-- 規則都是 `SoundRule` 子類，只聽事件：`WeaponSounds`（自己的 `WEAPON_FIRED`、`WEAPON_CHANGED`、`WEAPON_RELOAD_STARTED`，用 `register(武器 id, { fire, hit, reload, held, working })` 查表）、`HitSounds`（自己子彈的命中、爆頭、擊殺）、`PlayerSounds`（受傷、治療、丟東西）、`PickupSounds`（`register(武器 id, 音效)`：槍是金屬卡榫聲、刀和電鋸是拿起重物的聲音，沒登記的補給品是塞進包包的沙沙聲；彈藥箱是壓子彈的喀喀聲。不用叮咚提示音）、`ZombieSounds`（`register(敵人類別, { spawn, groan, death })`，沒登記的用 `Enemy` 的；隨機一隻每 1.5～3.5 秒叫一聲）、`WorldSounds`（爆炸、波次開始、清完、結束）。
+- 規則都是 `SoundRule` 子類，只聽事件：`WeaponSounds`（自己的 `WEAPON_FIRED`、`WEAPON_CHANGED`、`WEAPON_RELOADED`，用 `register(武器 id, { fire, hit, held, working })` 查表）、`HitSounds`（自己子彈的命中、爆頭、擊殺）、`PlayerSounds`（受傷、治療、丟東西）、`PickupSounds`（`register(武器 id, 音效)`：槍是金屬卡榫聲、刀和電鋸是拿起重物的聲音，沒登記的補給品是塞進包包的沙沙聲；彈藥箱是壓子彈的喀喀聲。不用叮咚提示音）、`ZombieSounds`（`register(敵人類別, { spawn, groan, death })`，沒登記的用 `Enemy` 的；隨機一隻每 1.5～3.5 秒叫一聲）、`WorldSounds`（爆炸、波次開始、清完、結束）。
 - 音檔在 `web/assets/sfx/`，從舊專案複製，都是 CC0，來源見 `CREDITS.md`；`manifest.json` 是「音效名稱 → 檔名（陣列就隨機挑）」。沒有音檔的（槍聲、換彈、受傷等）用 `SynthSounds.js` 的合成配方，音檔載入前或載入失敗也會先用合成的。
 - 新增武器的聲音：`installAudio` 裡 `WeaponSounds` 加一行 `register`；有音檔就放進 `sfx/`、寫進 `manifest.json`，沒有就在 `SynthSounds.js` 加一個配方。
-- 槍聲和換彈是真的錄音（`sfx/gun/`）。換彈聲在 `WEAPON_RELOAD_STARTED`（開始換彈）播，用 `register(武器 id, { reload })` 指定：手槍和左輪用手槍換彈、步槍和衝鋒槍用步槍換彈、霰彈槍是上膛聲。
-- 還沒有：隊友的聲音（等 G8）。
+- 還沒有：開始換彈的聲音（沒有這個事件，見 B13，現在只有換完的「喀」）；隊友的聲音（等 G8）。
 
 ## 新增武器
 
