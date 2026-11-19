@@ -21,6 +21,8 @@
 //   --width / --height  viewport, default 1280 x 720
 //   --gpu               render on the real GPU instead of SwiftShader (software)
 //   --url <origin>      use a server that is already running, e.g. http://localhost:8080
+//   --timeout <s>       seconds to wait for each shot to be ready, default 120; a shot that
+//                       times out is reported as failed and the others are still taken
 
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -30,7 +32,7 @@ import { startServer } from '../serve.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SIZE_BUDGET_KB = 300;
-const READY_TIMEOUT_MS = 120_000;
+const READY_TIMEOUT_SECONDS = 120;
 
 // Headless Chromium has no GPU by default; WebGL needs one of these.
 const SOFTWARE_GL_ARGS = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
@@ -59,6 +61,7 @@ function readOptions() {
         height: { type: 'string', default: '720' },
         gpu: { type: 'boolean', default: false },
         url: { type: 'string' },
+        timeout: { type: 'string', default: String(READY_TIMEOUT_SECONDS) },
       },
     }));
   } catch (err) {
@@ -69,6 +72,8 @@ function readOptions() {
   }
   if (!/^[A-Za-z0-9_-]+$/.test(values.level)) fail('invalid level name "' + values.level + '"');
   if (!['jpg', 'png'].includes(values.format)) fail('--format must be jpg or png');
+  const timeout = Number(values.timeout);
+  if (!Number.isFinite(timeout) || timeout <= 0) fail('--timeout must be a positive number of seconds');
   const list = (text) => (text ? text.split(',').map((s) => s.trim()).filter(Boolean) : []);
   return {
     level: values.level,
@@ -84,6 +89,7 @@ function readOptions() {
     height: Number(values.height) || 720,
     gpu: values.gpu,
     url: values.url ? values.url.replace(/\/+$/, '') : null,
+    timeoutMs: Math.round(timeout * 1000),
   };
 }
 
@@ -104,6 +110,26 @@ async function loadPlaywright() {
   } catch {
     fail('playwright is not installed. Run: npm install && npx playwright install chromium');
   }
+}
+
+/** Loads one bookmark and saves it. Throws when the page reports an error or is not ready in time. */
+async function takeShot(page, url, file, options) {
+  await page.goto(url, { timeout: options.timeoutMs });
+  await page.waitForFunction(() => window.__ready || window.__error, null, { timeout: options.timeoutMs });
+  const state = await page.evaluate(() => ({ error: window.__error, stats: window.__stats }));
+  if (state.error) throw new Error(String(state.error));
+  await page.screenshot(
+    options.format === 'jpg'
+      ? { path: file, type: 'jpeg', quality: options.quality }
+      : { path: file, type: 'png' }
+  );
+  const kb = Math.round((await stat(file)).size / 1024);
+  const s = state.stats || {};
+  console.log(
+    relative(ROOT, file).replaceAll('\\', '/') + '  ' + kb + ' KB' +
+      (kb > SIZE_BUDGET_KB ? ' (over ' + SIZE_BUDGET_KB + ' KB!)' : '') +
+      '  draw calls ' + s.calls + ', triangles ' + s.triangles + ', lights ' + s.lights
+  );
 }
 
 async function main() {
@@ -146,28 +172,13 @@ async function main() {
 
         const name = (preset ? preset + '-' : '') + shot + options.suffix + '.' + options.format;
         const file = join(options.out, name);
-        await page.goto(origin + '/web/index.html?' + params.toString());
-        await page.waitForFunction(() => window.__ready || window.__error, null, {
-          timeout: READY_TIMEOUT_MS,
-        });
-        const state = await page.evaluate(() => ({ error: window.__error, stats: window.__stats }));
-        if (state.error) {
-          console.error('FAIL ' + name + ': ' + state.error);
+        try {
+          await takeShot(page, origin + "/web/index.html?" + params.toString(), file, options);
+        } catch (err) {
+          // A shot that hangs or crashes must not cost the rest of the run (KNOWN_ISSUES #6).
+          console.error('FAIL ' + name + ': ' + err.message.split('\n')[0]);
           failures++;
-          continue;
         }
-        await page.screenshot(
-          options.format === 'jpg'
-            ? { path: file, type: 'jpeg', quality: options.quality }
-            : { path: file, type: 'png' }
-        );
-        const kb = Math.round((await stat(file)).size / 1024);
-        const s = state.stats || {};
-        console.log(
-          relative(ROOT, file).replaceAll('\\', '/') + '  ' + kb + ' KB' +
-            (kb > SIZE_BUDGET_KB ? ' (over ' + SIZE_BUDGET_KB + ' KB!)' : '') +
-            '  draw calls ' + s.calls + ', triangles ' + s.triangles + ', lights ' + s.lights
-        );
       }
     }
   } finally {
