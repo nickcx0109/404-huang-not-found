@@ -33,6 +33,7 @@ import { RecoilKick } from '../player/RecoilKick.js';
 import { LoadoutHolder } from '../weapons/LoadoutHolder.js';
 import { WeaponCatalog } from '../pickups/WeaponCatalog.js';
 import { PickupField } from '../pickups/PickupField.js';
+import { ItemDeck } from '../pickups/ItemDeck.js';
 import { WeaponPickupViews } from '../pickups/WeaponPickupViews.js';
 import { Wallet } from '../economy/Wallet.js';
 import { Economy } from '../economy/Economy.js';
@@ -66,8 +67,9 @@ export function installGameplay(app) {
       look: { length: 0.12, height: 0.12, width: 0.1 } })
     .register('molotov', { create: () => new Molotov(), name: 'MOLOTOV', pool: 'throwable',
       look: { length: 0.28, height: 0.1, width: 0.1 } });
-  // Weapon, healing and throwable markers without an item get a random one from their pool each game.
-  const pickups = PickupField.fromLevel(app.level, catalog, ctx.rng);
+  // Dealt like cards, so every weapon lies somewhere before any lies twice.
+  const deck = new ItemDeck(catalog, ctx.rng);
+  const pickups = PickupField.fromLevel(app.level, catalog, ctx.rng, pool => deck.next(pool));
   const pickupViews = new WeaponPickupViews(ctx.scene, pickups, ctx.events);
   const crates = AmmoCrateField.fromLevel(app.level);
   const factory = new EnemyFactory(ctx, type => {
