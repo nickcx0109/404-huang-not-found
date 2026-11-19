@@ -77,7 +77,6 @@
 - [ ] **B15** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、道具欄會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
 - [ ] **B13** `WEAPON_FIRED`、`WEAPON_RELOADED`、`WEAPON_CHANGED` 的 payload 沒有子彈數，也沒有「開始換彈」的事件；補彈（`refill`）也不發事件。HUD 現在靠 `ui/hud/PlayerStatus.js` 每幀從 Session 抄數字。做連線（G8）時要嘛在事件裡帶上數字，要嘛讓快照填 `PlayerStatus`。
 - [ ] **B14** 暫停（滑鼠解鎖）時 `gameViews` 不更新，`SoundBoard` 的時間也停住：拿著電鋸暫停會一直響待機聲，暫停前正在鋸就一直響鋸的聲音，回到遊戲才停。可以在解鎖時暫停 AudioContext，或讓 `installAudio` 自己聽 `pointerlockchange`。
-- [~] **B16**（進行中：@nickcx0109，分支 fix/overview-shot）`shots.mjs --level ch2` 的 `overview.png` 每次拍都不完全一樣（同一個 commit 連拍兩次 SHA-256 不同，其他 7 張穩定），用截圖比對畫面有沒有變時這張不能信。找出不固定的來源（時間、亂數、動畫、載入順序），讓同一個 commit 拍出一樣的圖。
 
 ## 其他
 
@@ -100,6 +99,7 @@
 - G2 更多殭屍種類（PR #10）
 - B3 B5 B6 B8 引擎小 bug（PR #17）
 - B4 `shots.mjs` 某一張逾時不再中斷整批（PR #33）
+- B16 截圖比對容許軟體繪圖雜訊：`tools/art/compare.mjs`（PR #34）
 - G3 波次設計（PR #15）
 - G4 商店：取消，改成地上撿（PR #16 關閉不合併）
 - G11 地上撿武器和開局裝備：手槍（無限備彈）、球棒、主武器格換槍，地上的槍有高光邊框（PR #18）

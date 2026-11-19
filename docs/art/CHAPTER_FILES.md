@@ -44,7 +44,7 @@
 | `art/manifest/common.json` 和它列的資產 | 跨章共用的模型（廢車、卡車、路燈、圍欄、油桶、垃圾） |
 | `art/manifest/test.json`、`test_crate` | 流程測試用 |
 | `art/blender/_lib/` | 所有資產腳本共用的小工具 |
-| `tools/`（`serve.mjs`、`art/assets.mjs`、`build_assets.py`、`preview.py`、`check_assets.mjs`、`shots.mjs`、`_common.py`） | 工具 |
+| `tools/`（`serve.mjs`、`art/assets.mjs`、`build_assets.py`、`preview.py`、`check_assets.mjs`、`shots.mjs`、`compare.mjs`、`imageDiff.mjs`、`_common.py`） | 工具 |
 | `web/levels/test.json`、`web/levels/mood.json`、`web/levels/README.md` | 測試關卡、氣氛樣板、格式說明 |
 | `art/style/STYLE_GUIDE.md`、`docs/` | 文件。`docs/story/` 不能改 |
 | `package.json`、`package-lock.json`、`.gitignore` | 專案設定 |

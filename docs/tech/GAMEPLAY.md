@@ -357,6 +357,7 @@ npm test
 node tools/art/assets.mjs check
 node tools/art/shots.mjs --level ch2 --format png --out <OS-temp>/ch2
 node tools/art/shots.mjs --level test --format png --out <OS-temp>/test
+node tools/art/compare.mjs <改前資料夾> <改後資料夾>
 ```
 
 Windows 若 npm.ps1 被執行政策擋住，改用 `npm.cmd test`／`npm.cmd run serve`，不要改 PowerShell 政策。

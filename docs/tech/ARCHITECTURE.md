@@ -85,6 +85,6 @@ unsubscribe();
 
 - `npm test` 使用 `node --test`，測試 core、PropSet、LevelData、PathFinder、CollisionWorld；只用 Node 內建模組，不需要瀏覽器、CDN 或新增測試套件。
 - `node tools/art/assets.mjs check` 不需 Blender；`all --all` 還會建置、預覽，需 Blender 4.2 LTS。失敗時先對照主分支，不能為重構順便改美術。
-- 截圖維持 `node tools/art/shots.mjs --level ch2 --out <目錄>`；可用 `--format png` 與預先拍下的同機位影像逐像素比較。走動模式另外確認沒有 console error。
+- 截圖維持 `node tools/art/shots.mjs --level ch2 --out <目錄>`；可用 `--format png` 拍改前、改後兩份，再用 `node tools/art/compare.mjs <改前> <改後>` 比較：`same` 完全相同，`noise` 只有軟體繪圖造成的少數像素差一兩階，`DIFF` 才是畫面改變（結束碼 1）。走動模式另外確認沒有 console error。
 - `?level`、`?shot`、`?t`、`?debug`、`?perf`、`?models` 等既有參數不變。`window.__ready`、`window.__error`、`window.__stats`、`window.__app` 保留給工具；它們不是舊式的類別命名空間。
 - 已知問題以 [KNOWN_ISSUES.md](KNOWN_ISSUES.md) 為準；#1 起始重疊瞬移與 #2 出生點尺寸檢查已各自修復及加測試。沒有改關卡、材質、palette 或既有燈光；mood 新增一個正確的出生點重疊警告。
