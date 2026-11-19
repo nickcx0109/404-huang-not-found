@@ -134,7 +134,9 @@ classDiagram
 | Object Pool | EnemyFactory 每種類型使用既有 ObjectPool；死亡隱藏、重設、歸還，跨波次重用 mesh 與路徑 buffer |
 | Composite | `SurvivalHud` 裝著一組 `HudWidget`，每幀對每個元件呼叫 `sync` 和 `tick`；加元件不用改其他元件 |
 | Template Method（介面） | `HudWidget.tick` 固定「計時的 class → 子類的 `advance` → 共用的淡入淡出」，子類只覆寫 `bind`、`sync`、`advance` |
-| Factory／Registry | EnemyFactory 依字串類型建構已註冊子類；不靠大量 if/else 或匯入各種具體敵人 |
+| Factory／Registry | EnemyFactory 依字串類型建構已註冊子類；不靠大量 if/else 或匯入各種具體敵人。`WeaponCatalog`（含 pool）、`EffectViews.register`、`RecoilKick.register` 也是註冊表 |
+| Template Method（投擲物） | `ThrownObject.update` 固定「重力 → 撞牆 → 落地 → afterMove」，`ThrownGrenade`、`ThrownMolotov` 只覆寫 `onWall`、`onGround`、`afterMove` |
+| 多型 hook | `Weapon.secondary`、`holster`、`progress`、`depleted`、`canAbsorb`、`absorb`、`refuses` 預設什麼都不做，`CarriedItem`、`Bandage` 覆寫；`LoadoutHolder`、Session、HUD 只呼叫介面，不判斷種類 |
 
 ## 事件清單
 
@@ -146,10 +148,14 @@ classDiagram
 | `FIRE_REQUESTED` | `player.fire-requested` | `{ownerId}`；輸入 → Session |
 | `RELOAD_REQUESTED` | `player.reload-requested` | `{ownerId}`；輸入 → Session |
 | `SWITCH_REQUESTED` | `player.switch-requested` | `{ownerId,index}`；輸入 → Session |
+| `SECONDARY_REQUESTED` | `player.secondary-requested` | `{ownerId}`；滑鼠右鍵 → Session，呼叫手上物品的 `secondary(ctx)`（繃帶：治療前方隊友） |
 | `PURCHASE_REQUESTED` | `shop.purchase-requested` | `{ownerId,itemId}`；輸入 → Session |
 | `DAMAGE_REQUESTED` | `entity.damage-requested` | `DamageInfo`；攻擊策略 → Session |
 | `ENTITY_DAMAGED` | `entity.damaged` | `{entity,info,amount,health}`；Damageable 通知，amount 為實際扣血 |
 | `ENTITY_DIED` | `entity.died` | 同上；Damageable 通知，單一生命只發一次 |
+| `ENTITY_HEALED` | `entity.healed` | `{entity,sourceId,amount,health}`；`Damageable.heal` 通知，amount 為實際補的血 |
+| `ITEM_THROWN` | `item.thrown` | `{ownerId,itemId,effect}`；`ThrowFire` 通知 |
+| `EXPLODED` | `effect.exploded` | `{kind,x,y,z,radius,ownerId}`；手榴彈爆炸通知，`EffectViews` 畫閃光 |
 | `ENEMY_SPAWNED` | `enemy.spawned` | `{enemy,wave}`；Session 通知 |
 | `WEAPON_FIRED` | `weapon.fired` | `{ownerId,weaponId,hit}`；Weapon 通知，miss 時 hit 為 null |
 | `WEAPON_RELOADED` | `weapon.reloaded` | `{ownerId,weaponId}`；Weapon 換彈完成通知 |
@@ -190,10 +196,20 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 - 玩家用 `LoadoutHolder`（`WeaponHolder` 子類），固定七格，順序也是數字鍵：1 `primary`（槍）、2 `sidearm`（手槍）、3 `melee`（球棒）、4 `special`（撿到的近戰）、5 `throwable`、6 `healing`、7 `booster`。`cycle(step)` 是滾輪：往前或往後跳到下一個有東西的格子，會繞回來；`CYCLE_REQUESTED` 由 Session 檢查後呼叫。右側的 `InventoryWidget` 從 `PlayerStatus.slots`／`selected` 畫每一格，圖示是 `hud.css` 裡依物品 id 的 mask，沒有 mask 的物品就印名字。武器用 `slot` getter 說自己放哪一格，`Weapon` 預設是 `primary`，所以 `Rifle`、`Shotgun` 不用改。
 - 開局只有 `StarterPistol`（繼承 `Pistol`，備彈 `Infinity`，彈匣打完還是要換彈）和 `Bat`，手上拿手槍。這兩格永遠不會丟。
 - `MeleeWeapon` 是近戰基底：`usesAmmo` 為 false，`fire` 不扣子彈、`reload` 不做事，冷卻照舊。`Bat`：傷害 45、距離 2.2 m（算到敵人身體邊緣）、前方 90 度、冷卻 0.6 秒。命中用 `MeleeSwing` Strategy：最近、在前方扇形內、沒被牆擋的活敵人，送 `kind: 'melee'` 的 `DAMAGE_REQUESTED`，打的是身體，不算爆頭。
-- 地上的槍是關卡 `type: "weapon"` marker。位置固定；`item` 寫了就放那一把，**不寫就每局用 `ctx.rng` 從 `WeaponCatalog` 隨機抽一把**（`installGameplay` 註冊 `rifle`、`shotgun`、`smg`、`revolver`，機率相同）。**規則：所有撿得到的武器（槍和撿來的近戰）都要在這份名單裡**，新武器在 `WeaponCatalog` 註冊就會自動加入。開局就有、不會丟的手槍和球棒不在名單裡。**投擲物和治療物不放進這份名單**：之後各有自己的清單和 marker 種類（`throwable`、`healing`），三種分開抽。**每個場景（每個關卡檔）至少 8 個 `weapon`、4 個 `healing`、4 個 `throwable` marker**，`test/LevelPickupSpots.test.js` 會檢查；`healing`、`throwable` 的點已經放好，G16、G20 做好後直接讀這兩種 marker。`PickupField.fromLevel` 每個 marker 建一個 `WeaponPickup`，裡面放的是真的 Weapon 物件。
+- 地上的槍是關卡 `type: "weapon"` marker。位置固定；`item` 寫了就放那一把，**不寫就每局用 `ctx.rng` 從 `WeaponCatalog` 隨機抽一把**（`installGameplay` 註冊 `rifle`、`shotgun`、`smg`、`revolver`，機率相同）。**規則：所有撿得到的武器（槍和撿來的近戰）都要在這份名單裡**，新武器在 `WeaponCatalog` 註冊就會自動加入。開局就有、不會丟的手槍和球棒不在名單裡。**投擲物和治療物不放進這份名單**：之後各有自己的清單和 marker 種類（`throwable`、`healing`），三種分開抽。**每個場景（每個關卡檔）至少 8 個 `weapon`、4 個 `healing`、4 個 `throwable` marker**，`test/LevelPickupSpots.test.js` 會檢查；`healing`、`throwable` 的點從各自的 pool 抽（見下一節）。`PickupField.fromLevel` 每個 marker 建一個 `WeaponPickup`，裡面放的是真的 Weapon 物件。
 - E 送 `PICKUP_REQUESTED`；Session 在玩家能移動時（Playing、WaveBreak）呼叫 `PickupField.take`：撿最近、搆得到的那把，用 `LoadoutHolder.equip` 放進主武器格並拿在手上，原本那把留在同一個位置，子彈數不變。撿到同款的槍也是交換，**不會補子彈**。成功發 `WEAPON_PICKED_UP`。
 - 畫面：`WeaponPickupViews` 為每個 pickup 畫一個躺在地上、大小照槍的方塊，外面加一圈會脈動的亮色邊框（inverted hull：稍大的方塊只畫背面，不吃霧），不加燈。HUD 的提示從 `PlayerStatus.pickup` 來（`E  PICK UP RIFLE` 或 `E  SWAP FOR RIFLE`）；撿到時不跳字卡。拿球棒時 `PlayerStatus.armed` 為 false，彈藥欄不顯示。
 - E 目前同時送 `PURCHASE_REQUESTED`，站的位置不對的那個會被 Session 拒絕。
+
+## 治療物、投擲物、跳躍、後座力（G16、G20）
+
+- `CarriedItem`（`Weapon` 子類，抽象）：一小疊物品，`count`／`maxCount`，不用子彈。用完 `depleted`，`LoadoutHolder.update` 把它拿出格子，手上的換到下一格。撿到同一種就疊（`canAbsorb`／`absorb`），放不下的留在地上；滿了就不能撿（`refuses`）；別種就整疊交換。槍不疊，同款也是交換。
+- `Bandage`（第 6 格 `healing`，最多 2）：左鍵治療自己、右鍵（`SECONDARY_REQUESTED`）治療前方 2.5 m、70 度內的隊友；3 秒後補 40，這時才扣一個。滿血不能用；換武器（`holster`）、自己或對方死掉都會取消，不扣。`progress(time)` 給 HUD：`PlayerStatus.action` 是「自我治療」「正在治療 ○○」「○○ 正在治療你」，`PromptWidget` 在下方畫字和進度線。
+- `Throwable`（第 5 格 `throwable`，最多 2，抽象）用 `ThrowFire` Strategy 丟出：從眼睛沿準心方向，速度 13 m/s 加上 3 m/s 往上，丟出去的東西放進 `ctx.effects`。`Grenade` → `ThrownGrenade`：撞牆、落地會彈，3 秒後爆，半徑 5 m，中心 150、邊緣 30，牆後的擋住。`Molotov` → `ThrownMolotov`：碰到牆或地就破，留下 `FireArea`：半徑 3 m、6 秒、每 0.5 秒 12.5（每秒 25）。傷害都只送 `DAMAGE_REQUESTED`（`kind` 是 `explosion`／`fire`），Session 規則不變，所以不會傷到玩家。
+- `ctx.effects`：`Effect` 子類，`update(dt, ctx)` 回傳 false 就被 `GameSession.updateEffects` 移除（Playing 和 WaveBreak 都跑）。畫面是 `EffectViews`，依 `kind` 註冊做 mesh 的函式，App 每幀呼叫 `update(dt)`。
+- 地上的點：`WeaponCatalog.register(id, { pool })`，pool 就是 marker 種類。`healing` 抽 `bandage`，`throwable` 從 `grenade`、`molotov` 等機率抽；新的治療物、投擲物註冊到對的 pool 就會出現。
+- 跳躍：空白鍵，`PlayerController` 裡組合一個 `JumpMotion`（起跳 4.6 m/s、重力 13，約 0.8 m 高、0.7 秒）。只抬高眼睛，碰撞還是照地面算，所以跳不過矮牆和沙包。
+- 後座力：`RecoilKick` 聽自己的 `WEAPON_FIRED`，依武器 id 查表把視角往上（和隨機往旁邊）踢，60% 在約 0.25 秒內回來，連射會一路往上飄。數值在 `installGameplay`：手槍 1.6°、步槍 0.9°、衝鋒槍 0.6°、霰彈槍 4.5°、左輪 4°。沒登記的（球棒、投擲物）不踢。
 
 ## 新增武器
 
