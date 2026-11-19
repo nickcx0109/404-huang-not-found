@@ -10,6 +10,7 @@ import { PromptWidget } from './PromptWidget.js';
 import { EventCard } from './EventCard.js';
 import { TeamWidget } from './TeamWidget.js';
 import { InventoryWidget } from './InventoryWidget.js';
+import { SlashWidget } from './SlashWidget.js';
 
 /**
  * The in-game HUD: a composite of HudWidget objects on one layer above the 3D view.
@@ -52,7 +53,8 @@ export class SurvivalHud extends Hud {
       .add(new PromptWidget(doc))
       .add(new EventCard(doc))
       .add(new TeamWidget(doc))
-      .add(new InventoryWidget(doc));
+      .add(new InventoryWidget(doc))
+      .add(new SlashWidget(doc));
   }
 
   add(widget) {

@@ -364,6 +364,24 @@
   background: linear-gradient(90deg, var(--fresh) 0 30%, transparent 30% 70%, var(--fresh) 70%);
 }
 
+/* ---- blade light, full screen (SlashWidget.js draws it) ------------------- */
+
+.hud-slash {
+  inset: 0;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.hud-slash__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hud-slash__canvas[hidden] {
+  display: none;
+}
+
 /* ---- being hurt, full screen --------------------------------------------- */
 
 .hud-damage {

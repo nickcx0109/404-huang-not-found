@@ -245,6 +245,15 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 - `SpreadFire` 以均勻圓盤取樣偏移，轉換到瞄準方向的正交平面後正規化，各彈丸委派既有 `HitscanFire`，因此沿用最近命中、牆壁遮擋、爆頭與 Session 傷害流程。回傳第一顆命中摘要，全部未命中則回傳 null，不修改共用 ctx.aim。
 - 亂數可用 `new SpreadFire({rng})` 注入，否則採用 `ctx.rng`；測試不依賴 Math.random。`WeaponTrigger` 僅送輸入命令，Session 仍決定是否允許開火，Weapon 仍管理彈藥與模擬時鐘 deadline。
 
+### 第一人稱武器模型（G25，接 G9 的 `WeaponRig`）
+
+- 只有 `?play=1` 才建立：`installGameplay` 建 `weapons/FirstPersonWeapon.js`，設成 `app.overlay`。`App` 每幀呼叫 `overlay.update`，`PostFX.render` 在場景畫完、後製之前畫它。沒有 `play=1` 時 `overlay` 不存在，畫面不變。
+- 誰畫什麼：`views/standardViewModels.js` 把武器 id 對到 `WeaponView` 子類（握的位置、動畫片段），`models/standardModels.js` 對到模型工廠。手槍是 G9 的 `pistol.glb`，其他十把用 `models/ModelKit.js` 拿 Three.js 幾何體拼，顏色取 `art/style/chapters/weapons.json` 的 `_assets.colors`。
+- 什麼時候動：`views/HeldWeaponDriver.js`（不依賴 Three.js）聽 `WEAPON_CHANGED`（拿出）、`WEAPON_FIRED`（開槍、揮砍、丟出）、`WEAPON_RELOADED`（換彈結束）。換彈開始和繃帶進度沒有事件，每幀讀武器的 `reloading`、`progress(time)`。換彈動畫會依武器的 `reloadSeconds` 調快或調慢。不改任何武器的邏輯。
+- 槍口火光只在模型有 `muzzle` 標記時出現（只有槍有）。武士刀每刀左右交替，和 `SlashWidget` 的刀光同步；刀光畫在 HUD 的 canvas 上，在模型前面，不會被擋住。
+- 新增一把武器的樣子：寫一個 `WeaponView` 子類（`views/RifleView.js` 當範例，常用動畫用 `views/ClipKit.js`），寫模型工廠，然後在上面兩個檔案各加一行。
+- 除錯：`?play=1&debug=1` 時 `window.__weaponView.equip('katana')` 換成任一把，`freeze('fire', 0.05)` 停在某個動畫瞬間，`now()` 看現在播什麼。
+
 ## 新增敵人類型
 
 已註冊 `walker`、`runner`、`tank`、`exploder`。Runner：40 HP、速度 3.4、近戰 10；Tank：240 HP、速度 0.8、近戰 30；兩者沿用每秒一次近戰。Exploder：50 HP、速度 1.8，接觸玩家且視線無遮擋時立即自爆；半徑 3 公尺（含玩家身體半徑）內、無牆壁遮擋的存活玩家各受 40 爆炸傷害，再向自己送出致死傷害，全部走 `DAMAGE_REQUESTED` → Session → DamagePipeline。自爆不給擊殺獎金，每次池重生只可自爆一次；被射殺不引爆。數值是此版灰盒平衡，不實作參考文件的敵人屬性成長；預設混合出怪使用上方 G3 波次資料。
