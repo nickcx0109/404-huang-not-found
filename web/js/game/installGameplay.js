@@ -19,6 +19,11 @@ import { Rifle } from '../weapons/Rifle.js';
 import { Shotgun } from '../weapons/Shotgun.js';
 import { SubmachineGun } from '../weapons/SubmachineGun.js';
 import { Revolver } from '../weapons/Revolver.js';
+import { Bandage } from '../weapons/Bandage.js';
+import { Grenade } from '../weapons/Grenade.js';
+import { Molotov } from '../weapons/Molotov.js';
+import { EffectViews } from '../effects/EffectViews.js';
+import { RecoilKick } from '../player/RecoilKick.js';
 import { LoadoutHolder } from '../weapons/LoadoutHolder.js';
 import { WeaponCatalog } from '../pickups/WeaponCatalog.js';
 import { PickupField } from '../pickups/PickupField.js';
@@ -41,8 +46,15 @@ export function installGameplay(app) {
     .register('rifle', { create: () => new Rifle(), name: 'RIFLE', look: { length: 0.95, height: 0.14, width: 0.12 } })
     .register('shotgun', { create: () => new Shotgun(), name: 'SHOTGUN', look: { length: 0.85, height: 0.12, width: 0.14 } })
     .register('smg', { create: () => new SubmachineGun(), name: 'SMG', look: { length: 0.55, height: 0.16, width: 0.1 } })
-    .register('revolver', { create: () => new Revolver(), name: 'REVOLVER', look: { length: 0.34, height: 0.14, width: 0.07 } });
-  // Weapon markers without an item get a random gun each game.
+    .register('revolver', { create: () => new Revolver(), name: 'REVOLVER', look: { length: 0.34, height: 0.14, width: 0.07 } })
+    // Healing and throwable spots draw from their own pools, never from the guns.
+    .register('bandage', { create: () => new Bandage(), name: 'BANDAGE', pool: 'healing',
+      look: { length: 0.22, height: 0.08, width: 0.16 } })
+    .register('grenade', { create: () => new Grenade(), name: 'GRENADE', pool: 'throwable',
+      look: { length: 0.12, height: 0.12, width: 0.1 } })
+    .register('molotov', { create: () => new Molotov(), name: 'MOLOTOV', pool: 'throwable',
+      look: { length: 0.28, height: 0.1, width: 0.1 } });
+  // Weapon, healing and throwable markers without an item get a random one from their pool each game.
   const pickups = PickupField.fromLevel(app.level, catalog, ctx.rng);
   const pickupViews = new WeaponPickupViews(ctx.scene, pickups, ctx.events);
   const factory = new EnemyFactory(ctx, type => {
@@ -61,7 +73,15 @@ export function installGameplay(app) {
   const ammo = new AmmoRefillItem();
   app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(SURVIVAL_WAVES), economy: new Economy(),
     items: [ammo], separation: new CrowdSeparation(), pickups });
-  app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id);
+  // Degrees of upward kick per shot and the most it swings sideways.
+  const recoil = new RecoilKick(ctx.events, player.id, { rng: ctx.rng })
+    .register('pistol', { pitch: 1.6, yaw: 0.4 })
+    .register('rifle', { pitch: 0.9, yaw: 0.35 })
+    .register('smg', { pitch: 0.6, yaw: 0.45 })
+    .register('shotgun', { pitch: 4.5, yaw: 0.8 })
+    .register('revolver', { pitch: 4, yaw: 0.6 });
+  app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id, recoil);
+  app.effectViews = EffectViews.standard(ctx.scene, ctx, ctx.events);
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);
   const unsubscribe = ctx.events.on(EVENTS.GAME_OVER, () => {
@@ -73,6 +93,7 @@ export function installGameplay(app) {
   const dispose = () => {
     unsubscribe();
     pickupViews.dispose();
+    app.effectViews.dispose();
     app.combat.dispose();
     app.game.dispose();
     app.hud.dispose();

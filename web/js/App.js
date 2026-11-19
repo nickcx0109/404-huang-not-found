@@ -280,9 +280,10 @@ export class App {
     if (!this.game || this.game.canMove) this.player.update(dt);
     if (this.flow) this.flow.update(dt);
     if (this.game && this.player.locked) {
-      this.combat.update();
+      this.combat.update(dt);
       this.game.update(dt);
       this.hud.updateGame(dt, this.game);
+      this.effectViews?.update(dt);
     }
     this.atmosphere.update(dt, now / 1000);
     this.built.update(now / 1000);

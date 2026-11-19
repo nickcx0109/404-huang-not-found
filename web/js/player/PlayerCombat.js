@@ -5,7 +5,9 @@ import { WeaponTrigger } from '../weapons/WeaponTrigger.js';
 const WHEEL_NOTCH = 50;
 
 export class PlayerCombat {
-  constructor(controller, camera, ctx, ownerId, purchaseItemId) {
+  /** @param {RecoilKick|null} recoil  kicks the view when this player's gun fires */
+  constructor(controller, camera, ctx, ownerId, purchaseItemId, recoil = null) {
+    this.recoil = recoil;
     this.controller = controller;
     this.camera = camera;
     this.context = ctx;
@@ -16,11 +18,17 @@ export class PlayerCombat {
     this._purchaseRequest = Object.freeze({ ownerId, itemId: purchaseItemId });
     this.trigger = new WeaponTrigger(ctx, ownerId);
     this._onMouseDown = event => {
-      if (event.button === 0 && this.controller.locked) {
+      if (!this.controller.locked) return;
+      if (event.button === 0) {
         this.updateAim();
         this.trigger.press();
+      } else if (event.button === 2) {
+        // Right button: the item's second use, e.g. bandaging the teammate in front.
+        this.updateAim();
+        ctx.events.emit(EVENTS.SECONDARY_REQUESTED, this._ownerRequest);
       }
     };
+    this._onContextMenu = event => { if (this.controller.locked) event.preventDefault(); };
     this._onMouseUp = event => { if (event.button === 0) this.trigger.release(); };
     this._onBlur = () => this.trigger.release();
     this._onPointerLockChange = () => {
@@ -49,6 +57,7 @@ export class PlayerCombat {
     };
     window.addEventListener('wheel', this._onWheel, { passive: true });
     window.addEventListener('mousedown', this._onMouseDown);
+    window.addEventListener('contextmenu', this._onContextMenu);
     window.addEventListener('mouseup', this._onMouseUp);
     window.addEventListener('blur', this._onBlur);
     document.addEventListener('pointerlockchange', this._onPointerLockChange);
@@ -67,7 +76,14 @@ export class PlayerCombat {
     aim.direction.z = this._direction.z;
   }
 
-  update() {
+  update(dt = 0) {
+    if (this.recoil) {
+      const turn = this.recoil.update(dt);
+      if (turn.pitch !== 0 || turn.yaw !== 0) {
+        this.controller.nudge(turn.pitch, turn.yaw);
+        this.controller._syncCamera();
+      }
+    }
     this.updateAim();
     if (this.controller.locked) this.trigger.update();
     else this.trigger.release();
@@ -76,7 +92,9 @@ export class PlayerCombat {
   dispose() {
     this.trigger.release();
     window.removeEventListener('wheel', this._onWheel);
+    this.recoil?.dispose();
     window.removeEventListener('mousedown', this._onMouseDown);
+    window.removeEventListener('contextmenu', this._onContextMenu);
     window.removeEventListener('mouseup', this._onMouseUp);
     window.removeEventListener('blur', this._onBlur);
     document.removeEventListener('pointerlockchange', this._onPointerLockChange);
