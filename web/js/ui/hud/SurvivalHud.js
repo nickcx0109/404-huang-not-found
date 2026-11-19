@@ -11,6 +11,7 @@ import { EventCard } from './EventCard.js';
 import { TeamWidget } from './TeamWidget.js';
 import { InventoryWidget } from './InventoryWidget.js';
 import { SlashWidget } from './SlashWidget.js';
+import { ObjectiveWidget } from './ObjectiveWidget.js';
 import { LobbyScreen } from './LobbyScreen.js';
 import { GameOverScreen } from './GameOverScreen.js';
 import { VictoryScreen } from './VictoryScreen.js';
@@ -57,6 +58,7 @@ export class SurvivalHud extends Hud {
       .add(new TeamWidget(doc))
       .add(new InventoryWidget(doc))
       .add(new SlashWidget(doc))
+      .add(new ObjectiveWidget(doc))
       .add(new LobbyScreen(doc))
       .add(new GameOverScreen(doc))
       .add(new VictoryScreen(doc));

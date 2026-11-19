@@ -315,6 +315,21 @@
   text-shadow: var(--edge);
 }
 
+/* ---- objective countdown, under the status line --------------------------- */
+
+.hud-objective {
+  top: 3.4em;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--type);
+  font-size: 1.35em;
+  letter-spacing: 0.16em;
+  -webkit-text-stroke: 0.04em rgba(8, 6, 5, 0.6);
+  paint-order: stroke fill;
+  text-shadow: var(--edge);
+}
+
 /* ---- crosshair, centre --------------------------------------------------- */
 
 .hud-crosshair {
