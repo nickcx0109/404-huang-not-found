@@ -305,3 +305,27 @@ test('TeamWidget lists the other players, marks low health and shows who is down
   assert.equal(row.el.removed, true);
   hud.dispose();
 });
+
+test('InventoryWidget lists every slot, marks the one in hand and shows stack counts', async () => {
+  const { InventoryWidget } = await import('../web/js/ui/hud/InventoryWidget.js');
+  const doc = { createElement: fakeNode };
+  const widget = new InventoryWidget(doc);
+  const status = { slots: [{ id: null, count: null }, { id: 'pistol', count: null }, { id: 'bat', count: null }], selected: 1 };
+  widget.sync(status);
+  assert.equal(widget.rows.length, 3);
+  assert.equal(widget.rows[0].el.classList.contains('is-empty'), true);
+  assert.equal(widget.rows[1].icon.classList.contains('hud-inventory__icon--pistol'), true);
+  assert.equal(widget.rows[1].el.classList.contains('is-selected'), true);
+  assert.equal(widget.attention.awake, true);
+
+  status.slots[0] = { id: 'rifle', count: null };
+  status.slots[2] = { id: 'bandage', count: 2 };
+  status.selected = 0;
+  widget.sync(status);
+  assert.equal(widget.rows[0].el.classList.contains('is-empty'), false);
+  assert.equal(widget.rows[0].el.classList.contains('is-selected'), true);
+  assert.equal(widget.rows[1].el.classList.contains('is-selected'), false);
+  assert.equal(widget.rows[2].icon.classList.contains('hud-inventory__icon--bat'), false, 'the old icon is taken off');
+  assert.equal(widget.rows[2].icon.textContent, 'BANDAGE', 'no mask yet: the name is printed');
+  assert.equal(widget.rows[2].amount.textContent, '\u00d72');
+});

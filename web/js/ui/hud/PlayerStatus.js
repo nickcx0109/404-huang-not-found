@@ -18,6 +18,12 @@ export class PlayerStatus {
     /** The weapon on the ground the player could take now: its screen name, and whether it would replace one. */
     this.pickup = null;
     this.pickupSwap = false;
+    /**
+     * What the player carries, one plain record per slot { id, count }: id is the item id or null for an
+     * empty slot, count is how many of a stackable item (null for a weapon). `selected` is the slot in hand.
+     */
+    this.slots = [];
+    this.selected = -1;
     this.money = 0;
     this.state = null;
     this.wave = 0;
@@ -32,6 +38,19 @@ export class PlayerStatus {
     this.threats = [];
     /** The other players as plain records { id, name, health, maxHealth, down }. */
     this.mates = [];
+  }
+
+  /** Copies the slots into reused records; a holder without fixed slots lists what it has in order. */
+  _readSlots(player) {
+    const held = player?.weapons?.weapons ?? [];
+    for (let index = 0; index < held.length; index++) {
+      const record = this.slots[index] ?? (this.slots[index] = { id: null, count: null });
+      const item = held[index];
+      record.id = item ? item.id : null;
+      record.count = item && Number.isInteger(item.count) ? item.count : null;
+    }
+    this.slots.length = held.length;
+    this.selected = player?.weapons ? player.weapons.index ?? -1 : -1;
   }
 
   /**
@@ -53,6 +72,7 @@ export class PlayerStatus {
     const offer = player && session.canMove ? session.pickups?.offerFor(player, OFFER) : null;
     this.pickup = offer ? offer.name : null;
     this.pickupSwap = offer ? offer.swap : false;
+    this._readSlots(player);
     this.money = player?.wallet ? player.wallet.balance : 0;
     this.state = session.state;
     this.wave = session.wave;

@@ -563,6 +563,118 @@
   background: var(--dried);
 }
 
+/* ---- inventory, right edge ------------------------------------------------- */
+/* One row per slot: number key, the outline of what is in it, how many are left.
+   The slot in hand is bright with brush corners; no box behind it. */
+
+.hud-inventory {
+  right: 2.4em;
+  font-size: 1.3em;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5em;
+}
+
+.hud-inventory__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  padding: 0.3em 0.5em;
+  opacity: 0.55;
+  transition: opacity 0.15s ease-out;
+}
+
+.hud-inventory__row.is-empty {
+  opacity: 0.2;
+}
+
+.hud-inventory__row.is-selected {
+  opacity: 1;
+}
+
+/* Brush corners, top left and bottom right, slightly crooked. */
+.hud-inventory__row.is-selected::before,
+.hud-inventory__row.is-selected::after {
+  content: "";
+  position: absolute;
+  width: 0.9em;
+  height: 0.75em;
+  border: 0 solid var(--bone);
+  filter: var(--mark-shadow);
+}
+
+.hud-inventory__row.is-selected::before {
+  left: 0;
+  top: 0;
+  border-left-width: max(2px, 0.13em);
+  border-top-width: max(2px, 0.13em);
+  transform: rotate(-3deg);
+}
+
+.hud-inventory__row.is-selected::after {
+  right: 0;
+  bottom: 0;
+  border-right-width: max(2px, 0.13em);
+  border-bottom-width: max(2px, 0.13em);
+  transform: rotate(2deg);
+}
+
+.hud-inventory__key {
+  font-family: var(--type);
+  font-size: 0.75em;
+  color: var(--ash);
+  text-shadow: var(--edge);
+}
+
+.hud-inventory__row.is-selected .hud-inventory__key {
+  color: var(--bone);
+}
+
+/* Without a mask below, the item's name is printed instead. */
+.hud-inventory__icon {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 4.8em;
+  height: 1.5em;
+  font-family: var(--type);
+  font-size: 0.85em;
+  font-style: normal;
+  letter-spacing: 0.1em;
+  text-shadow: var(--edge);
+}
+
+.hud-inventory__count {
+  min-width: 1.6em;
+  font-family: var(--num);
+  font-size: 0.95em;
+  text-shadow: var(--edge);
+}
+
+.hud-inventory__icon--pistol,
+.hud-inventory__icon--rifle,
+.hud-inventory__icon--shotgun,
+.hud-inventory__icon--bat {
+  color: transparent;
+  text-shadow: none;
+  background: var(--bone);
+  -webkit-mask: var(--icon) right center / contain no-repeat;
+  mask: var(--icon) right center / contain no-repeat;
+  filter: var(--mark-shadow);
+}
+
+.hud-inventory__icon--pistol { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 30'%3E%3Cpath d='M26 4H70V13H66L69 28H58L56 17H52C51 20 48 21 46 20V13H26Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--rifle { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 28'%3E%3Cpath d='M2 9L20 7H58V5H64V8H94V11H64V14H56L58 26H50L48 16H36L34 22H28L28 16H20L4 18Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--shotgun { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 24'%3E%3Cpath d='M2 8L22 6H90V9H94V12H78V16H60V14H44L42 22H36L36 14H22L4 16Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--bat { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 20'%3E%3Cpath d='M0 7H5V8.6H30C50 6 70 3 91 3C94 3 96 6 96 10C96 14 94 17 91 17C70 17 50 14 30 11.4H5V13H0Z'/%3E%3C/svg%3E"); }
+
 /* ---- motion ------------------------------------------------------------- */
 
 /* Never down to nothing: dried red alone is too dark to read on a dark picture. */
