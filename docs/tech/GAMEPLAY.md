@@ -185,6 +185,14 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 
 資料錯誤會在 WaveTable 建構時拋出帶欄位路徑的錯誤，例如 `waves[0].counts.runner`。四種數量必須完整、為非負安全整數且總數大於零；未知種類會被拒絕，間隔必須為正有限數、上限為 1～40 整數、休息為非負有限數，overflow 也必須完整指定四種增量。後續波次溢出安全整數範圍亦會明確拒絕。
 
+## G22 難度倍數
+
+`game/Difficulty.js` 把整個遊戲一起調難或調簡單，不動波次表（`waves/survival.js`）和各種殭屍類別：
+
+- `waves(data)`：回傳放大後的波次資料副本。每種數量和 overflow 都乘 `count`，同時活著的上限也乘（但不超過 `maxAliveCap`，預設 40），生怪間隔除以 `count`（最短 0.05 秒），休息時間不變。
+- `tune(enemy)`：速度乘 `speed`，近戰和自爆傷害乘 `damage`。由 `EnemyFactory` 的 `prepare` 在每隻殭屍第一次建出來時呼叫一次；物件池重複使用同一隻，所以不會越用越快。
+- 現在的值在 `installGameplay`：`new Difficulty({ count: 10, speed: 5 })`，傷害不變。第一波 40 隻、同時最多 30 隻，走路殭屍 8 m/s（比玩家衝刺 7 m/s 快）、跑者 17 m/s。
+
 ## 新增武器
 
 1. 從 `weapons/Weapon.js`、`weapons/Pistol.js`、`test/Weapon.test.js` 開始，新增自己的檔案與具名 export，不更動 Pistol 範例來冒充新武器。
