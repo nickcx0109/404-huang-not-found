@@ -31,8 +31,8 @@ export function installGameplay(app) {
   player.weapons.add(new Rifle());
   player.weapons.add(new Shotgun());
   ctx.players.push(player);
-  // G22: ten times the zombies, five times as fast (same damage). Tune here.
-  const difficulty = new Difficulty({ count: 10, speed: 5 });
+  // G22: ten times the zombies, three times as fast (same damage). Tune here.
+  const difficulty = new Difficulty({ count: 10, speed: 3 });
   const factory = new EnemyFactory(ctx, type => {
     const geometry = new THREE.BoxGeometry(ctx.pathFinder.radius * 2, ctx.pathFinder.height, ctx.pathFinder.radius * 2);
     const material = new THREE.MeshStandardMaterial({ color: app.style.greybox.dummy,
