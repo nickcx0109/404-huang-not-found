@@ -142,6 +142,23 @@ node tools/serve.mjs
 
 程式在 `web/js/level/`：`LevelFlow` 是規則（不依賴 DOM，測試在 `test/LevelFlow.test.js`），`installLevelFlow` 接上按鍵、提示和換關。沒有出口的關卡不受影響。
 
+### `objective`（選填）
+
+這一關怎樣算過關，例如第二章：
+
+```json
+"objective": { "type": "hold", "seconds": 180, "label": "GATE OPENS IN", "goal": "HOLD THE GATE UNTIL THE LOCK OPENS" }
+```
+
+| 欄位 | 必填 | 說明 |
+|---|---|---|
+| `type` | 是 | 種類，在 `web/js/game/objectives/Objectives.js` 註冊。目前只有 `hold`：撐過 `seconds` 秒就勝利 |
+| `seconds` | `hold` 要 | 要撐多久（秒），正數 |
+| `label` | 否 | 畫面上倒數前面的字，預設 `HOLD OUT` |
+| `goal` | 否 | 開始畫面的副標題 |
+
+不寫就是無限波次，撐到全滅為止。
+
 ### `bounds`（選填）
 
 可活動範圍的矩形（中心 `x`、`z`，大小 `w`、`d`），玩家走不出去。不寫的話，用所有 collider 和出生點的範圍往外加 2 m。地板會比這個範圍多鋪 60 m，邊緣藏在霧後面。

@@ -116,6 +116,8 @@ export class LevelData {
     this.bookmarks = LevelData._readBookmarks(raw, v);
     this._bookmarkByName = new Map(this.bookmarks.map((b) => [b.name, b]));
     this.markers = LevelData._readMarkers(raw, v);
+    /** How the level is won, e.g. { type: 'hold', seconds: 180 }, or null (survive until everyone is down). */
+    this.objective = LevelData._readObjective(raw, v);
     this.bounds = LevelData._readBounds(raw, v, this);
 
     this._checkSpawnsAreFree(v);
@@ -310,6 +312,19 @@ export class LevelData {
       if (!ok) v.error('manifests[' + i + ']', 'must be a manifest name such as "common" or "ch2"');
       return ok;
     });
+  }
+
+  /** Optional win condition: an object with a `type` string; the other fields are that type's settings. */
+  static _readObjective(raw, v) {
+    if (raw.objective === undefined || raw.objective === null) return null;
+    if (!v.object(raw.objective, 'objective')) return null;
+    const { type } = raw.objective;
+    if (typeof type !== 'string' || type === '') {
+      v.error('objective.type', 'is required (string)');
+      return null;
+    }
+    if (raw.objective.seconds !== undefined) v.number(raw.objective, 'seconds', 'objective', { positive: true });
+    return Object.freeze({ ...raw.objective });
   }
 
   /** Optional named gameplay points: objective, defence posts, pickups ... */
