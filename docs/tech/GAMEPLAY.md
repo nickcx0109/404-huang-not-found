@@ -15,7 +15,7 @@ http://localhost:8080/web/index.html?level=ch2&play=1
 - Esc 解除鎖定會暫停玩法時鐘；重新點畫面繼續。不要用系統時間決定射速或換彈，以免暫停期間偷偷完成。
 - 波次清空後依波次表整備 6～10 秒；槍、投擲物與治療物從地上撿，彈藥由彈藥箱補充。撿取與補彈在戰鬥及整備期間都可進行。
 - Lobby 顯示標題、操作提示與 CLICK TO START；按鈕仍先要求滑鼠鎖定，成功後才送 START_REQUESTED。生命歸零進入 GameOver，顯示到達波次與擊殺數；RESTART 按鈕或 Enter 不重新整理就回到全新 Lobby，再點擊開始。
-- Victory 同樣凍結戰鬥並提供結算與重開，供 G6 呼叫 `session.win()`；目前只有測試和 debug 會觸發。暫無救援、復活、獲勝／開大門條件，也不實作故事章節目標。
+- Victory 同樣凍結戰鬥並提供結算與重開。怎樣算贏由關卡的 `Objective` 決定（G6，見下方「過關條件」）：第二章守住大門 180 秒到開鎖完成就進 Victory；沒寫 `objective` 的關卡（第一章、第三章目前）照舊無限波次。暫無救援、復活。
 - 預設使用資料驅動的混合波次，陸續出怪且限制同時在場數量（見下方 G3 波次表）；數值不是最終遊戲平衡。單人離線而已，沒有網路協定。
 
 ## 類別關係
@@ -39,6 +39,10 @@ classDiagram
   State <|-- WaveBreakState
   State <|-- GameOverState
   State <|-- VictoryState
+  GameSession --> Objective
+  Objective <|-- EndlessObjective
+  Objective <|-- HoldOutObjective
+  Objectives ..> Objective : create(level.objective)
   StateMachine --> State
   Entity <|-- CombatPlayer
   Entity <|-- Enemy
@@ -132,6 +136,7 @@ classDiagram
 | Template Method | `Weapon.fire` 固定開火流程，`Pistol.createShot` 提供射擊規格，`onFired` 為選用 hook |
 | Strategy | Weapon 注入 fire-mode 物件，Enemy 注入 Brain，Session 注入 separation.apply(ctx) 物件；可替換行為而不用改使用者 |
 | State | 五種 State 經由現有 StateMachine 管理；不能在 enter／exit 遞迴切換，要在 update 請 Session 轉換；結束狀態的 canRestart hook 供通用重開流程使用 |
+| Strategy（過關條件） | Session 注入一個 `Objective`，每個模擬步呼叫 `update(dt, session)`，達成時由它呼叫 `session.win()`；`Objectives` 依關卡資料的 `type` 建立已註冊的子類，Session 不知道有哪幾種 |
 | Observer | 所有玩法通知及輸入命令名稱統一在 `game/events.js`，用 App 的 EventBus 解耦 |
 | Chain of Responsibility | DamagePipeline 串接 DamageRule.next，先前規則輸出交給下一個；目前只提供爆頭範例 |
 | Object Pool | EnemyFactory 每種類型使用既有 ObjectPool；死亡隱藏、重設、歸還，跨波次重用 mesh 與路徑 buffer |
@@ -299,6 +304,15 @@ stateDiagram-v2
   Victory --> Lobby: RESTART_REQUESTED / dispose old run + create new run
 ```
 
+### 過關條件（G6）
+
+- 關卡檔可以寫 `"objective": { "type": "hold", "seconds": 180, "label": "GATE OPENS IN", "goal": "..." }`。`LevelData.objective` 只檢查 `type` 是字串、`seconds`（有寫的話）是正數，其餘設定原樣交給那個種類。
+- `game/objectives/`：`Objective`（抽象；`goal` 開始畫面那一行、`status` 給 HUD 的 `{label, seconds}`、`update(dt, session)`）、`EndlessObjective`（永遠不贏，沒寫 objective 時用）、`HoldOutObjective`（倒數，波次中和波次之間都在跑，Lobby 不跑；時間到呼叫 `session.win()`）、`Objectives`（註冊表，`standard()` 註冊 `hold`）。
+- Session 在 Playing／WaveBreak 每步先檢查全滅（全滅就是 GameOver，倒數停住、之後 `win()` 也不收），再跑 objective；objective 讓狀態變了就不再出怪或結束整備。
+- 第二章的開鎖時間故事文件還沒訂，先訂 180 秒放在 `web/levels/ch2.json`，要調只改那一個數字。
+- HUD：`PlayerStatus.goal`、`PlayerStatus.objective` 由 Session 的 objective 抄出；`ObjectiveWidget` 在狀態列下面顯示「GATE OPENS IN 2:35」，`LobbyScreen` 用 `goal` 當副標題。
+- 新增一種過關條件：寫一個 `Objective` 子類，在 `Objectives.standard()` 加一行 `register`，在關卡檔寫 `objective.type`。
+
 ### G5 頁內重開
 
 - `GameOverState`、`VictoryState` 設定 `canRestart = true`；Lifecycle 只問這個 hook，不依名稱分派。`win()` 僅在玩家仍可行動的 Playing／WaveBreak 接受，不會自動判定過關，也不允許死後改成勝利。
@@ -347,6 +361,6 @@ node tools/art/shots.mjs --level test --format png --out <OS-temp>/test
 
 Windows 若 npm.ps1 被執行政策擋住，改用 `npm.cmd test`／`npm.cmd run serve`，不要改 PowerShell 政策。
 
-加 `&debug=1` 才有 `window.__gameDebug`：`ready()` 等待本局武器載入，`start()` 在 debug 直接開始並推進零秒讓第一波出生；`snapshot()` 含 state／wave／kills／health／ammo／inventory／enemies／sceneChildren／listeners；`aimAt(enemyId)`、`fire()`、`reload()`、`advance(seconds)` 沿用原功能。`kill()` 用 DamageInfo 對玩家送致死傷害並推進零秒進入 GameOver；`win()` 只呼叫 Session.win；`restart()` 可從任意狀態強制 dispose 並重建 Lobby，供壓力測試，正常 UI 仍只接受結算狀態。advance 每次至多 120 秒、內部切成最多 0.05 秒的模擬步；fire 仍走正常命中、遮擋、扣彈、冷卻及 Session 傷害流程。這不是公開遊戲 API，無 debug 參數不建立它。自動測試若用 advance，先停止一般 rAF，避免同時推進兩個時鐘。
+加 `&debug=1` 才有 `window.__gameDebug`：`ready()` 等待本局武器載入，`start()` 在 debug 直接開始並推進零秒讓第一波出生；`snapshot()` 含 state／wave／kills／health／ammo／inventory／objective（剩餘秒數或 null）／enemies／sceneChildren／listeners；`aimAt(enemyId)`、`fire()`、`reload()`、`advance(seconds)` 沿用原功能。`kill()` 用 DamageInfo 對玩家送致死傷害並推進零秒進入 GameOver；`win()` 只呼叫 Session.win；`restart()` 可從任意狀態強制 dispose 並重建 Lobby，供壓力測試，正常 UI 仍只接受結算狀態。advance 每次至多 120 秒、內部切成最多 0.05 秒的模擬步；fire 仍走正常命中、遮擋、扣彈、冷卻及 Session 傷害流程。這不是公開遊戲 API，無 debug 參數不建立它。自動測試若用 advance，先停止一般 rAF，避免同時推進兩個時鐘。
 
 G3 驗收：126 個 node:test 全過，包含每波數量／種類／間隔／上限、延伸波次、資料錯誤、Session 空場等待／逐波休息，以及重疊敵人分離、薄牆與命中盒同步。修改前後 ch2 共 8 組 shot PNG 的 SHA-256 全部相同（無 play=1）。以 npm run serve 啟動後，瀏覽器在 `?level=ch2&play=1&debug=1` 停止一般 rAF，再使用 start／advance／snapshot：模擬時間 0.05／1.24／1.25／2.45 秒，場上為 1／1／2／3 隻；再前進 10 秒仍為 3 隻、remaining 為 1，符合第一波 1.2 秒間隔與 3 隻上限。PNG 放 OS temp，不加入版本控制；驗收後關閉 server。
