@@ -132,7 +132,7 @@ node tools/serve.mjs
 
 程式用 `level.markersOfType('shop')` 取。
 
-地上的槍：`{ "id": "gun_rifle", "type": "weapon", "item": "rifle", "x": -6.8, "z": 6.4, "r": 1.2 }`。`r` 是撿得到的距離（從玩家身體邊緣算）。只有 `play=1` 會畫出來（發亮的槍和光柱），寫了沒註冊的 `item` 會在開始玩的時候報錯。
+地上的槍：`{ "id": "gun_rifle", "type": "weapon", "item": "rifle", "x": -6.8, "z": 6.4, "r": 1.2 }`。`r` 是撿得到的距離（從玩家身體邊緣算）。只有 `play=1` 會畫出來（地上的槍加亮色邊框），寫了沒註冊的 `item` 會在開始玩的時候報錯。
 
 ### 出口與擋路的障礙物（`exit` marker）
 
