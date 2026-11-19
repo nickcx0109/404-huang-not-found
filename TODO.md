@@ -113,3 +113,4 @@
 - G16 G20 繃帶、手榴彈、燃燒瓶，地上的治療物和投擲物點；跳躍、槍的後座力（分支 feat/more-guns，還沒開 PR）
 - G18 G19 G13 武士刀、鏈鋸（每個場景 2 個近戰點）、彈藥箱（每個場景 3 個）；投擲物會傷到自己和隊友（分支 feat/more-guns）
 - G24 武士刀刀光：揮刀時畫面有一道弧形刀光，打到更亮更粗；`SlashStyles` 註冊表讓之後的近戰也能用（分支 feat/katana-slash）
+- G25 其他武器的第一人稱模型：`play=1` 時十一把武器都看得到，換武器會切換，開槍有後座和火光、換彈和揮砍有動作；沿用 G9 的 `WeaponRig`、`WeaponView`、`Clip`（分支 feat/weapon-models）

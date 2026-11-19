@@ -38,6 +38,7 @@ import { Wallet } from '../economy/Wallet.js';
 import { Economy } from '../economy/Economy.js';
 import { AmmoRefillItem } from '../economy/AmmoRefillItem.js';
 import { SurvivalHud } from '../ui/hud/SurvivalHud.js';
+import { FirstPersonWeapon } from '../weapons/FirstPersonWeapon.js';
 
 export function installGameplay(app) {
   const ctx = new GameContext({ scene: app.scene, collision: app.built.collision,
@@ -98,6 +99,15 @@ export function installGameplay(app) {
   app.gameViews = [app.effectViews, app.crateViews, new MovementLock(app.player, app.game, player.id)];
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);
+  // The weapon in the player's hands, drawn over the scene once its models are ready.
+  const held = FirstPersonWeapon.create(app, ctx, player).then(weapon => {
+    app.overlay = weapon;
+    if (app.options.debug) window.__weaponView = weapon.debugHandle();
+    return weapon;
+  }).catch(err => {
+    console.warn('[weapons] first-person weapon unavailable: ' + err.message);
+    return null;
+  });
   const unsubscribe = ctx.events.on(EVENTS.GAME_OVER, () => {
     app.player.enabled = false;
     app.hud.setStartVisible(false);
@@ -106,6 +116,7 @@ export function installGameplay(app) {
   });
   const dispose = () => {
     unsubscribe();
+    held.then(weapon => weapon?.dispose());
     pickupViews.dispose();
     app.effectViews.dispose();
     app.crateViews.dispose();
