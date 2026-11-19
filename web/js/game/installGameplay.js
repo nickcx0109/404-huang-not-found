@@ -4,6 +4,7 @@ import { GameSession } from './GameSession.js';
 import { TimedWaveDirector } from './TimedWaveDirector.js';
 import { CrowdSeparation } from './CrowdSeparation.js';
 import { SURVIVAL_WAVES } from './waves/survival.js';
+import { Difficulty } from './Difficulty.js';
 import { EVENTS } from './events.js';
 import { PathFinder } from '../PathFinder.js';
 import { EnemyFactory } from '../enemies/EnemyFactory.js';
@@ -30,6 +31,8 @@ export function installGameplay(app) {
   player.weapons.add(new Rifle());
   player.weapons.add(new Shotgun());
   ctx.players.push(player);
+  // G22: ten times the zombies, five times as fast (same damage). Tune here.
+  const difficulty = new Difficulty({ count: 10, speed: 5 });
   const factory = new EnemyFactory(ctx, type => {
     const geometry = new THREE.BoxGeometry(ctx.pathFinder.radius * 2, ctx.pathFinder.height, ctx.pathFinder.radius * 2);
     const material = new THREE.MeshStandardMaterial({ color: app.style.greybox.dummy,
@@ -39,12 +42,12 @@ export function installGameplay(app) {
     view.visible = false;
     ctx.scene.add(view);
     return view;
-  }).register('walker', Walker)
+  }, { prepare: enemy => difficulty.tune(enemy) }).register('walker', Walker)
     .register('runner', Runner)
     .register('tank', Tank)
     .register('exploder', Exploder);
   const ammo = new AmmoRefillItem();
-  app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(SURVIVAL_WAVES), economy: new Economy(),
+  app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(difficulty.waves(SURVIVAL_WAVES)), economy: new Economy(),
     items: [ammo], separation: new CrowdSeparation() });
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id);
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
