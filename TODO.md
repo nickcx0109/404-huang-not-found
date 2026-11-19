@@ -17,12 +17,12 @@
 
 ## 優先：玩法
 
-玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker`、`AmmoRefillItem` 這三個範例。
+玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker` 這兩個範例。
 
-- [~] **G4 商店介面和更多商品**（進行中：@nickcx0109，分支 feat/shop-ui）
-  - 起點：`web/js/economy/`、`web/js/ui/hud/`（照 GAMEPLAY.md「新增 HUD 元件」），`test/Economy.test.js`。
-  - 內容：靠近商店按 E 打開一個列出商品的介面，不再是按 E 直接補彈。新增商品：買 G1 的槍、補血、護甲。
-  - 完成：每個商品是一個 `ShopItem` 子類，有買不起、條件不符、成功、失敗退費的測試。
+- [ ] **G26 拿掉商店和金錢**
+  - 決定：不做商店。槍、投擲物、治療物都從地上撿，子彈從彈藥箱補（G11、G13、G14 已完成）。
+  - 內容：拿掉 `web/js/economy/`（`Wallet`、`Economy`、`ShopItem`、`AmmoRefillItem`）、`GameSession` 的 `economy` 和 `PURCHASE_REQUESTED`／`ITEM_PURCHASED` 事件、殺敵給錢、HUD 的金額和「E AT SHOP」提示、關卡裡的 `shop` 標記；`shop_terminal` 模型留著當場景裝飾（不然沒開 `play=1` 的畫面會變）。GAMEPLAY.md、ARCHITECTURE.md 裡講商店的段落一起改。
+  - 完成：`npm test` 通過，沒有留下引用 economy 的程式；`shots.mjs --level ch2` 的截圖和改之前一樣。
 - [ ] **G5 開始、結束、重開畫面**
   - 起點：`web/js/game/states/`、`GameSession.js`，`test/GameSession.test.js`。
   - 內容：Lobby 顯示開始畫面；GameOver 顯示結算（波次、擊殺）並可以不重新整理就重開（先完整 dispose 再建新的 Session）；新增 Victory 狀態給 G6 用。
@@ -87,7 +87,7 @@
 - [ ] **B10** 抗鋸齒：沒有 MSAA 也沒有 FXAA
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
 - [ ] **B12** `Emitters` 沒有公開的方法讓章節道具登記每幀動畫；`Ch1Props.js` 的營火閃爍暫時直接用內部的 `_animations` 陣列（欄位改名的話火只是不閃，不會壞）
-- [ ] **G11** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、金錢會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
+- [ ] **B15** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、道具欄會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
 - [ ] **B13** `WEAPON_FIRED`、`WEAPON_RELOADED`、`WEAPON_CHANGED` 的 payload 沒有子彈數，也沒有「開始換彈」的事件；補彈（`refill`）也不發事件。HUD 現在靠 `ui/hud/PlayerStatus.js` 每幀從 Session 抄數字。做連線（G8）時要嘛在事件裡帶上數字，要嘛讓快照填 `PlayerStatus`。
 - [ ] **B14** 暫停（滑鼠解鎖）時 `gameViews` 不更新，`SoundBoard` 的時間也停住：拿著電鋸暫停會一直響待機聲，暫停前正在鋸就一直響鋸的聲音，回到遊戲才停。可以在解鎖時暫停 AudioContext，或讓 `installAudio` 自己聽 `pointerlockchange`。
 
@@ -98,7 +98,6 @@
 ---
 
 ## 已完成
-- G3 波次設計（PR #15）
 
 格式：`代號 標題（PR #編號）`。
 
@@ -109,6 +108,8 @@
 - G1 步槍和霰彈槍（PR #9）
 - G2 更多殭屍種類（PR #10）
 - B3 B5 B6 B8 引擎小 bug（PR #17）
+- G3 波次設計（PR #15）
+- G4 商店：取消，改成地上撿（PR #16 關閉不合併）
 - G11 地上撿武器和開局裝備：手槍（無限備彈）、球棒、主武器格換槍，地上的槍有高光邊框（PR #18）
 - G14 道具欄 7 格、滾輪切換、右側側邊欄（PR #19）
 - G23 衝鋒槍、左輪，地上的槍位置固定、內容隨機（PR #20）
