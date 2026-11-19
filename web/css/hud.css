@@ -658,7 +658,9 @@
 .hud-inventory__icon--pistol,
 .hud-inventory__icon--rifle,
 .hud-inventory__icon--shotgun,
-.hud-inventory__icon--bat {
+.hud-inventory__icon--bat,
+.hud-inventory__icon--smg,
+.hud-inventory__icon--revolver {
   color: transparent;
   text-shadow: none;
   background: var(--bone);
@@ -674,6 +676,10 @@
 .hud-inventory__icon--shotgun { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 24'%3E%3Cpath d='M2 8L22 6H90V9H94V12H78V16H60V14H44L42 22H36L36 14H22L4 16Z'/%3E%3C/svg%3E"); }
 
 .hud-inventory__icon--bat { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 20'%3E%3Cpath d='M0 7H5V8.6H30C50 6 70 3 91 3C94 3 96 6 96 10C96 14 94 17 91 17C70 17 50 14 30 11.4H5V13H0Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--smg { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 32'%3E%3Cpath d='M14 8H24V6H70V9H78V12H70V15H54V30H47V15H40L38 22H31L32 15H24V13H14Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--revolver { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 32'%3E%3Cpath d='M14 9H40V7H43V4H57C60 4 61 6 61 9V17H58L64 29H53L49 20H45C43 22 41 22 40 20V13H14Z'/%3E%3C/svg%3E"); }
 
 /* ---- motion ------------------------------------------------------------- */
 
