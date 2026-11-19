@@ -111,3 +111,16 @@ test('A fire bottle breaks where it lands and burns 3 m for 6 seconds at 25 a se
   assert.equal(inside[0].amount, 12.5);
   assert.equal(inside[0].kind, 'fire');
 });
+
+test('Blasts and fire hurt players too, the thrower included', () => {
+  const { ctx, hits } = world();
+  const body = (id, x) => ({ id, body: { radius: 0.35 }, position: { x, y: 0, z: 0 }, damageable: { alive: true } });
+  ctx.players.push(body('p1', 0.35), body('p2', -2.85), body('p3', 9));
+  ctx.effects.push(new ThrownGrenade({ position: { x: 0, y: 0, z: 0 }, velocity: { x: 0, y: 0, z: 0 }, ownerId: 'p1' }));
+  run(ctx, 3.1);
+  const by = Object.fromEntries(hits.map(info => [info.targetId, info]));
+  assert.equal(by.p1.amount, 150, 'the thrower');
+  assert.equal(Math.round(by.p2.amount), 90, 'a teammate');
+  assert.equal(by.p3, undefined, 'out of range');
+  assert.equal(by.p1.friendlyFire, true);
+});

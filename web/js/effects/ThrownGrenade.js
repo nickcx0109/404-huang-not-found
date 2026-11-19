@@ -1,5 +1,5 @@
 import { ThrownObject } from './ThrownObject.js';
-import { damageEnemiesInRadius } from './AreaDamage.js';
+import { damageInRadius } from './AreaDamage.js';
 import { EVENTS } from '../game/events.js';
 
 /** A grenade in flight: bounces off walls and the ground and explodes when its fuse runs out. */
@@ -28,7 +28,7 @@ export class ThrownGrenade extends ThrownObject {
   afterMove(ctx) {
     if (ctx.time + 1e-9 < this.explodesAt) return true;
     const { centreDamage, edgeDamage } = this;
-    damageEnemiesInRadius(ctx, { centre: this.position, radius: this.radius, sourceId: this.ownerId,
+    damageInRadius(ctx, { centre: this.position, radius: this.radius, sourceId: this.ownerId,
       kind: 'explosion', blockedByWalls: true,
       damageAt: fraction => centreDamage + (edgeDamage - centreDamage) * fraction });
     ctx.events.emit(EVENTS.EXPLODED, { kind: this.kind, x: this.position.x, y: this.position.y,

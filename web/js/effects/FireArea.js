@@ -1,5 +1,5 @@
 import { Effect } from './Effect.js';
-import { damageEnemiesInRadius } from './AreaDamage.js';
+import { damageInRadius } from './AreaDamage.js';
 
 /** Burning ground: every `tickSeconds` it hurts the enemies standing in it, for `seconds` in total. */
 export class FireArea extends Effect {
@@ -19,7 +19,7 @@ export class FireArea extends Effect {
   update(dt, ctx) {
     const tickDamage = this.tickDamage;
     while (ctx.time + 1e-9 >= this.nextTickAt && this.nextTickAt <= this.endsAt + 1e-9) {
-      damageEnemiesInRadius(ctx, { centre: this.position, radius: this.radius, sourceId: this.ownerId,
+      damageInRadius(ctx, { centre: this.position, radius: this.radius, sourceId: this.ownerId,
         kind: 'fire', damageAt: () => tickDamage });
       this.nextTickAt += this.tickSeconds;
     }

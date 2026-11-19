@@ -168,7 +168,9 @@ export class GameSession {
     const targetPlayer = this.playerById(info.targetId);
     const sourceEnemy = ctx.enemies.find(enemy => enemy.id === info.sourceId && enemy.damageable.alive);
     const targetEnemy = ctx.enemies.find(enemy => enemy.id === info.targetId && enemy.active);
+    // A player's grenade or fire may hurt players too (friendlyFire), even after the thrower died; bullets never do.
     const target = sourcePlayer?.damageable.alive && targetEnemy ? targetEnemy :
+      sourcePlayer && info.friendlyFire && targetPlayer ? targetPlayer :
       sourceEnemy && (targetPlayer || (targetEnemy === sourceEnemy && targetEnemy));
     if (!target) return 0;
     return target.damageable.takeDamage(this.damagePipeline.apply(info));
