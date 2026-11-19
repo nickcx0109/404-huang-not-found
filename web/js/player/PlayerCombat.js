@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { EVENTS } from '../game/events.js';
 import { WeaponTrigger } from '../weapons/WeaponTrigger.js';
 
+const WHEEL_NOTCH = 50;
+
 export class PlayerCombat {
   constructor(controller, camera, ctx, ownerId, purchaseItemId) {
     this.controller = controller;
@@ -36,6 +38,16 @@ export class PlayerCombat {
         ctx.events.emit(EVENTS.SWITCH_REQUESTED, { ownerId, index: Number(event.code.slice(-1)) - 1 });
       }
     };
+    // The wheel moves one slot per notch; a trackpad's many small deltas are added up to one notch first.
+    this._wheel = 0;
+    this._onWheel = event => {
+      if (!this.controller.locked) return;
+      this._wheel += event.deltaY;
+      if (Math.abs(this._wheel) < WHEEL_NOTCH) return;
+      ctx.events.emit(EVENTS.CYCLE_REQUESTED, { ownerId, step: Math.sign(this._wheel) });
+      this._wheel = 0;
+    };
+    window.addEventListener('wheel', this._onWheel, { passive: true });
     window.addEventListener('mousedown', this._onMouseDown);
     window.addEventListener('mouseup', this._onMouseUp);
     window.addEventListener('blur', this._onBlur);
@@ -63,6 +75,7 @@ export class PlayerCombat {
 
   dispose() {
     this.trigger.release();
+    window.removeEventListener('wheel', this._onWheel);
     window.removeEventListener('mousedown', this._onMouseDown);
     window.removeEventListener('mouseup', this._onMouseUp);
     window.removeEventListener('blur', this._onBlur);

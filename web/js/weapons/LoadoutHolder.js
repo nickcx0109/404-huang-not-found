@@ -1,8 +1,11 @@
 import { EVENTS } from '../game/events.js';
 import { WeaponHolder } from './WeaponHolder.js';
 
-/** Slot order is also the number key order: 1 primary, 2 sidearm, 3 melee. */
-export const LOADOUT_SLOTS = Object.freeze(['primary', 'sidearm', 'melee']);
+/**
+ * Slot order is also the number key order: 1 primary gun, 2 pistol, 3 bat, 4 picked-up melee
+ * (katana, chainsaw), 5 throwable, 6 healing item, 7 adrenaline.
+ */
+export const LOADOUT_SLOTS = Object.freeze(['primary', 'sidearm', 'melee', 'special', 'throwable', 'healing', 'booster']);
 const KEPT = new Set(['sidearm', 'melee']);
 
 /**
@@ -62,6 +65,22 @@ export class LoadoutHolder extends WeaponHolder {
   switchTo(index) {
     if (!Number.isInteger(index) || !this.weapons[index]) return false;
     return super.switchTo(index);
+  }
+
+  /**
+   * Moves to the next (`step` > 0) or previous (`step` < 0) slot that holds something, wrapping
+   * around; empty slots are skipped. This is what the mouse wheel does.
+   */
+  cycle(step) {
+    if (!Number.isInteger(step) || step === 0) return false;
+    const direction = Math.sign(step);
+    const count = this.weapons.length;
+    let index = this.index;
+    for (let tried = 1; tried < count; tried++) {
+      index = ((index + direction) % count + count) % count;
+      if (this.weapons[index]) return this.switchTo(index);
+    }
+    return false;
   }
 
   update(dt, ctx) {

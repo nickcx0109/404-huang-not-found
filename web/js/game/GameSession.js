@@ -45,6 +45,10 @@ export class GameSession {
         const player = this.playerById(request.ownerId);
         if (this.canMove && player?.damageable.alive) player.weapons.switchTo(request.index);
       }),
+      ctx.events.on(EVENTS.CYCLE_REQUESTED, request => {
+        const player = this.playerById(request.ownerId);
+        if (this.canMove && player?.damageable.alive) player.weapons.cycle?.(request.step);
+      }),
       ctx.events.on(EVENTS.PICKUP_REQUESTED, request => this.pickUp(request.ownerId)),
       ctx.events.on(EVENTS.PURCHASE_REQUESTED, request => this.buy(request.ownerId, request.itemId)),
       ctx.events.on(EVENTS.DAMAGE_REQUESTED, info => this.resolveDamage(info)),

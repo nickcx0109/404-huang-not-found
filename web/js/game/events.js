@@ -3,6 +3,7 @@ export const EVENTS = Object.freeze({
   FIRE_REQUESTED: 'player.fire-requested',
   RELOAD_REQUESTED: 'player.reload-requested',
   SWITCH_REQUESTED: 'player.switch-requested',
+  CYCLE_REQUESTED: 'player.cycle-requested',
   PICKUP_REQUESTED: 'player.pickup-requested',
   PURCHASE_REQUESTED: 'shop.purchase-requested',
   DAMAGE_REQUESTED: 'entity.damage-requested',
