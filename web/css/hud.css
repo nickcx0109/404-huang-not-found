@@ -663,7 +663,9 @@
 .hud-inventory__icon--revolver,
 .hud-inventory__icon--bandage,
 .hud-inventory__icon--grenade,
-.hud-inventory__icon--molotov {
+.hud-inventory__icon--molotov,
+.hud-inventory__icon--katana,
+.hud-inventory__icon--chainsaw {
   color: transparent;
   text-shadow: none;
   background: var(--bone);
@@ -689,6 +691,10 @@
 .hud-inventory__icon--grenade { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 32'%3E%3Cpath d='M66 2H80V6H86L92 12L88 14L83 9H80V10C88 13 92 18 92 23C92 28 86 31 78 31C70 31 64 28 64 23C64 18 68 13 66 10Z'/%3E%3C/svg%3E"); }
 
 .hud-inventory__icon--molotov { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 32'%3E%3Cpath d='M86 1C90 4 90 7 88 9H84C82 7 82 4 86 1ZM83 10H89V15C93 17 94 20 94 23V31H78V23C78 20 79 17 83 15Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--katana { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 20'%3E%3Cpath d='M0 8H16V6H20V8H24C50 8 74 7 96 3C80 10 56 12 24 12H20V14H16V12H0Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--chainsaw { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 30'%3E%3Cpath d='M4 8H16L18 4H34V24H8C5 24 4 22 4 20ZM34 10H88C93 10 95 13 95 16C95 19 93 22 88 22H34Z'/%3E%3C/svg%3E"); }
 
 /* ---- motion ------------------------------------------------------------- */
 
