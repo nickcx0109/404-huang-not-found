@@ -243,22 +243,26 @@ test('PromptWidget shows, updates and hides a prompt sent as an event', () => {
   hud.dispose();
 });
 
-test('EventCard announces waves one after another and keeps the game-over card up', () => {
+test('EventCard announces cleared waves one after another, says nothing when a wave starts and keeps the game-over card up', () => {
   const { events, session, hud, card } = setup();
   const has = name => card.el.classList.contains(name);
   hud.updateGame(0, session);
   assert.equal(has('is-on'), false);
 
   events.emit(EVENTS.WAVE_STARTED, { wave: 3, count: 4 });
+  hud.updateGame(0, session);
+  assert.equal(has('is-on'), false, 'a starting wave is not announced');
+
+  events.emit(EVENTS.WAVE_CLEARED, { wave: 3 });
   events.emit(EVENTS.ANNOUNCED, { text: 'FUEL FULL' });
   hud.updateGame(0, session);
-  assert.equal(card.text.textContent, 'WAVE');
+  assert.equal(card.text.textContent, 'CLEAR');
   assert.equal(has('is-on'), true);
 
   for (let step = 0; step < 42; step++) hud.updateGame(0.05, session);
   assert.equal(has('is-on'), false);
   assert.equal(has('is-fading'), true, 'after two seconds it fades');
-  assert.equal(card.text.textContent, 'WAVE', 'the words stay while fading');
+  assert.equal(card.text.textContent, 'CLEAR', 'the words stay while fading');
 
   for (let step = 0; step < 20; step++) hud.updateGame(0.05, session);
   assert.equal(card.text.textContent, 'FUEL FULL', 'the next card takes its turn');
