@@ -125,7 +125,12 @@
     {"id": "gun_05", "type": "weapon", "x": 5.8, "z": 6.3, "r": 1.2},
     {"id": "gun_06", "type": "weapon", "x": 2.8, "z": -20.7, "r": 1.2},
     {"id": "gun_07", "type": "weapon", "x": -14.7, "z": -29.7, "r": 1.2},
-    {"id": "gun_08", "type": "weapon", "x": -9.2, "z": 0.8, "r": 1.2}
+    {"id": "gun_08", "type": "weapon", "x": -9.2, "z": 0.8, "r": 1.2},
+    {"id": "melee_01", "type": "melee", "x": 7.3, "z": -33.2, "r": 1.2},
+    {"id": "ammo_01", "type": "ammo", "x": 10.3, "z": -0.2, "r": 1.2},
+    {"id": "melee_02", "type": "melee", "x": -4.2, "z": -7.2, "r": 1.2},
+    {"id": "ammo_02", "type": "ammo", "x": 7.3, "z": -6.7, "r": 1.2},
+    {"id": "ammo_03", "type": "ammo", "x": -9.7, "z": -24.7, "r": 1.2}
   ],
 
   "bookmarks": [
