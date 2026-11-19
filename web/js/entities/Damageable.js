@@ -18,6 +18,20 @@ export class Damageable {
     this.health = this.maxHealth;
   }
 
+  /**
+   * Restores health up to the maximum. A dead body cannot be healed.
+   * @returns {number} how much health was actually added
+   */
+  heal(amount, sourceId = null) {
+    if (!Number.isFinite(amount) || amount < 0) throw new RangeError('Healing must be finite and nonnegative');
+    if (!this.alive) return 0;
+    const added = Math.min(this.maxHealth - this.health, amount);
+    if (added <= 0) return 0;
+    this.health += added;
+    this.events.emit(EVENTS.ENTITY_HEALED, { entity: this.owner, sourceId, amount: added, health: this.health });
+    return added;
+  }
+
   takeDamage(info) {
     if (!(info instanceof DamageInfo)) throw new TypeError('Expected DamageInfo');
     if (!this.alive || info.targetId !== this.owner.id || info.amount === 0) return 0;

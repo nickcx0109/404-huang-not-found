@@ -2,6 +2,7 @@ import { EVENTS } from '../../game/events.js';
 import { HudWidget } from './HudWidget.js';
 
 const PICKUP_PROMPT = 'weapon-pickup';
+const ACTION_PROMPT = 'timed-action';
 
 /**
  * Prompt, bottom centre: one small line of text ("HOLD E ...") and, when the action takes time,
@@ -25,9 +26,19 @@ export class PromptWidget extends HudWidget {
     this.listen(events, EVENTS.PROMPT_CHANGED, detail => this.show(detail));
   }
 
-  /** The weapon-on-the-ground prompt comes from PlayerStatus, not from an event: it follows where the player stands. */
+  /**
+   * Two prompts come from PlayerStatus instead of events: a timed action in progress (bandaging, with its
+   * line filling up) and, when there is none, the weapon on the ground the player stands at.
+   */
   sync(status) {
-    const text = status.pickup === null ? null : (status.pickupSwap ? 'E  SWAP FOR ' : 'E  PICK UP ') + status.pickup;
+    if (status.action !== null) {
+      this._pickupText = null;
+      this.show({ id: ACTION_PROMPT, text: status.action, progress: status.actionProgress });
+      return;
+    }
+    if (this._id === ACTION_PROMPT) this.show({ id: ACTION_PROMPT, text: null });
+    const text = status.pickup === null ? null : status.pickupNote ? status.pickup + '  ' + status.pickupNote :
+      'E  ' + (status.pickupVerb ?? (status.pickupSwap ? 'SWAP FOR' : 'PICK UP')) + ' ' + status.pickup;
     if (text === this._pickupText) return;
     this._pickupText = text;
     this.show({ id: PICKUP_PROMPT, text });

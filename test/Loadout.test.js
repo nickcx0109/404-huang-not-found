@@ -105,11 +105,11 @@ test('LoadoutHolder keeps one weapon per slot and swaps the primary', () => {
   const changes = [];
   events.on(EVENTS.WEAPON_CHANGED, detail => changes.push(detail.weaponId));
   const holder = new LoadoutHolder('p1', events);
-  assert.deepEqual(LOADOUT_SLOTS, ['primary', 'sidearm', 'melee']);
+  assert.deepEqual(LOADOUT_SLOTS, ['primary', 'sidearm', 'melee', 'special', 'throwable', 'healing', 'booster']);
   const pistol = holder.add(new StarterPistol());
   const bat = holder.add(new Bat());
   assert.equal(holder.current, pistol, 'the first weapon added is in hand');
-  assert.deepEqual(holder.weapons, [null, pistol, bat]);
+  assert.deepEqual(holder.weapons, [null, pistol, bat, null, null, null, null]);
   assert.throws(() => holder.add(new StarterPistol()), /taken/);
   assert.throws(() => holder.add(pistol), /already/);
   assert.equal(holder.switchTo(0), false, 'the primary slot starts empty');
@@ -142,4 +142,28 @@ test('LoadoutHolder keeps one weapon per slot and swaps the primary', () => {
   shotgun.update = () => { updated++; };
   holder.update(0.1, { time: 0, events });
   assert.equal(updated, 1, 'empty slots are skipped');
+});
+
+test('LoadoutHolder.cycle moves through filled slots only, both ways, wrapping around', () => {
+  const events = new EventBus();
+  const holder = new LoadoutHolder('p1', events);
+  assert.equal(holder.cycle(1), false, 'nothing to move to');
+  const pistol = holder.add(new StarterPistol());
+  assert.equal(holder.cycle(1), false, 'one item: nowhere else to go');
+  const bat = holder.add(new Bat());
+  assert.equal(holder.cycle(1), true);
+  assert.equal(holder.current, bat);
+  assert.equal(holder.cycle(1), true, 'wraps past the empty slots 4-7 and 1');
+  assert.equal(holder.current, pistol);
+  assert.equal(holder.cycle(-1), true);
+  assert.equal(holder.current, bat, 'backwards wraps the other way');
+  const rifle = new Rifle();
+  holder.equip(rifle);
+  assert.equal(holder.cycle(-1), true);
+  assert.equal(holder.current, bat);
+  assert.equal(holder.cycle(1), true);
+  assert.equal(holder.current, rifle, 'from slot 3 forward: 4-7 are empty, so back to 1');
+  assert.equal(holder.cycle(0), false);
+  assert.equal(holder.cycle(0.5), false);
+  assert.equal(holder.switchTo(6), false, 'an empty slot cannot be picked by number either');
 });

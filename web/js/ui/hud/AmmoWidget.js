@@ -41,6 +41,10 @@ export class AmmoWidget extends HudWidget {
       this.flash('is-refilling', REFILL_SECONDS);
     }));
     this.listen(events, EVENTS.WEAPON_CHANGED, mine(() => this.attention.poke()));
+    this.listen(events, EVENTS.AMMO_REFILLED, mine(() => {
+      this.attention.poke();
+      this.flash('is-refilling', REFILL_SECONDS);
+    }));
   }
 
   sync(status) {

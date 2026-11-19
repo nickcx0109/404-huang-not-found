@@ -52,6 +52,31 @@ export class Aabb {
     }
     return near;
   }
+
+  /**
+   * Like rayDistance, but also says which face the ray enters through: axis 'x', 'y' or 'z'
+   * (null when the origin starts inside the box). Returns null when the ray misses.
+   */
+  rayFace(origin, direction, maxDistance) {
+    let near = 0;
+    let far = maxDistance;
+    let axisName = null;
+    for (const axis of RAY_AXES) {
+      const start = origin[axis[0]];
+      const delta = direction[axis[0]];
+      const minimum = this[axis[1]];
+      const maximum = this[axis[2]];
+      if (Math.abs(delta) < 1e-10) {
+        if (start < minimum || start > maximum) return null;
+      } else {
+        const entry = Math.min((minimum - start) / delta, (maximum - start) / delta);
+        if (entry > near) { near = entry; axisName = axis[0]; }
+        far = Math.min(far, Math.max((minimum - start) / delta, (maximum - start) / delta));
+        if (near > far) return null;
+      }
+    }
+    return { distance: near, axis: axisName };
+  }
 }
 
 export class CollisionWorld {
@@ -90,6 +115,23 @@ export class CollisionWorld {
     let distance = Infinity;
     for (const box of this.boxes) distance = Math.min(distance, box.rayDistance(origin, direction, maxDistance));
     return distance;
+  }
+
+  /**
+   * The nearest box face a ray hits: { distance, normal } with a unit normal pointing out of the box,
+   * or null when nothing is hit within maxDistance. Used by bouncing objects.
+   */
+  raycastFace(origin, direction, maxDistance) {
+    let best = null;
+    for (const box of this.boxes) {
+      const hit = box.rayFace(origin, direction, maxDistance);
+      if (hit && (!best || hit.distance < best.distance)) best = hit;
+    }
+    if (!best) return null;
+    const normal = { x: 0, y: 0, z: 0 };
+    if (best.axis) normal[best.axis] = direction[best.axis] > 0 ? -1 : 1;
+    else normal.y = 1; // started inside a box: push it up and out
+    return { distance: best.distance, normal };
   }
 
   /**

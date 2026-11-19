@@ -364,6 +364,24 @@
   background: linear-gradient(90deg, var(--fresh) 0 30%, transparent 30% 70%, var(--fresh) 70%);
 }
 
+/* ---- blade light, full screen (SlashWidget.js draws it) ------------------- */
+
+.hud-slash {
+  inset: 0;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.hud-slash__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hud-slash__canvas[hidden] {
+  display: none;
+}
+
 /* ---- being hurt, full screen --------------------------------------------- */
 
 .hud-damage {
@@ -562,6 +580,139 @@
 .hud-team__row.is-low .hud-team__fill {
   background: var(--dried);
 }
+
+/* ---- inventory, right edge ------------------------------------------------- */
+/* One row per slot: number key, the outline of what is in it, how many are left.
+   The slot in hand is bright with brush corners; no box behind it. */
+
+.hud-inventory {
+  right: 2.4em;
+  font-size: 1.3em;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5em;
+}
+
+.hud-inventory__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  padding: 0.3em 0.5em;
+  opacity: 0.55;
+  transition: opacity 0.15s ease-out;
+}
+
+.hud-inventory__row.is-empty {
+  opacity: 0.2;
+}
+
+.hud-inventory__row.is-selected {
+  opacity: 1;
+}
+
+/* Brush corners, top left and bottom right, slightly crooked. */
+.hud-inventory__row.is-selected::before,
+.hud-inventory__row.is-selected::after {
+  content: "";
+  position: absolute;
+  width: 0.9em;
+  height: 0.75em;
+  border: 0 solid var(--bone);
+  filter: var(--mark-shadow);
+}
+
+.hud-inventory__row.is-selected::before {
+  left: 0;
+  top: 0;
+  border-left-width: max(2px, 0.13em);
+  border-top-width: max(2px, 0.13em);
+  transform: rotate(-3deg);
+}
+
+.hud-inventory__row.is-selected::after {
+  right: 0;
+  bottom: 0;
+  border-right-width: max(2px, 0.13em);
+  border-bottom-width: max(2px, 0.13em);
+  transform: rotate(2deg);
+}
+
+.hud-inventory__key {
+  font-family: var(--type);
+  font-size: 0.75em;
+  color: var(--ash);
+  text-shadow: var(--edge);
+}
+
+.hud-inventory__row.is-selected .hud-inventory__key {
+  color: var(--bone);
+}
+
+/* Without a mask below, the item's name is printed instead. */
+.hud-inventory__icon {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 4.8em;
+  height: 1.5em;
+  font-family: var(--type);
+  font-size: 0.85em;
+  font-style: normal;
+  letter-spacing: 0.1em;
+  text-shadow: var(--edge);
+}
+
+.hud-inventory__count {
+  min-width: 1.6em;
+  font-family: var(--num);
+  font-size: 0.95em;
+  text-shadow: var(--edge);
+}
+
+.hud-inventory__icon--pistol,
+.hud-inventory__icon--rifle,
+.hud-inventory__icon--shotgun,
+.hud-inventory__icon--bat,
+.hud-inventory__icon--smg,
+.hud-inventory__icon--revolver,
+.hud-inventory__icon--bandage,
+.hud-inventory__icon--grenade,
+.hud-inventory__icon--molotov,
+.hud-inventory__icon--katana,
+.hud-inventory__icon--chainsaw {
+  color: transparent;
+  text-shadow: none;
+  background: var(--bone);
+  -webkit-mask: var(--icon) right center / contain no-repeat;
+  mask: var(--icon) right center / contain no-repeat;
+  filter: var(--mark-shadow);
+}
+
+.hud-inventory__icon--pistol { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 30'%3E%3Cpath d='M26 4H70V13H66L69 28H58L56 17H52C51 20 48 21 46 20V13H26Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--rifle { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 28'%3E%3Cpath d='M2 9L20 7H58V5H64V8H94V11H64V14H56L58 26H50L48 16H36L34 22H28L28 16H20L4 18Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--shotgun { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 24'%3E%3Cpath d='M2 8L22 6H90V9H94V12H78V16H60V14H44L42 22H36L36 14H22L4 16Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--bat { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 20'%3E%3Cpath d='M0 7H5V8.6H30C50 6 70 3 91 3C94 3 96 6 96 10C96 14 94 17 91 17C70 17 50 14 30 11.4H5V13H0Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--smg { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 32'%3E%3Cpath d='M14 8H24V6H70V9H78V12H70V15H54V30H47V15H40L38 22H31L32 15H24V13H14Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--revolver { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 32'%3E%3Cpath d='M14 9H40V7H43V4H57C60 4 61 6 61 9V17H58L64 29H53L49 20H45C43 22 41 22 40 20V13H14Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--bandage { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 32'%3E%3Cpath fill-rule='evenodd' d='M50 6H86C90 6 92 9 92 16C92 23 90 26 86 26H50ZM60 13V19H66V25H72V19H78V13H72V7H66V13ZM46 8C40 4 32 6 30 11L20 14L22 18L31 16C34 22 42 24 46 21Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--grenade { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 32'%3E%3Cpath d='M66 2H80V6H86L92 12L88 14L83 9H80V10C88 13 92 18 92 23C92 28 86 31 78 31C70 31 64 28 64 23C64 18 68 13 66 10Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--molotov { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 32'%3E%3Cpath d='M86 1C90 4 90 7 88 9H84C82 7 82 4 86 1ZM83 10H89V15C93 17 94 20 94 23V31H78V23C78 20 79 17 83 15Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--katana { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 20'%3E%3Cpath d='M0 8H16V6H20V8H24C50 8 74 7 96 3C80 10 56 12 24 12H20V14H16V12H0Z'/%3E%3C/svg%3E"); }
+
+.hud-inventory__icon--chainsaw { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 30'%3E%3Cpath d='M4 8H16L18 4H34V24H8C5 24 4 22 4 20ZM34 10H88C93 10 95 13 95 16C95 19 93 22 88 22H34Z'/%3E%3C/svg%3E"); }
 
 /* ---- motion ------------------------------------------------------------- */
 
