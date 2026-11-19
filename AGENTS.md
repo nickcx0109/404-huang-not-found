@@ -19,7 +19,7 @@ AOOP 期末專題（第 8 組）：網頁版第一人稱三人合作殭屍射擊
 
 - **commit 用使用者自己的 git 身分**，不要用別人的名字或 email。訊息用英文 Conventional Commits（`feat(weapons): add rifle`），一個 commit 一件說得清楚的事。
 - 新功能用新類別和新檔案加進去（繼承、Strategy、註冊），不要在既有類別裡加 `switch` 或 `if` 判斷種類。
-- 沒有 `play=1` 時，畫面必須和改之前一模一樣。動到引擎或玩法共用檔案時，用 `node tools/art/shots.mjs --level ch2 --format png --out <暫存資料夾>` 在改前、改後各拍一次，確認 PNG 相同（美術項目本來就會改畫面，不用比）。
+- 沒有 `play=1` 時，畫面必須和改之前一模一樣。動到引擎或玩法共用檔案時，用 `node tools/art/shots.mjs --level ch2 --format png --out <暫存資料夾>` 在改前、改後各拍一次，再用 `node tools/art/compare.mjs <改前> <改後>` 比對，每張都要是 `same` 或 `noise`（軟體繪圖偶爾有幾個像素差一兩階，不算改變；`DIFF` 才是畫面變了）（美術項目本來就會改畫面，不用比）。
 - 純邏輯（`core/`、`entities/`、`game/`、`weapons/`、`enemies/`、`pickups/`）不依賴 DOM，每個新類別都要有 `test/` 裡的測試。
 - `docs/story/` 是故事設定，不要改。
 - 不要做清單項目以外的事；看到別的問題就加進 TODO.md。
