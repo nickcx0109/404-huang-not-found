@@ -40,6 +40,7 @@ import { Economy } from '../economy/Economy.js';
 import { AmmoRefillItem } from '../economy/AmmoRefillItem.js';
 import { SurvivalHud } from '../ui/hud/SurvivalHud.js';
 import { FirstPersonWeapon } from '../weapons/FirstPersonWeapon.js';
+import { installAudio } from '../audio/installAudio.js';
 
 export function installGameplay(app) {
   const ctx = new GameContext({ scene: app.scene, collision: app.built.collision,
@@ -98,7 +99,8 @@ export function installGameplay(app) {
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, ammo.id, recoil);
   app.effectViews = EffectViews.standard(ctx.scene, ctx, ctx.events);
   app.crateViews = new AmmoCrateViews(ctx.scene, crates, () => ctx.time);
-  app.gameViews = [app.effectViews, app.crateViews, new MovementLock(app.player, app.game, player.id)];
+  app.audio = installAudio({ events: ctx.events, player: app.player, enemies: () => ctx.enemies, playerId: player.id });
+  app.gameViews = [app.effectViews, app.crateViews, new MovementLock(app.player, app.game, player.id), app.audio];
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
   app.hud.updateGame(0, app.game, true);
   // The weapon in the player's hands, drawn over the scene once its models are ready.
@@ -122,6 +124,7 @@ export function installGameplay(app) {
     pickupViews.dispose();
     app.effectViews.dispose();
     app.crateViews.dispose();
+    app.audio.dispose();
     app.combat.dispose();
     app.game.dispose();
     app.hud.dispose();

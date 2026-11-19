@@ -137,6 +137,7 @@ classDiagram
 | Factory／Registry | EnemyFactory 依字串類型建構已註冊子類；不靠大量 if/else 或匯入各種具體敵人。`WeaponCatalog`（含 pool）、`EffectViews.register`、`RecoilKick.register` 也是註冊表 |
 | Template Method（投擲物） | `ThrownObject.update` 固定「重力 → 撞牆 → 落地 → afterMove」，`ThrownGrenade`、`ThrownMolotov` 只覆寫 `onWall`、`onGround`、`afterMove` |
 | 多型 hook | `Weapon.secondary`、`holster`、`progress`、`depleted`、`canAbsorb`、`absorb`、`refuses` 預設什麼都不做，`CarriedItem`、`Bandage` 覆寫；`LoadoutHolder`、Session、HUD 只呼叫介面，不判斷種類 |
+| Observer＋Strategy（音效） | `SoundRule` 子類（`WeaponSounds`、`HitSounds`、`PlayerSounds`、`PickupSounds`、`ZombieSounds`、`WorldSounds`）訂閱事件、叫 `SoundBoard.play`；聲音本身是 `Sound` 子類（`SampleSound` 音檔、`SynthSound` 程式合成），武器和殭屍完全不知道有音效 |
 
 ## 事件清單
 
@@ -221,6 +222,15 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 
 - 跳躍：空白鍵，`PlayerController` 裡組合一個 `JumpMotion`（起跳 4.6 m/s、重力 13，約 0.8 m 高、0.7 秒）。只抬高眼睛，碰撞還是照地面算，所以跳不過矮牆和沙包。
 - 後座力：`RecoilKick` 聽自己的 `WEAPON_FIRED`，依武器 id 查表把視角往上（和隨機往旁邊）踢，60% 在約 0.25 秒內回來，連射會一路往上飄。數值在 `installGameplay`：手槍 1.6°、步槍 0.9°、衝鋒槍 0.6°、霰彈槍 4.5°、左輪 4°。沒登記的（球棒、投擲物）不踢。
+
+## 音效（G10）
+
+- 只有 `play=1` 才裝：`installGameplay` 呼叫 `audio/installAudio.js`，它回傳的物件放進 `gameViews` 每幀 `update`。瀏覽器規定要先點一下或按鍵才會出聲，`WebAudioOutput.unlock()` 在第一次 `pointerdown`／`keydown` 才建立 AudioContext。
+- 分兩層：`SoundBoard`（純邏輯，有測試）決定播什麼、多大聲、左右聲道；`WebAudioOutput`（瀏覽器）決定聽起來怎樣。`SoundBoard` 用 `SpatialMix` 把世界座標換成左右 pan 和距離音量（30 m 外聽不到），`cooldown` 防止同一個音效疊太多次，`hold`／`loop` 管電鋸這種持續的聲音。
+- 規則都是 `SoundRule` 子類，只聽事件：`WeaponSounds`（自己的 `WEAPON_FIRED`、`WEAPON_CHANGED`、`WEAPON_RELOADED`，用 `register(武器 id, { fire, hit, held, working })` 查表）、`HitSounds`（自己子彈的命中、爆頭、擊殺）、`PlayerSounds`（受傷、治療、丟東西）、`PickupSounds`（`register(武器 id, 音效)`：槍是金屬卡榫聲、刀和電鋸是拿起重物的聲音，沒登記的補給品是塞進包包的沙沙聲；彈藥箱是壓子彈的喀喀聲。不用叮咚提示音）、`ZombieSounds`（`register(敵人類別, { spawn, groan, death })`，沒登記的用 `Enemy` 的；隨機一隻每 1.5～3.5 秒叫一聲）、`WorldSounds`（爆炸、波次開始、清完、結束）。
+- 音檔在 `web/assets/sfx/`：刀、電鋸、爆炸、殭屍從舊專案複製（CC0）；五把槍的槍聲（`gun/`）來自 gunsoundeffect.com。來源都在 `CREDITS.md`。`manifest.json` 是「音效名稱 → 檔名（陣列就隨機挑）」。沒有音檔的（換彈、受傷等）用 `SynthSounds.js` 的合成配方，音檔載入前或載入失敗也會先用合成的。
+- 新增武器的聲音：`installAudio` 裡 `WeaponSounds` 加一行 `register`；有音檔就放進 `sfx/`、寫進 `manifest.json`，沒有就在 `SynthSounds.js` 加一個配方。
+- 還沒有：開始換彈的聲音（沒有這個事件，見 B13，現在只有換完的「喀」）；隊友的聲音（等 G8）。
 
 ## 新增武器
 

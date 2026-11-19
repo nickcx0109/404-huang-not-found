@@ -57,7 +57,7 @@
   - 內容：放第 7 格，最多 1 個。用了 10 秒內換彈時間減半、移動速度 ×1.3。（地上撿，放在 `type: "healing"` 點，有自己的治療物清單，和武器、投擲物分開抽）
 - [ ] **G22 殭屍數量變多、變快、傷害降低**（所有章節）
   - 內容：每波數量 ×1.5、速度 ×1.25、傷害 ×0.6（先用這個值試玩再調）。會改 G3 的波次表和各種殭屍數值，開工前先和 @nickcx0109 講好。
-- [ ] **G10 音效**
+- [x] **G10 音效**（@big0527，分支 feat/sound；槍聲來自 gunsoundeffect.com，見 `web/assets/sfx/CREDITS.md`）
   - 起點：`reference/old-web-prototype/prototype-web/sfx/`、`core/audio.js`。
   - 內容：開槍、換彈、殭屍、受傷、波次開始的音效，用訂閱事件的方式播放，不寫進武器或敵人的邏輯裡。
 
@@ -88,6 +88,7 @@
 - [ ] **B12** `Emitters` 沒有公開的方法讓章節道具登記每幀動畫；`Ch1Props.js` 的營火閃爍暫時直接用內部的 `_animations` 陣列（欄位改名的話火只是不閃，不會壞）
 - [ ] **G11** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、金錢會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
 - [ ] **B13** `WEAPON_FIRED`、`WEAPON_RELOADED`、`WEAPON_CHANGED` 的 payload 沒有子彈數，也沒有「開始換彈」的事件；補彈（`refill`）也不發事件。HUD 現在靠 `ui/hud/PlayerStatus.js` 每幀從 Session 抄數字。做連線（G8）時要嘛在事件裡帶上數字，要嘛讓快照填 `PlayerStatus`。
+- [ ] **B14** 暫停（滑鼠解鎖）時 `gameViews` 不更新，`SoundBoard` 的時間也停住：拿著電鋸暫停會一直響待機聲，暫停前正在鋸就一直響鋸的聲音，回到遊戲才停。可以在解鎖時暫停 AudioContext，或讓 `installAudio` 自己聽 `pointerlockchange`。
 
 ## 其他
 
