@@ -96,6 +96,8 @@ export class WeaponView {
     this.machine = new StateMachine(this);
     this.machine.change(this.states.idle);
     this._sway = { x: 0, y: 0, bob: 0, phase: 0, sprint: 0 };
+    /** Seconds the weapon stays up in front of the eye after a shot, even while sprinting. */
+    this._raised = 0;
     this._progress = null;
   }
 
@@ -127,6 +129,7 @@ export class WeaponView {
    */
   fire(force = false) {
     if (!this.states.fire || (!force && !this.canFire)) return false;
+    this._raised = WeaponView.RAISED_AFTER_SHOT;
     this._play(this.states.fire);
     return true;
   }
@@ -197,6 +200,7 @@ export class WeaponView {
   /**
    * The life in a held weapon: breathing, the bob of walking, lagging behind a turn, and
    * dropping out of the way while sprinting. Added on top of whatever clip is playing.
+   * A shot brings it straight back up to the crosshair, so it never seems to fire at the floor.
    */
   addHandling(channels, dt, time, motion) {
     const s = this._sway;
@@ -221,8 +225,10 @@ export class WeaponView {
     add('gun.pos.x', Math.cos(s.phase) * 0.006 * s.bob * k);
     add('gun.pos.y', -Math.abs(Math.sin(s.phase)) * 0.007 * s.bob * k);
 
-    // sprinting: lowered and turned across the body
-    s.sprint += ((motion.sprinting ? 1 : 0) - s.sprint) * follow(7);
+    // sprinting: lowered and turned across the body, unless it has just been fired
+    this._raised = Math.max(0, this._raised - dt);
+    const shooting = this._raised > 0;
+    s.sprint += ((motion.sprinting && !shooting ? 1 : 0) - s.sprint) * follow(shooting ? 30 : 7);
     add('gun.rot.y', 0.55 * s.sprint);
     add('gun.rot.x', -0.25 * s.sprint);
     add('gun.pos.y', -0.03 * s.sprint);
@@ -239,4 +245,5 @@ export class WeaponView {
   }
 }
 
+WeaponView.RAISED_AFTER_SHOT = 0.6;
 WeaponView.STILL = Object.freeze({ yawRate: 0, pitchRate: 0, speed: 0, sprinting: false });

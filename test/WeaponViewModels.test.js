@@ -92,3 +92,21 @@ test('the chainsaw engine and the molotov flame keep moving while held', () => {
   bottle.addHandling(channels, 0.016, 0.3, still);
   assert.ok(channels['flame.rot.x'] !== 0 && 'flame.rot.x' in channels);
 });
+
+test('a gun fired while sprinting comes back up to the crosshair, then drops again', () => {
+  const sprinting = { yawRate: 0, pitchRate: 0, speed: 7, sprinting: true };
+  const view = new VIEWS.pistol(noModel(), null);
+  view.equip();
+  const lowered = () => {
+    const channels = {};
+    view.addHandling(channels, 0, 0, sprinting);
+    return channels['gun.rot.x'];
+  };
+  for (let i = 0; i < 60; i++) view.addHandling({}, 0.016, 0, sprinting);
+  assert.ok(lowered() < -0.2, 'sprinting lowers the gun');
+  view.fire(true);
+  for (let i = 0; i < 10; i++) view.addHandling({}, 0.016, 0, sprinting);
+  assert.ok(Math.abs(lowered()) < 0.02, 'a shot raises it at once');
+  for (let i = 0; i < 90; i++) view.addHandling({}, 0.016, 0, sprinting);
+  assert.ok(lowered() < -0.2, 'still sprinting a while later: lowered again');
+});
