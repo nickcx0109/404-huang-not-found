@@ -47,7 +47,7 @@ test('SurvivalHud keeps the viewer error display and draws health, ammunition an
   assert.equal(ammo.magazine.textContent, '12');
   assert.equal(ammo.reserve.textContent, '60');
   assert.equal(ammo.rounds.length, 12);
-  assert.equal(line.el.textContent, 'WAVE 2   $50   1 LEFT');
+  assert.equal(line.el.textContent, '$50   1 LEFT');
   assert.equal(doc.head.children.length, 2, 'fonts and hud.css are added with the HUD, not by index.html');
 
   hud.showError('failure', ['detail']);
@@ -144,8 +144,8 @@ test('SurvivalHud.dispose removes its nodes and stops listening', () => {
 test('StatusLine describes every game state in one line', () => {
   const base = { wave: 3, money: 125, enemies: 4, breakSeconds: 6 };
   assert.equal(StatusLine.describe({ ...base, state: 'lobby' }), 'CLICK TO START');
-  assert.equal(StatusLine.describe({ ...base, state: 'playing' }), 'WAVE 3   $125   4 LEFT');
-  assert.equal(StatusLine.describe({ ...base, state: 'wave-break' }), 'WAVE 3   $125   NEXT WAVE IN 6   E AT SHOP: AMMO $25');
+  assert.equal(StatusLine.describe({ ...base, state: 'playing' }), '$125   4 LEFT');
+  assert.equal(StatusLine.describe({ ...base, state: 'wave-break' }), '$125   NEXT WAVE IN 6   E AT SHOP: AMMO $25');
   assert.equal(StatusLine.describe({ ...base, state: 'game-over' }), 'REFRESH TO RETRY');
 });
 
@@ -243,22 +243,26 @@ test('PromptWidget shows, updates and hides a prompt sent as an event', () => {
   hud.dispose();
 });
 
-test('EventCard announces waves one after another and keeps the game-over card up', () => {
+test('EventCard announces cleared waves one after another, says nothing when a wave starts and keeps the game-over card up', () => {
   const { events, session, hud, card } = setup();
   const has = name => card.el.classList.contains(name);
   hud.updateGame(0, session);
   assert.equal(has('is-on'), false);
 
   events.emit(EVENTS.WAVE_STARTED, { wave: 3, count: 4 });
+  hud.updateGame(0, session);
+  assert.equal(has('is-on'), false, 'a starting wave is not announced');
+
+  events.emit(EVENTS.WAVE_CLEARED, { wave: 3 });
   events.emit(EVENTS.ANNOUNCED, { text: 'FUEL FULL' });
   hud.updateGame(0, session);
-  assert.equal(card.text.textContent, 'WAVE 3');
+  assert.equal(card.text.textContent, 'CLEAR');
   assert.equal(has('is-on'), true);
 
   for (let step = 0; step < 42; step++) hud.updateGame(0.05, session);
   assert.equal(has('is-on'), false);
   assert.equal(has('is-fading'), true, 'after two seconds it fades');
-  assert.equal(card.text.textContent, 'WAVE 3', 'the words stay while fading');
+  assert.equal(card.text.textContent, 'CLEAR', 'the words stay while fading');
 
   for (let step = 0; step < 20; step++) hud.updateGame(0.05, session);
   assert.equal(card.text.textContent, 'FUEL FULL', 'the next card takes its turn');

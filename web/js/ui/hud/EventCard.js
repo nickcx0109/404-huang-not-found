@@ -3,8 +3,8 @@ import { HudWidget } from './HudWidget.js';
 import { CardQueue } from './logic/CardQueue.js';
 
 /**
- * Event card, upper middle: a few words scrawled across the picture ("WAVE 3"), held for two seconds,
- * then faded out. Waves and game over are announced here; anything else can emit EVENTS.ANNOUNCED { text }.
+ * Event card, upper middle: a few words scrawled across the picture ("CLEAR"), held for two seconds,
+ * then faded out. Cleared waves and game over are announced here; anything else can emit EVENTS.ANNOUNCED { text }.
  */
 export class EventCard extends HudWidget {
   constructor(doc, { queue = new CardQueue() } = {}) {
@@ -16,7 +16,6 @@ export class EventCard extends HudWidget {
   }
 
   bind(events) {
-    this.listen(events, EVENTS.WAVE_STARTED, detail => this.queue.push('WAVE ' + detail.wave));
     this.listen(events, EVENTS.WAVE_CLEARED, () => this.queue.push('CLEAR'));
     this.listen(events, EVENTS.GAME_OVER, () => this.queue.push('YOU DIED', { sticky: true }));
     this.listen(events, EVENTS.ANNOUNCED, detail => this.queue.push(String(detail.text)));
