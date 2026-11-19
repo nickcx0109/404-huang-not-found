@@ -10,7 +10,6 @@ import { GameSession } from '../web/js/game/GameSession.js';
 import { ExampleWaveDirector } from '../web/js/game/WaveDirector.js';
 import { EnemyFactory } from '../web/js/enemies/EnemyFactory.js';
 import { Walker } from '../web/js/enemies/Walker.js';
-import { Economy } from '../web/js/economy/Economy.js';
 import { CombatPlayer } from '../web/js/player/CombatPlayer.js';
 import { StarterPistol } from '../web/js/weapons/StarterPistol.js';
 import { Bat } from '../web/js/weapons/Bat.js';
@@ -40,7 +39,7 @@ function player(events, x = 0, z = 0) {
 const markers = [
   { id: 'gun_a', type: 'weapon', item: 'rifle', x: 2, z: 0, r: 1.2 },
   { id: 'gun_b', type: 'weapon', item: 'shotgun', x: -1.5, z: 0, r: 1.2 },
-  { id: 'shop', type: 'shop', x: 9, z: 9, r: 1 },
+  { id: 'objective', type: 'objective', x: 9, z: 9, r: 1 },
 ];
 
 test('WeaponCatalog builds registered weapons and refuses duplicates and mismatched ids', () => {
@@ -148,7 +147,7 @@ function sessionFixture() {
   ctx.players.push(body);
   const pickups = PickupField.fromLevel(level, catalog());
   const session = new GameSession(ctx, { factory: new EnemyFactory(ctx).register('walker', Walker),
-    director: new ExampleWaveDirector({ type: 'walker', initialCount: 1, maxCount: 1 }), economy: new Economy(), pickups });
+    director: new ExampleWaveDirector({ type: 'walker', initialCount: 1, maxCount: 1 }), pickups });
   return { ctx, body, session };
 }
 

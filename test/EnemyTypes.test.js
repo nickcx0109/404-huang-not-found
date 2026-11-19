@@ -14,12 +14,9 @@ import { Runner } from '../web/js/enemies/Runner.js';
 import { Tank } from '../web/js/enemies/Tank.js';
 import { Exploder } from '../web/js/enemies/Exploder.js';
 import { CombatPlayer } from '../web/js/player/CombatPlayer.js';
-import { Wallet } from '../web/js/economy/Wallet.js';
-import { Economy } from '../web/js/economy/Economy.js';
 
 function addPlayer(ctx, id, x, z, y = 0) {
   const player = new CombatPlayer(id, { x, y, z }, ctx.events);
-  player.wallet = new Wallet(id, ctx.events);
   ctx.players.push(player);
   return player;
 }
@@ -34,7 +31,7 @@ function fixture(type, options = {}) {
   const factory = new EnemyFactory(ctx).register('walker', Walker).register('runner', Runner)
     .register('tank', Tank).register('exploder', Exploder);
   const director = new ExampleWaveDirector({ type, initialCount: 1, maxCount: 1 });
-  const session = new GameSession(ctx, { factory, director, economy: new Economy(), breakSeconds: 0, ...options });
+  const session = new GameSession(ctx, { factory, director, breakSeconds: 0, ...options });
   session.start();
   session.update(0.05);
   return { ctx, player, factory, session, enemy: ctx.enemies[0] };
@@ -73,7 +70,8 @@ for (const type of ['runner', 'tank', 'exploder']) {
     ctx.events.emit(EVENTS.DAMAGE_REQUESTED, new DamageInfo({
       amount: 1000, sourceId: player.id, targetId: oldId,
     }));
-    assert.equal(player.wallet.balance, enemy.reward);
+    assert.equal(session.kills, 1);
+    assert.equal(enemy.deathRecorded, true);
     assert.equal(player.damageable.health, 100);
     session.update(0.05);
     assert.equal(enemy.active, false);
@@ -87,7 +85,7 @@ for (const type of ['runner', 'tank', 'exploder']) {
     assert.equal(reused.hitVolume, hitVolume);
     assert.equal(reused.damageable.health, reused.damageable.maxHealth);
     assert.equal(reused.active, true);
-    assert.equal(reused.rewarded, false);
+    assert.equal(reused.deathRecorded, false);
     assert.equal(reused.route.length, 0);
     assert.equal(reused.routeIndex, 0);
     assert.equal(reused.nextAttackAt, ctx.time);
@@ -172,7 +170,6 @@ test('Exploder damages every exposed player in its blast, then dies once without
   assert.ok(requests.every(info => info instanceof DamageInfo && info.kind === 'explosion' && info.sourceId === enemy.id));
   assert.deepEqual(deaths, [player.id, enemy.id]);
   assert.equal(session.kills, 0);
-  assert.equal(player.wallet.balance, 0);
   enemy.update(0.05, ctx);
   enemy.attack(nearby, ctx);
   assert.equal(requests.length, 4);

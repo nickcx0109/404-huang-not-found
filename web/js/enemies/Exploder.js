@@ -5,7 +5,7 @@ import { EVENTS } from '../game/events.js';
 
 export class Exploder extends Enemy {
   constructor(dependencies) {
-    super(dependencies, { health: 50, speed: 1.8, reward: 25, brain: new ChaseBrain() });
+    super(dependencies, { health: 50, speed: 1.8, brain: new ChaseBrain() });
     this.blastRadius = 3;
     this.blastDamage = 40;
     this._blastDirection = { x: 0, y: 0, z: 0 };

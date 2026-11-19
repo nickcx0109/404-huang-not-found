@@ -11,9 +11,6 @@ import { EnemyFactory } from '../web/js/enemies/EnemyFactory.js';
 import { Walker } from '../web/js/enemies/Walker.js';
 import { CombatPlayer } from '../web/js/player/CombatPlayer.js';
 import { Pistol } from '../web/js/weapons/Pistol.js';
-import { Wallet } from '../web/js/economy/Wallet.js';
-import { Economy } from '../web/js/economy/Economy.js';
-import { AmmoRefillItem } from '../web/js/economy/AmmoRefillItem.js';
 import { EVENTS } from '../web/js/game/events.js';
 
 function fixture() {
@@ -21,18 +18,17 @@ function fixture() {
   collision.bounds = { minX: -10, maxX: 10, minZ: -10, maxZ: 10 };
   const events = new EventBus();
   const ctx = new GameContext({ collision, pathFinder: new PathFinder(collision), events, rng: () => 0.5,
-    level: { spawns: { zombies: [{ x: 5, z: 5, r: 1 }] }, markers: [{ type: 'shop', x: 0, z: 0, r: 1 }] } });
+    level: { spawns: { zombies: [{ x: 5, z: 5, r: 1 }] }, markers: [] } });
   const player = new CombatPlayer('player', { x: 0, z: 0 }, events);
-  player.wallet = new Wallet(player.id, events);
   player.weapons.add(new Pistol());
   ctx.players.push(player);
   const factory = new EnemyFactory(ctx).register('walker', Walker);
   const director = new ExampleWaveDirector({ type: 'walker', initialCount: 1, maxCount: 2 });
-  const session = new GameSession(ctx, { factory, director, economy: new Economy(), items: [new AmmoRefillItem()], breakSeconds: 0.1 });
+  const session = new GameSession(ctx, { factory, director, breakSeconds: 0.1 });
   return { ctx, player, session };
 }
 
-test('GameSession transitions Lobby -> Playing -> WaveBreak -> Playing and rewards a death once', () => {
+test('GameSession transitions Lobby -> Playing -> WaveBreak -> Playing and records a death once', () => {
   const { ctx, player, session } = fixture();
   assert.equal(session.state, 'lobby');
   session.update(0.05);
@@ -46,15 +42,12 @@ test('GameSession transitions Lobby -> Playing -> WaveBreak -> Playing and rewar
   const info = new DamageInfo({ amount: 34, targetId: enemy.id, sourceId: player.id, hitPart: 'head' });
   ctx.events.emit(EVENTS.DAMAGE_REQUESTED, info);
   ctx.events.emit(EVENTS.DAMAGE_REQUESTED, info);
-  assert.equal(player.wallet.balance, 25);
+  ctx.events.emit(EVENTS.ENTITY_DIED, { entity: enemy, info });
+  assert.equal(enemy.deathRecorded, true);
   assert.equal(session.kills, 1);
   session.update(0.05);
   assert.equal(session.state, 'wave-break');
   assert.equal(ctx.enemies.length, 0);
-  assert.equal(session.buy(player.id, 'ammo-refill'), false);
-  player.weapons.current.ammo--;
-  assert.equal(session.buy(player.id, 'ammo-refill'), true);
-  assert.equal(player.wallet.balance, 0);
   session.update(0.05);
   session.update(0.05);
   assert.equal(session.state, 'playing');
@@ -77,7 +70,6 @@ test('GameSession owns game over, rejects friendly or unknown damage and disable
     ctx.events.emit(EVENTS.DAMAGE_REQUESTED, new DamageInfo({ amount: 100, sourceId, targetId: player.id }));
   }
   assert.equal(player.damageable.health, 100);
-  assert.equal(session.buy(player.id, 'ammo-refill'), false);
   ctx.events.emit(EVENTS.DAMAGE_REQUESTED, new DamageInfo({ amount: 100, sourceId: enemy.id, targetId: player.id, kind: 'melee' }));
   session.update(0.05);
   assert.equal(session.state, 'game-over');

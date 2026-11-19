@@ -154,13 +154,13 @@ test('Healing and throwable spots draw from their own pools', () => {
     { id: 'b', type: 'healing', x: 0, z: 0, r: 1 },
     { id: 'c', type: 'throwable', x: 0, z: 0, r: 1 },
     { id: 'd', type: 'throwable', x: 0, z: 0, r: 1 },
-    { id: 'e', type: 'shop', x: 0, z: 0, r: 1 },
+    { id: 'e', type: 'objective', x: 0, z: 0, r: 1 },
   ] };
   const rolls = [0.9, 0.9, 0.1, 0.9];
   const field = PickupField.fromLevel(level, catalog, () => rolls.shift());
   assert.deepEqual(field.pickups.map(pickup => pickup.weapon.id), ['rifle', 'bandage', 'grenade', 'molotov']);
   assert.equal(catalog.hasPool('healing'), true);
-  assert.equal(catalog.hasPool('shop'), false);
+  assert.equal(catalog.hasPool('objective'), false);
   assert.throws(() => catalog.randomId(() => 0, 'booster'), /pool booster/);
 });
 
