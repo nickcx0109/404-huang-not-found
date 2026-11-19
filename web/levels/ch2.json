@@ -154,7 +154,12 @@
     { "id": "heal_04", "type": "healing", "x": 18.3, "z": 16.3, "r": 1.2 },
     { "id": "throw_04", "type": "throwable", "x": -18.7, "z": 16.3, "r": 1.2 },
     { "id": "gun_07", "type": "weapon", "x": 5.3, "z": -13.2, "r": 1.2 },
-    { "id": "gun_08", "type": "weapon", "x": -6.7, "z": -13.7, "r": 1.2 }
+    { "id": "gun_08", "type": "weapon", "x": -6.7, "z": -13.7, "r": 1.2 },
+    { "id": "melee_01", "type": "melee", "x": 12.3, "z": -24.2, "r": 1.2 },
+    { "id": "ammo_01", "type": "ammo", "x": -6.7, "z": -36.2, "r": 1.2 },
+    { "id": "melee_02", "type": "melee", "x": -11.7, "z": -26.2, "r": 1.2 },
+    { "id": "ammo_02", "type": "ammo", "x": -15.7, "z": -3.7, "r": 1.2 },
+    { "id": "ammo_03", "type": "ammo", "x": 17.8, "z": -4.2, "r": 1.2 }
   ],
 
   "bookmarks": [
