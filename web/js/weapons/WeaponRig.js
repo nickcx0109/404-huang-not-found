@@ -24,7 +24,7 @@ export class WeaponRig {
   /**
    * @param {object} config  the "viewmodel" block of weapons.json
    * @param {object} levelStyle  resolved palette style of the level
-   * @param {EventBus} events  receives and carries 'weapon:anim'
+   * @param {EventBus} events  receives and carries 'weapon:anim'; sends 'weapon:muzzle-flash' { weapon }
    * @param {ViewModelRegistry} registry  weapon id -> view class and model factory
    * @param {object} modelContext  handed to every model factory (modelsUrl, surface, colors)
    */
@@ -230,6 +230,8 @@ export class WeaponRig {
   _startFlash() {
     if (!this._muzzle) return;
     this._flashTime = 0;
+    // MuzzleLight lights the level with it
+    this.events.emit('weapon:muzzle-flash', { weapon: this.view.id });
     this._showFlash(true, Math.random());
   }
 

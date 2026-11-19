@@ -2,6 +2,7 @@ import { WeaponRig } from './WeaponRig.js';
 import { HeldWeaponDriver } from './views/HeldWeaponDriver.js';
 import { standardViewModels } from './views/standardViewModels.js';
 import { STANDARD_MODELS } from './models/standardModels.js';
+import { MuzzleLight } from '../MuzzleLight.js';
 
 const STYLE_URL = '../art/style/chapters/weapons.json';
 const MODELS_URL = 'assets/models/';
@@ -11,11 +12,12 @@ const MODELS_URL = 'assets/models/';
  * scene and resize. Only made with ?play=1 (installGameplay), so the walking mode and the scene
  * screenshots look exactly as before.
  *
- * WeaponRig draws; HeldWeaponDriver turns the game's weapon events into its animations.
+ * WeaponRig draws; MuzzleLight lights the level when a gun fires; HeldWeaponDriver turns the game's weapon events into its animations.
  */
 export class FirstPersonWeapon {
-  constructor(rig, driver, { player, flashlight, clock }) {
+  constructor(rig, driver, { player, flashlight, clock, muzzleLight = null }) {
     this.rig = rig;
+    this.muzzleLight = muzzleLight;
     this.driver = driver;
     this.player = player;
     this.flashlight = flashlight;
@@ -39,7 +41,9 @@ export class FirstPersonWeapon {
     });
     rig.resize(app.camera.aspect);
     const driver = new HeldWeaponDriver(ctx.events, player.id, player.weapons, rig);
-    return new FirstPersonWeapon(rig, driver, { player: app.player, flashlight: app.flashlight, clock: () => ctx.time });
+    const world = rig.config.muzzleFlash.world;
+    const muzzleLight = world ? new MuzzleLight(app.camera, ctx.events, world) : null;
+    return new FirstPersonWeapon(rig, driver, { player: app.player, flashlight: app.flashlight, clock: () => ctx.time, muzzleLight });
   }
 
   /** @param {number} dt seconds  @param {number} time seconds on the animation clock */
@@ -47,6 +51,7 @@ export class FirstPersonWeapon {
     if (this.frozen) return;
     this.driver.update(this.clock());
     this.rig.update(dt, time, this.player, this.flashlight.on);
+    this.muzzleLight?.update(dt);
   }
 
   render(renderer) {
@@ -83,5 +88,6 @@ export class FirstPersonWeapon {
   dispose() {
     this.driver.dispose();
     this.rig.dispose();
+    this.muzzleLight?.dispose();
   }
 }
