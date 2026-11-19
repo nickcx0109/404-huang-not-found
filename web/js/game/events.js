@@ -18,6 +18,7 @@ export const EVENTS = Object.freeze({
   WEAPON_RELOADED: 'weapon.reloaded',
   WEAPON_CHANGED: 'weapon.changed',
   WEAPON_PICKED_UP: 'weapon.picked-up',
+  AMMO_REFILLED: 'ammo.refilled',
   WALLET_CHANGED: 'wallet.changed',
   ITEM_PURCHASED: 'shop.purchased',
   STATE_CHANGED: 'game.state-changed',
