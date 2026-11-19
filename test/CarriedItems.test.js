@@ -179,3 +179,14 @@ test('Standing at an item you carry a full stack of says FULL instead of nothing
   assert.equal(field.take(me, ctx), true);
   assert.equal(me.weapons.inSlot('healing').count, 2);
 });
+
+test('An entry can be in several pools, e.g. melee weapons at weapon spots and at melee spots', async () => {
+  const { Katana } = await import('../web/js/weapons/Katana.js');
+  const catalog = new WeaponCatalog()
+    .register('rifle', { create: () => new Rifle() })
+    .register('katana', { create: () => new Katana(), pool: ['weapon', 'melee'] });
+  assert.equal(catalog.randomId(() => 0.9, 'weapon'), 'katana');
+  assert.equal(catalog.randomId(() => 0, 'melee'), 'katana');
+  assert.equal(catalog.hasPool('melee'), true);
+  assert.throws(() => catalog.register('x', { create: () => new Rifle(), pool: [] }), /pool/);
+});

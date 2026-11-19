@@ -12,13 +12,18 @@ export class WeaponCatalog {
    * @param {string} id   marker `item` name and weapon id, e.g. 'rifle'
    * @param {{create: () => import('../weapons/Weapon.js').Weapon, name?: string,
    *          look?: {length: number, height: number, width: number}, pool?: string}} entry
-   *   pool: the level marker type whose spots draw this item at random ('weapon', 'healing', 'throwable')
+   *   pool: the level marker type whose spots draw this item at random ('weapon', 'healing', 'throwable'),
+   *         or a list of them, e.g. ['weapon', 'melee'] for a katana that may lie at any weapon spot
+   *         and also at the spots kept for melee weapons
    */
   register(id, { create, name = id.toUpperCase(), look = { length: 0.8, height: 0.12, width: 0.2 }, pool = 'weapon' }) {
     if (typeof id !== 'string' || id === '' || this.entries.has(id)) throw new TypeError('Invalid or duplicate weapon id: ' + id);
     if (typeof create !== 'function') throw new TypeError('Weapon entry needs create()');
-    if (typeof pool !== 'string' || pool === '') throw new TypeError('Weapon entry needs a pool name');
-    this.entries.set(id, Object.freeze({ id, create, name, pool, look: Object.freeze({ ...look }) }));
+    const pools = Object.freeze(Array.isArray(pool) ? [...pool] : [pool]);
+    if (pools.length === 0 || pools.some(name => typeof name !== 'string' || name === '')) {
+      throw new TypeError('Weapon entry needs a pool name');
+    }
+    this.entries.set(id, Object.freeze({ id, create, name, pools, look: Object.freeze({ ...look }) }));
     return this;
   }
 
@@ -40,13 +45,13 @@ export class WeaponCatalog {
 
   /** Whether some entry draws from `pool`, i.e. markers of that type hand out items from this catalog. */
   hasPool(pool) {
-    for (const entry of this.entries.values()) if (entry.pool === pool) return true;
+    for (const entry of this.entries.values()) if (entry.pools.includes(pool)) return true;
     return false;
   }
 
   /** One id from `pool` picked with `rng` (a function returning 0 <= x < 1), each equally likely. */
   randomId(rng, pool = 'weapon') {
-    const ids = [...this.entries.values()].filter(entry => entry.pool === pool).map(entry => entry.id);
+    const ids = [...this.entries.values()].filter(entry => entry.pools.includes(pool)).map(entry => entry.id);
     if (ids.length === 0) throw new RangeError('No weapons registered in pool ' + pool);
     const roll = rng();
     if (!(roll >= 0 && roll < 1)) throw new RangeError('rng must return a number in [0, 1)');
