@@ -190,7 +190,7 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 - 玩家用 `LoadoutHolder`（`WeaponHolder` 子類），固定七格，順序也是數字鍵：1 `primary`（槍）、2 `sidearm`（手槍）、3 `melee`（球棒）、4 `special`（撿到的近戰）、5 `throwable`、6 `healing`、7 `booster`。`cycle(step)` 是滾輪：往前或往後跳到下一個有東西的格子，會繞回來；`CYCLE_REQUESTED` 由 Session 檢查後呼叫。右側的 `InventoryWidget` 從 `PlayerStatus.slots`／`selected` 畫每一格，圖示是 `hud.css` 裡依物品 id 的 mask，沒有 mask 的物品就印名字。武器用 `slot` getter 說自己放哪一格，`Weapon` 預設是 `primary`，所以 `Rifle`、`Shotgun` 不用改。
 - 開局只有 `StarterPistol`（繼承 `Pistol`，備彈 `Infinity`，彈匣打完還是要換彈）和 `Bat`，手上拿手槍。這兩格永遠不會丟。
 - `MeleeWeapon` 是近戰基底：`usesAmmo` 為 false，`fire` 不扣子彈、`reload` 不做事，冷卻照舊。`Bat`：傷害 45、距離 2.2 m（算到敵人身體邊緣）、前方 90 度、冷卻 0.6 秒。命中用 `MeleeSwing` Strategy：最近、在前方扇形內、沒被牆擋的活敵人，送 `kind: 'melee'` 的 `DAMAGE_REQUESTED`，打的是身體，不算爆頭。
-- 地上的槍是關卡 `type: "weapon"` marker，`item` 對到 `WeaponCatalog` 註冊的名字（`installGameplay` 註冊 `rifle`、`shotgun`）。`PickupField.fromLevel` 每個 marker 建一個 `WeaponPickup`，裡面放的是真的 Weapon 物件。
+- 地上的槍是關卡 `type: "weapon"` marker。位置固定；`item` 寫了就放那一把，**不寫就每局用 `ctx.rng` 從 `WeaponCatalog` 隨機抽一把**（`installGameplay` 註冊 `rifle`、`shotgun`、`smg`、`revolver`，機率相同）。`PickupField.fromLevel` 每個 marker 建一個 `WeaponPickup`，裡面放的是真的 Weapon 物件。
 - E 送 `PICKUP_REQUESTED`；Session 在玩家能移動時（Playing、WaveBreak）呼叫 `PickupField.take`：撿最近、搆得到的那把，用 `LoadoutHolder.equip` 放進主武器格並拿在手上，原本那把留在同一個位置，子彈數不變。撿到同款的槍也是交換，**不會補子彈**。成功發 `WEAPON_PICKED_UP`。
 - 畫面：`WeaponPickupViews` 為每個 pickup 畫一個躺在地上、大小照槍的方塊，外面加一圈會脈動的亮色邊框（inverted hull：稍大的方塊只畫背面，不吃霧），不加燈。HUD 的提示從 `PlayerStatus.pickup` 來（`E  PICK UP RIFLE` 或 `E  SWAP FOR RIFLE`）；撿到時不跳字卡。拿球棒時 `PlayerStatus.armed` 為 false，彈藥欄不顯示。
 - E 目前同時送 `PURCHASE_REQUESTED`，站的位置不對的那個會被 Session 拒絕。
@@ -203,6 +203,12 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 4. 命中時只發 DAMAGE_REQUESTED，不直接讀 Walker 類別、加錢或扣血。視覺／音效用 onFired 或訂閱 WEAPON_FIRED，別把 Three.js 引進純邏輯基底。
 5. 在共用組合入口 `game/installGameplay.js` 匯入新類別，呼叫 `player.weapons.add(new 你的類別())`。WeaponHolder 已支援數字鍵切換，不需改 Enemy 或 Economy。
 6. 自己補假時鐘測試（射速、空彈、換彈、切槍），用 Conventional Commit 提交，一把武器一組 commit。
+
+### G23 衝鋒槍和左輪
+
+- `SubmachineGun`（id `smg`）：傷害 13、40 發彈匣／240 備彈、0.06 秒冷卻（約每分鐘 1000 發）、1.6 秒換彈、散布 0.02、射程 45 m，按住連射。
+- `Revolver`：傷害 90（打身體一發倒 walker）、6 發／36 備彈、0.75 秒冷卻、2.4 秒換彈、射程 70 m，一次點一發。
+- 兩把都放主武器格，只能在地上撿到。
 
 ### G1 武器與散布
 
