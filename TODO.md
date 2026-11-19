@@ -46,6 +46,7 @@
     - 改用玩法骨架的事件。現在用自己的 `weapon:fire`、`weapon:reload`，還自己綁滑鼠和 R 鍵；要改成訂閱 `game/events.js` 的 `WEAPON_FIRED`、`WEAPON_RELOADED`、`WEAPON_CHANGED`。
     - 走動模式現在預設會拿槍，畫面會變。要決定是只在 `play=1` 顯示，還是接受走動模式的截圖改變。
     - 測試，以及 G1 的步槍和霰彈槍模型。
+    - 武士刀模型（G24 只做了刀光）：參考舊原型 `reference/old-web-prototype/prototype-web/gfx/weapons.js` 的 `katana()`，鮫皮柄加柄卷的菱形窗、黃銅鐔、彎的刀身分鎬地／平地／刃三段，刃口一條淡藍發光線。揮刀動畫的掃過時間對齊刀光（`ui/hud/logic/SlashStyles.js` 的 `sweepSeconds`，0.08 秒），方向也要一致：刀光每一刀左右交替（`SlashTrail.side`）。
 - [ ] **G15 隊友狀態列**（等 G14）
   - 內容：從 `ui/hud/TeamWidget.js` 改：左下排隊友的頭像、名字、血條，身上有治療物就顯示小圖示；右下是自己的血量，低血量變紅。
 - [ ] **G16b 繃帶的隊友圖示**（等 G15）
@@ -111,3 +112,4 @@
 - G23 衝鋒槍、左輪，地上的槍位置固定、內容隨機（PR #20）
 - G16 G20 繃帶、手榴彈、燃燒瓶，地上的治療物和投擲物點；跳躍、槍的後座力（分支 feat/more-guns，還沒開 PR）
 - G18 G19 G13 武士刀、鏈鋸（每個場景 2 個近戰點）、彈藥箱（每個場景 3 個）；投擲物會傷到自己和隊友（分支 feat/more-guns）
+- G24 武士刀刀光：揮刀時畫面有一道弧形刀光，打到更亮更粗；`SlashStyles` 註冊表讓之後的近戰也能用（分支 feat/katana-slash）
