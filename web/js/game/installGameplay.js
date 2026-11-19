@@ -17,6 +17,8 @@ import { StarterPistol } from '../weapons/StarterPistol.js';
 import { Bat } from '../weapons/Bat.js';
 import { Rifle } from '../weapons/Rifle.js';
 import { Shotgun } from '../weapons/Shotgun.js';
+import { SubmachineGun } from '../weapons/SubmachineGun.js';
+import { Revolver } from '../weapons/Revolver.js';
 import { LoadoutHolder } from '../weapons/LoadoutHolder.js';
 import { WeaponCatalog } from '../pickups/WeaponCatalog.js';
 import { PickupField } from '../pickups/PickupField.js';
@@ -37,8 +39,11 @@ export function installGameplay(app) {
   ctx.players.push(player);
   const catalog = new WeaponCatalog()
     .register('rifle', { create: () => new Rifle(), name: 'RIFLE', look: { length: 0.95, height: 0.14, width: 0.12 } })
-    .register('shotgun', { create: () => new Shotgun(), name: 'SHOTGUN', look: { length: 0.85, height: 0.12, width: 0.14 } });
-  const pickups = PickupField.fromLevel(app.level, catalog);
+    .register('shotgun', { create: () => new Shotgun(), name: 'SHOTGUN', look: { length: 0.85, height: 0.12, width: 0.14 } })
+    .register('smg', { create: () => new SubmachineGun(), name: 'SMG', look: { length: 0.55, height: 0.16, width: 0.1 } })
+    .register('revolver', { create: () => new Revolver(), name: 'REVOLVER', look: { length: 0.34, height: 0.14, width: 0.07 } });
+  // Weapon markers without an item get a random gun each game.
+  const pickups = PickupField.fromLevel(app.level, catalog, ctx.rng);
   const pickupViews = new WeaponPickupViews(ctx.scene, pickups, ctx.events);
   const factory = new EnemyFactory(ctx, type => {
     const geometry = new THREE.BoxGeometry(ctx.pathFinder.radius * 2, ctx.pathFinder.height, ctx.pathFinder.radius * 2);

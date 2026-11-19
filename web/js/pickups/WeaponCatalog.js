@@ -36,6 +36,15 @@ export class WeaponCatalog {
     return weapon;
   }
 
+  /** One registered id picked with `rng` (a function returning 0 <= x < 1), each equally likely. */
+  randomId(rng) {
+    if (this.entries.size === 0) throw new RangeError('No weapons registered');
+    const ids = [...this.entries.keys()];
+    const roll = rng();
+    if (!(roll >= 0 && roll < 1)) throw new RangeError('rng must return a number in [0, 1)');
+    return ids[Math.floor(roll * ids.length)];
+  }
+
   /** Screen name for a weapon id; ids that are not registered (e.g. the pistol) fall back to upper case. */
   nameOf(id) {
     return this.entries.get(id)?.name ?? String(id).toUpperCase();
