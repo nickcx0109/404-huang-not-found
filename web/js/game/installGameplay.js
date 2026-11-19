@@ -4,6 +4,7 @@ import { GameSession } from './GameSession.js';
 import { TimedWaveDirector } from './TimedWaveDirector.js';
 import { CrowdSeparation } from './CrowdSeparation.js';
 import { SURVIVAL_WAVES } from './waves/survival.js';
+import { Difficulty } from './Difficulty.js';
 import { EVENTS } from './events.js';
 import { PathFinder } from '../PathFinder.js';
 import { EnemyFactory } from '../enemies/EnemyFactory.js';
@@ -73,6 +74,8 @@ export function installGameplay(app) {
   const pickups = PickupField.fromLevel(app.level, catalog, ctx.rng, pool => deck.next(pool));
   const pickupViews = new WeaponPickupViews(ctx.scene, pickups, ctx.events);
   const crates = AmmoCrateField.fromLevel(app.level);
+  // G22: ten times the zombies, twice as fast (same damage). Tune here.
+  const difficulty = new Difficulty({ count: 10, speed: 2 });
   const factory = new EnemyFactory(ctx, type => {
     const geometry = new THREE.BoxGeometry(ctx.pathFinder.radius * 2, ctx.pathFinder.height, ctx.pathFinder.radius * 2);
     const material = new THREE.MeshStandardMaterial({ color: app.style.greybox.dummy,
@@ -82,12 +85,12 @@ export function installGameplay(app) {
     view.visible = false;
     ctx.scene.add(view);
     return view;
-  }).register('walker', Walker)
+  }, { prepare: enemy => difficulty.tune(enemy) }).register('walker', Walker)
     .register('runner', Runner)
     .register('tank', Tank)
     .register('exploder', Exploder);
   const ammo = new AmmoRefillItem();
-  app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(SURVIVAL_WAVES), economy: new Economy(),
+  app.game = new GameSession(ctx, { factory, director: new TimedWaveDirector(difficulty.waves(SURVIVAL_WAVES)), economy: new Economy(),
     items: [ammo], separation: new CrowdSeparation(), pickups: new InteractionList([pickups, crates]) });
   // Degrees of upward kick per shot and the most it swings sideways.
   const recoil = new RecoilKick(ctx.events, player.id, { rng: ctx.rng })

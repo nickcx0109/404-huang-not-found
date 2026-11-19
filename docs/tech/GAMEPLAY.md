@@ -232,6 +232,14 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 - 新增武器的聲音：`installAudio` 裡 `WeaponSounds` 加一行 `register`；有音檔就放進 `sfx/`、寫進 `manifest.json`，沒有就在 `SynthSounds.js` 加一個配方。
 - 還沒有：開始換彈的聲音（沒有這個事件，見 B13，現在只有換完的「喀」）；隊友的聲音（等 G8）。
 
+## G22 難度倍數
+
+`game/Difficulty.js` 把整個遊戲一起調難或調簡單，不動波次表（`waves/survival.js`）和各種殭屍類別：
+
+- `waves(data)`：回傳放大後的波次資料副本。每種數量和 overflow 都乘 `count`，同時活著的上限也乘（但不超過 `maxAliveCap`，預設 40），生怪間隔除以 `count`（最短 0.05 秒），休息時間不變。
+- `tune(enemy)`：速度乘 `speed`，近戰和自爆傷害乘 `damage`。由 `EnemyFactory` 的 `prepare` 在每隻殭屍第一次建出來時呼叫一次；物件池重複使用同一隻，所以不會越用越快。
+- 現在的值在 `installGameplay`：`new Difficulty({ count: 10, speed: 2 })`，傷害不變。第一波 40 隻、同時最多 30 隻，走路殭屍 3.2 m/s（比玩家走路 4.5 m/s 慢）、跑者 6.8 m/s（比玩家衝刺 7 m/s 慢一點）。
+
 ## 新增武器
 
 1. 從 `weapons/Weapon.js`、`weapons/Pistol.js`、`test/Weapon.test.js` 開始，新增自己的檔案與具名 export，不更動 Pistol 範例來冒充新武器。

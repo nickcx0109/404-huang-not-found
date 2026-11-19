@@ -2,9 +2,14 @@ import { ObjectPool } from '../core/ObjectPool.js';
 import { Enemy } from './Enemy.js';
 
 export class EnemyFactory {
-  constructor(ctx, createView = () => null) {
+  /**
+   * @param {(enemy: Enemy) => void} [prepare]  runs once on each newly built enemy, before it enters the
+   *   pool (e.g. Difficulty.tune). Pooled enemies keep what it set across spawns.
+   */
+  constructor(ctx, createView = () => null, { prepare = null } = {}) {
     this.ctx = ctx;
     this.createView = createView;
+    this.prepare = prepare;
     this.registry = new Map();
     this.active = new Map();
     this.created = new Set();
@@ -16,6 +21,7 @@ export class EnemyFactory {
     if (!(EnemyType?.prototype instanceof Enemy)) throw new TypeError('Register an Enemy subclass');
     const pool = new ObjectPool(() => {
       const enemy = new EnemyType({ events: this.ctx.events, pathFinder: this.ctx.pathFinder, view: this.createView(type) });
+      this.prepare?.(enemy);
       this.created.add(enemy);
       return enemy;
     }, enemy => enemy.deactivate());

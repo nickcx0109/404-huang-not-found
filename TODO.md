@@ -55,8 +55,9 @@
   - 內容：地上撿，放主武器格。傷害 150、射程 120 m、彈匣 5、備彈 25、每發間隔 1.2 秒。（在 `installGameplay` 的武器清單 `WeaponCatalog` 註冊，自動進 `type: "weapon"` 點的隨機名單）
 - [ ] **G21 腎上腺素**（等 G14）
   - 內容：放第 7 格，最多 1 個。用了 10 秒內換彈時間減半、移動速度 ×1.3。（地上撿，放在 `type: "healing"` 點，有自己的治療物清單，和武器、投擲物分開抽）
-- [~] **G22 殭屍數量變多、變快、傷害降低**（所有章節）（進行中：@big0527，分支 feat/zombie-horde）
+- [x] **G22 殭屍數量變多、變快、傷害降低**（所有章節）（@big0527，分支 feat/zombie-horde）
   - 內容：每波數量 ×1.5、速度 ×1.25、傷害 ×0.6（先用這個值試玩再調）。會改 G3 的波次表和各種殭屍數值，開工前先和 @nickcx0109 講好。
+  - 結果：使用者改成數量 ×10、速度 ×2、傷害不變。原本的波次表和殭屍類別沒動，倍數都在 `installGameplay` 的 `new Difficulty({ count: 10, speed: 2 })`，要調只改這一行。同時活著最多 40 隻（PERFORMANCE_PLAN 的上限）。
 - [x] **G10 音效**（@big0527，分支 feat/sound；槍聲來自 gunsoundeffect.com，見 `web/assets/sfx/CREDITS.md`）
   - 起點：`reference/old-web-prototype/prototype-web/sfx/`、`core/audio.js`。
   - 內容：開槍、換彈、殭屍、受傷、波次開始的音效，用訂閱事件的方式播放，不寫進武器或敵人的邏輯裡。
