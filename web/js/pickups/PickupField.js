@@ -70,12 +70,14 @@ export class PickupField {
    * When nothing can be taken but the player stands at an item they already carry a full stack of,
    * the offer says so (`full`), so the prompt can tell why E does nothing.
    */
-  offerFor(player, out = { name: '', swap: false, full: false }) {
+  offerFor(player, out = {}) {
     const pickup = this.nearestFor(player) ?? this._nearestFull(player);
     if (!pickup) return null;
     out.name = this.catalog.nameOf(pickup.weapon.id);
     out.full = player.weapons.isFull?.(pickup.weapon) ?? false;
     out.swap = !out.full && (player.weapons.wouldSwap?.(pickup.weapon) ?? false);
+    out.verb = out.swap ? 'SWAP FOR' : 'PICK UP';
+    out.note = out.full ? 'FULL' : null;
     return out;
   }
 

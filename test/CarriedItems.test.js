@@ -172,10 +172,10 @@ test('Standing at an item you carry a full stack of says FULL instead of nothing
   const field = PickupField.fromLevel({ markers: [{ id: 'h', type: 'healing', x: 0.5, z: 0, r: 1.2 }] }, catalog);
   assert.equal(field.nearestFor(me), null, 'cannot take it');
   assert.equal(me.weapons.isFull(field.pickups[0].weapon), true);
-  assert.deepEqual({ ...field.offerFor(me) }, { name: 'BANDAGE', swap: false, full: true });
+  assert.deepEqual({ ...field.offerFor(me) }, { name: 'BANDAGE', swap: false, full: true, verb: 'PICK UP', note: 'FULL' });
   assert.equal(field.take(me, ctx), false);
   me.weapons.inSlot('healing').count = 1;
-  assert.deepEqual({ ...field.offerFor(me) }, { name: 'BANDAGE', swap: false, full: false });
+  assert.deepEqual({ ...field.offerFor(me) }, { name: 'BANDAGE', swap: false, full: false, verb: 'PICK UP', note: null });
   assert.equal(field.take(me, ctx), true);
   assert.equal(me.weapons.inSlot('healing').count, 2);
 });

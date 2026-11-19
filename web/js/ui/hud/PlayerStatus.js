@@ -1,5 +1,5 @@
 /** Scratch record for the pickup offer; its two values are copied out at once, so one is enough. */
-const OFFER = { name: '', swap: false, full: false };
+const OFFER = { name: '', swap: false, full: false, verb: '', note: null };
 
 /**
  * The plain numbers the HUD draws for one player.
@@ -20,6 +20,9 @@ export class PlayerStatus {
     this.pickupSwap = false;
     /** True when the item on the ground is one the player already carries as many of as they can. */
     this.pickupFull = false;
+    /** What E does there ('PICK UP', 'SWAP FOR', 'REFILL') and why it cannot ('FULL', 'READY IN 42s') or null. */
+    this.pickupVerb = null;
+    this.pickupNote = null;
     /** A timed action involving this player (bandaging yourself, a teammate, or being bandaged): its text and 0..1, or null. */
     this.action = null;
     this.actionProgress = 0;
@@ -100,10 +103,12 @@ export class PlayerStatus {
     this.magazine = weapon ? weapon.magazine : 0;
     this.reserve = weapon ? weapon.reserve : 0;
     this.reloading = weapon ? Boolean(weapon.reloading) : false;
-    const offer = player && session.canMove ? session.pickups?.offerFor(player, OFFER) : null;
+    const offer = player && session.canMove ? session.pickups?.offerFor(player, OFFER, context.time) : null;
     this.pickup = offer ? offer.name : null;
     this.pickupSwap = offer ? offer.swap : false;
     this.pickupFull = offer ? offer.full : false;
+    this.pickupVerb = offer ? offer.verb ?? null : null;
+    this.pickupNote = offer ? offer.note ?? null : null;
     this._readSlots(player);
     this._readAction(context, player);
     this.money = player?.wallet ? player.wallet.balance : 0;

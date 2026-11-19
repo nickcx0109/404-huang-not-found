@@ -37,8 +37,8 @@ export class PromptWidget extends HudWidget {
       return;
     }
     if (this._id === ACTION_PROMPT) this.show({ id: ACTION_PROMPT, text: null });
-    const text = status.pickup === null ? null : status.pickupFull ? status.pickup + '  FULL' :
-      (status.pickupSwap ? 'E  SWAP FOR ' : 'E  PICK UP ') + status.pickup;
+    const text = status.pickup === null ? null : status.pickupNote ? status.pickup + '  ' + status.pickupNote :
+      'E  ' + (status.pickupVerb ?? (status.pickupSwap ? 'SWAP FOR' : 'PICK UP')) + ' ' + status.pickup;
     if (text === this._pickupText) return;
     this._pickupText = text;
     this.show({ id: PICKUP_PROMPT, text });

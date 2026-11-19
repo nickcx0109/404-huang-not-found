@@ -83,7 +83,7 @@ test('Taking a gun swaps it with the primary: the old one stays behind with its 
   const body = player(events, 0, 0);
   const [rifleSpot, shotgunSpot] = field.pickups;
   assert.equal(field.nearestFor(body), shotgunSpot, 'the closer one wins');
-  assert.deepEqual(field.offerFor(body), { name: 'SHOTGUN', swap: false, full: false });
+  assert.deepEqual(field.offerFor(body), { name: 'SHOTGUN', swap: false, full: false, verb: 'PICK UP', note: null });
 
   assert.equal(field.take(body, ctx), true);
   const shotgun = body.weapons.current;
@@ -95,7 +95,7 @@ test('Taking a gun swaps it with the primary: the old one stays behind with its 
   shotgun.ammo = 2;
   shotgun.reserve = 5;
   body.position.x = 1.5;
-  assert.deepEqual(field.offerFor(body), { name: 'RIFLE', swap: true, full: false });
+  assert.deepEqual(field.offerFor(body), { name: 'RIFLE', swap: true, full: false, verb: 'SWAP FOR', note: null });
   assert.equal(field.take(body, ctx), true);
   assert.equal(body.weapons.current.id, 'rifle');
   assert.equal(rifleSpot.weapon, shotgun, 'the shotgun lies where the rifle was');
@@ -129,7 +129,7 @@ test('Taking the same kind of gun is still a swap, never a refill', () => {
   const onGround = field.pickups[0].weapon;
   onGround.ammo = 4;
   onGround.reserve = 10;
-  assert.deepEqual(field.offerFor(body), { name: 'RIFLE', swap: true, full: false });
+  assert.deepEqual(field.offerFor(body), { name: 'RIFLE', swap: true, full: false, verb: 'SWAP FOR', note: null });
   field.take(body, { events });
   assert.equal(body.weapons.current, onGround);
   assert.equal(body.weapons.current.ammo, 4);
