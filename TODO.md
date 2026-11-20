@@ -76,7 +76,7 @@
 
 ## 其他
 
-- [ ] **O1** 更新 README 的 commit 統計表（照表下的指令重跑）
+- [~] **O1**（進行中：@nickcx0109，分支 docs/commit-stats） 更新 README 的 commit 統計表（照表下的指令重跑）
 
 ---
 
