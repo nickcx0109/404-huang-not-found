@@ -7,7 +7,7 @@
 | 1 | ✅ 已修復 | `web/js/CollisionWorld.js` | 起始重疊先按最小穿透深度解開，再分軸移動 | 四個方向、原地重疊與滑牆皆有回歸測試 | `fix(collision): depenetrate overlapping bodies before movement` |
 | 2 | ✅ 已修復 | `web/js/LevelData.js`、`player/PlayerBody.js` | 出生點以玩家圓柱檢查（含角落、上下高度） | `PlayerController` 與驗證器共用 `PLAYER_BODY` | `fix(level): validate spawns against shared player dimensions` |
 | 3 | 🟠 | `web/levels/mood.json:81`、`web/js/PropFactory.js:52-54` | 綁了 collider 的道具，旋轉或縮放後，外觀會超出碰撞盒 | mood 的 `car_wreck` 轉 28°，玩家可以走進車角約 0.18 m | LevelData 驗證時發出警告；或讓碰撞盒依旋轉後的外框計算 |
-| 4 | 🟡 | `tools/serve.mjs:63` | 隱藏檔過濾只擋開頭是 `.` 的路徑；Windows 的 8.3 短檔名（如 `GIT~1`）可以繞過 | 用 `HOST=0.0.0.0` 開放給區網時，別人可能讀到 `.git/config`、`.env` | 解析成真實路徑後再檢查，或只開放 `web/`、`art/` 等白名單資料夾 |
+| 4 | ✅ 已修復 | `tools/serve.mjs` `isServable` | 除了檢查請求路徑，讀檔前再用 `realpath.native` 取得真實路徑（8.3 短檔名會還原成 `.git`，連結會跟到目的地），必須在 repo 裡且沒有隱藏的部分；路徑含 `:`（ADS、磁碟代號）也直接 403 | `test/Serve.test.js`：`/GIT~1/config`、`/git~1/HEAD`、`/%2egit/config`、`::$DATA` 都是 403，遊戲檔照常 200 | `fix(tools): stop the dev server from serving hidden files by short name` |
 | 5 | ✅ 已修復 | `web/js/PostFX.js`、`core/bloomLevels.js` | 明確的 levels: 0 關閉 bloom，不建立 targets 或執行 bloom pass；缺省為 3，非零層數限制為 1～4 | 純函式測試涵蓋 0、缺省、邊界與無效值 | `fix(postfx): treat bloom.levels 0 as a valid value` |
 | 6 | ✅ 已修復 | `tools/art/shots.mjs` `takeShot` | 每張各自 try/catch，逾時或頁面錯誤只算那一張失敗，其他照拍，最後仍以失敗數結束（exit 1）；`--timeout <秒>` 可調等待時間（預設 120） | 用 `--timeout 0.01` 驗證過：8 張都記為 FAIL、迴圈沒有中斷 | `fix(tools): keep taking screenshots after one shot times out`；`--gpu` 的 d3d11 參數只適用於 Windows 仍未處理 |
 | 7 | ✅ 已修復 | `web/js/App.js` | dt 仍限制在 0～maxFrameTime；fps 統計用真實的幀時間，但超過 0.5 秒（第一幀、切回分頁）或時鐘倒退的間隔不算進統計 | 低於 20 fps 的機器也量得準，切分頁不會讓數字跳 | `fix(app): clamp elapsed time for fps statistics`、`fix(app): keep real frame times in fps stats` |
