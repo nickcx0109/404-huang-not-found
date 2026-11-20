@@ -34,6 +34,16 @@ export class Emitters {
     for (let i = 0; i < this._animations.length; i++) this._animations[i](time);
   }
 
+  /**
+   * Registers `step(time)` to run on every update together with the built-in emitters, for
+   * chapter props that glow or flicker on their own (a campfire, a cabin lamp). Like the others it
+   * must depend only on `time`, so a still frame (?shot=, fixed time) always looks the same.
+   */
+  addAnimation(step) {
+    this._animations.push(step);
+    return step;
+  }
+
   // ---- accent: the chapter's guide colour ------------------------------------
 
   /** Brightness (0..1) of the accent at `time`; 1 when the palette defines no flicker. */
