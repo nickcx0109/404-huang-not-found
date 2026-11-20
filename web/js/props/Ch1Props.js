@@ -847,13 +847,11 @@ function warmLight(factory, key, levelAt) {
 
 /**
  * Runs `step(time)` every frame together with the level's other emitters, so a still frame
- * (?shot=, fixed time) always shows the same state. Emitters has no public hook for this yet;
- * if its animation list ever goes away the lights simply stop flickering.
+ * (?shot=, fixed time) always shows the same state.
  */
 function animate(factory, step) {
   step(0);
-  const list = factory.emitters && factory.emitters._animations;
-  if (Array.isArray(list)) list.push(step);
+  if (factory.emitters) factory.emitters.addAnimation(step);
 }
 
 /**
