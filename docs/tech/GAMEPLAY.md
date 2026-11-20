@@ -348,7 +348,7 @@ G5 的 `LobbyScreen`、`GameOverScreen`、`VictoryScreen` 都在 `SurvivalHud.st
 - 這不是最終大量殭屍方案：24／40／64 隻、品質分級、自動降解析度、Worker flow field 還是 PERFORMANCE_PLAN 的後續工作，不在這次擴寫。
 - DamageInfo、事件摘要、換波出怪等只在離散事件配置；不要新增每幀的 map/filter、new Vector3 或尋路陣列。HUD 每幀只比對數字，有變才寫 DOM，不重建節點。
 - Session.dispose 取消訂閱並釋放 Factory；Factory.dispose 清理所有曾建立的 mesh／材質／幾何（包含已回池者）。頁內重開與離頁都經 GameplayLifecycle 清理完整每局資源，離頁才釋放共用 PlayerController。
-- LevelData 以真正圓柱與 AABB 的最近點檢查出生點；移動仍沿用原本較保守的方柱碰撞。新驗證使 `mood.json` 的 `spawns.zombies[1]` 警告與 `tree_56` 重疊，未改該關卡；ch2／test 無新警告。
+- LevelData 以真正圓柱與 AABB 的最近點檢查出生點；移動仍沿用原本較保守的方柱碰撞。新驗證曾使 `mood.json` 的 `spawns.zombies[1]`（`woods_right`）警告與 `tree_56` 重疊，已把它往路邊移 0.5 m（B9）；現在所有關卡都沒有出生點警告。
 
 ## 驗證與除錯
 

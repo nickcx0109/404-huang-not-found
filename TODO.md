@@ -70,7 +70,6 @@
 - [ ] **B1** 綁了 collider 的道具旋轉或縮放後，外觀超出碰撞盒（KNOWN_ISSUES #3，和「AABB 不會跟著 rotY 轉」是同一件事）
 - [ ] **B2** `tools/serve.mjs` 開放區網時，8.3 短檔名可以繞過隱藏檔過濾（#4，做 G8 之前要修）
 - [ ] **B7** `StaticBatcher` 整關合併、無法剔除，要改成按區塊合併（#9，S1 會遇到）
-- [~] **B9**（進行中：@nickcx0109，分支 fix/mood-spawn） `mood.json` 的 `spawns.zombies[1]` 和 `tree_56` 重疊（出生點檢查變嚴格後才出現的警告）
 - [ ] **B10** 抗鋸齒：沒有 MSAA 也沒有 FXAA
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
 - [ ] **B15** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、道具欄會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
@@ -100,6 +99,7 @@
 - B16 截圖比對容許軟體繪圖雜訊：`tools/art/compare.mjs`（PR #34）
 - B14 暫停時聲音一起停（PR #35）
 - B12 `Emitters.addAnimation`，章節道具不再碰內部陣列（PR #36）
+- B9 `mood.json` 的 `woods_right` 出生點移出 `tree_56`（PR #37）
 - G3 波次設計（PR #15）
 - G4 商店：取消，改成地上撿（PR #16 關閉不合併）
 - G11 地上撿武器和開局裝備：手槍（無限備彈）、球棒、主武器格換槍，地上的槍有高光邊框（PR #18）
