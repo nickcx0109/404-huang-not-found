@@ -11,10 +11,11 @@
 // Other tools can import it:  const { url, close } = await startServer({ port: 0, quiet: true });
 
 import { createServer } from 'node:http';
-import { createReadStream } from 'node:fs';
+import { createReadStream, realpath } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { dirname, extname, join, normalize, resolve, sep } from 'node:path';
+import { dirname, extname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { promisify } from 'node:util';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_PORT = 8080;
@@ -45,6 +46,28 @@ const MIME = {
   '.wav': 'audio/wav',
 };
 
+// The operating system's own name for a path: on Windows this turns 8.3 short names (GIT~1) back
+// into the real ones (.git) and follows links, so the hidden-file check sees what is really read.
+const realPathOf = promisify(realpath.native);
+let realRoot = null;
+
+/** True when any part of a path (split on / or a backslash) is hidden, e.g. `.git`, `.env`, `web/.cache`. */
+export function hasHiddenPart(path) {
+  return path.split(/[\\/]/).some((part) => part.startsWith('.') && part !== '.' && part !== '..');
+}
+
+/**
+ * Checks the file that will really be read (KNOWN_ISSUES #4). The request path is checked first,
+ * but `GIT~1/config` or a link can name a hidden file without a dot, so the real path is checked
+ * again: it must stay inside ROOT and have no hidden part.
+ */
+async function isServable(filePath) {
+  realRoot ??= await realPathOf(ROOT);
+  const rel = relative(realRoot, await realPathOf(filePath));
+  if (rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel)) return false;
+  return !hasHiddenPart(rel);
+}
+
 function send(res, status, body, headers = {}) {
   res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8', ...headers });
   res.end(body);
@@ -61,6 +84,8 @@ function resolveRequestPath(urlPath) {
   if (decoded.includes('\0')) return null;
   // Hidden files and folders (.git, .claude, .env ...) are never served.
   if (decoded.split(/[\\/]/).some((part) => part.startsWith('.') && part !== '.')) return null;
+  // Windows path tricks: alternate data streams (file::$DATA) and drive letters.
+  if (decoded.includes(':')) return null;
   const filePath = normalize(join(ROOT, decoded));
   if (filePath !== ROOT && !filePath.startsWith(ROOT + sep)) return null;
   return filePath;
@@ -99,6 +124,10 @@ async function handle(req, res, quiet) {
       }
       filePath = join(filePath, 'index.html');
       info = await stat(filePath);
+    }
+    if (!(await isServable(filePath))) {
+      send(res, 403, 'Forbidden');
+      return log(403);
     }
     res.writeHead(200, {
       'Content-Type': MIME[extname(filePath).toLowerCase()] || 'application/octet-stream',
