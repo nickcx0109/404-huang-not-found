@@ -68,7 +68,7 @@
 細節和修法方向在 [docs/tech/KNOWN_ISSUES.md](docs/tech/KNOWN_ISSUES.md)。修好就在那份文件標成已修復，並從這裡刪掉。
 
 - [ ] **B1** 綁了 collider 的道具旋轉或縮放後，外觀超出碰撞盒（KNOWN_ISSUES #3，和「AABB 不會跟著 rotY 轉」是同一件事）
-- [ ] **B2** `tools/serve.mjs` 開放區網時，8.3 短檔名可以繞過隱藏檔過濾（#4，做 G8 之前要修）
+- [~] **B2**（進行中：@nickcx0109，分支 fix/serve-short-names） `tools/serve.mjs` 開放區網時，8.3 短檔名可以繞過隱藏檔過濾（#4，做 G8 之前要修）
 - [ ] **B7** `StaticBatcher` 整關合併、無法剔除，要改成按區塊合併（#9，S1 會遇到）
 - [ ] **B10** 抗鋸齒：沒有 MSAA 也沒有 FXAA
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
