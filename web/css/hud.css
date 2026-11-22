@@ -814,3 +814,12 @@
 }
 .hud-team__healing { margin-left: 0.6em; color: var(--bone); font-weight: bold; }
 .hud-team__row.is-down .hud-team__avatar { color: var(--fresh); border-color: var(--fresh); }
+
+/* Short or narrow windows: the font stops shrinking at 10px (see .hud), so the right column runs out of
+   room between the inventory and the bottom edge, and left and right meet in the middle. Fall back to
+   the compact arrangement: own health bottom left, teammates above it, ammunition back on the bottom line. */
+@media (max-height: 560px), (max-width: 700px) {
+  .hud-health { left: 2.8em; right: auto; }
+  .hud-ammo { bottom: 2.4em; }
+  .hud-team { bottom: 8.6em; }
+}
