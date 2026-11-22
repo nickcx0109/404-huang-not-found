@@ -10,6 +10,7 @@ import { KatanaView } from './KatanaView.js';
 import { ChainsawView } from './ChainsawView.js';
 import { GrenadeView } from './GrenadeView.js';
 import { MolotovView } from './MolotovView.js';
+import { AdrenalineView } from './AdrenalineView.js';
 import { BandageView } from './BandageView.js';
 
 /**
@@ -30,6 +31,7 @@ export const VIEWS = Object.freeze({
   grenade: GrenadeView,
   molotov: MolotovView,
   bandage: BandageView,
+  adrenaline: AdrenalineView,
 });
 
 /** @param {Object<string, function(object): object>} models  weapon id -> model factory */

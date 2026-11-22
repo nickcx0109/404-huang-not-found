@@ -17,6 +17,7 @@ export class DownedHealth extends Damageable {
     if (amount <= 0) return 0;
     this.health -= amount;
     this.owner.downed = !this.alive;
+    if (this.owner.downed) this.owner.clearEffects?.();
     this.events.emit(EVENTS.ENTITY_DAMAGED, { entity: this.owner, info, amount, health: this.health });
     return amount;
   }

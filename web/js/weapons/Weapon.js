@@ -61,16 +61,39 @@ export class Weapon {
     this.update(0, ctx);
     if (!this.usesAmmo || this.reloading || this.ammo === this.magazine || this.reserve === 0) return false;
     this.reloadEndsAt = ctx.time + this.reloadSeconds;
+    this._reloadUpdatedAt = ctx.time;
+    this._reloadEffects = this._ownerEffects(ctx);
     return true;
   }
 
   update(dt, ctx) {
-    if (!this.reloading || ctx.time + 1e-9 < this.reloadEndsAt) return;
+    if (!this.reloading) return;
+    const effects = this._ownerEffects(ctx);
+    this._reloadEffects = effects;
+    const from = this._reloadUpdatedAt ?? ctx.time;
+    const elapsed = effects?.elapsed('reloadRate', from, ctx.time) ?? ctx.time - from;
+    this.reloadEndsAt -= elapsed - (ctx.time - from);
+    this._reloadUpdatedAt = ctx.time;
+    if (ctx.time + 1e-9 < this.reloadEndsAt) return;
     const amount = Math.min(this.magazine - this.ammo, this.reserve);
     this.ammo += amount;
     this.reserve -= amount;
     this.reloadEndsAt = null;
     ctx.events.emit(EVENTS.WEAPON_RELOADED, { ownerId: this.ownerId, weaponId: this.id });
+  }
+
+  /**
+   * Real seconds until the current reload finishes, with the owner's reload-rate effects (and their expiry) applied.
+   * `reloadEndsAt` alone is in unbuffed seconds, so a view timed by it would be cut short. Null when not reloading.
+   */
+  reloadSecondsLeft(time) {
+    if (!this.reloading) return null;
+    const work = Math.max(0, this.reloadEndsAt - time);
+    return this._reloadEffects ? this._reloadEffects.timeToAccumulate('reloadRate', time, work) : work;
+  }
+
+  _ownerEffects(ctx) {
+    return ctx.players?.find(player => player.id === this.ownerId)?.effects ?? null;
   }
 
   refill() {

@@ -48,7 +48,8 @@ export class HeldWeaponDriver {
     const weapon = this.weapon;
     const reloading = Boolean(weapon?.reloading);
     if (reloading && !this._reloading) {
-      const left = Number.isFinite(weapon.reloadEndsAt) ? weapon.reloadEndsAt - time : weapon.reloadSeconds;
+      const left = typeof weapon.reloadSecondsLeft === 'function' ? weapon.reloadSecondsLeft(time)
+        : Number.isFinite(weapon.reloadEndsAt) ? weapon.reloadEndsAt - time : weapon.reloadSeconds;
       this.target.reload(Math.max(0.05, Math.min(weapon.reloadSeconds, left)));
     } else if (!reloading && this._reloading) {
       this.target.finishReload();
