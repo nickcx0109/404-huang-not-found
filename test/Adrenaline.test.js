@@ -12,6 +12,7 @@ import { WeaponCatalog } from '../web/js/pickups/WeaponCatalog.js';
 import { registerHealingItems } from '../web/js/pickups/healingItems.js';
 import { ItemDeck } from '../web/js/pickups/ItemDeck.js';
 import { PickupField } from '../web/js/pickups/PickupField.js';
+import { HeldWeaponDriver } from '../web/js/weapons/views/HeldWeaponDriver.js';
 
 function setup() {
   const events = new EventBus();
@@ -109,4 +110,27 @@ test('TimedEffects composes arbitrary stats, integrates expiry, validates and cl
   assert.throws(() => effects.refresh('x', 0, {}, 0), RangeError);
   assert.throws(() => effects.refresh('x', 1, { rate: 0 }, 0), RangeError);
   effects.clear(); assert.equal(effects.multiplier('rate', 0), 1);
+});
+test('timeToAccumulate inverts elapsed across a buff that expires', () => {
+  const effects = new TimedEffects();
+  effects.refresh('a', 1, { reloadRate: 2 }, 0);
+  assert.equal(effects.timeToAccumulate('reloadRate', 0, 1.5), 0.75);
+  assert.equal(effects.timeToAccumulate('reloadRate', 0, 3), 2, 'two units in the first second, one after it');
+  assert.equal(effects.timeToAccumulate('reloadRate', 5, 1), 1, 'ordinary speed once it is over');
+  assert.equal(effects.timeToAccumulate('reloadRate', 0, 0), 0);
+});
+
+test('the held weapon view plays a buffed reload in the time it really takes', () => {
+  const { player, ctx, use } = setup();
+  const gun = player.weapons.add(new Rifle()); gun.ammo--;
+  player.weapons.switchTo(0);
+  const reloads = [];
+  const target = { equip() {}, fire() {}, finishReload() {}, showProgress() {}, reload: seconds => reloads.push(seconds) };
+  const driver = new HeldWeaponDriver(ctx.events, 'p', player.weapons, target);
+  use(); player.weapons.switchTo(0); gun.reload(ctx);
+  assert.ok(Math.abs(gun.reloadSecondsLeft(0) - gun.reloadSeconds / 2) < 1e-9);
+  driver.update(0);
+  assert.equal(reloads.length, 1);
+  assert.ok(Math.abs(reloads[0] - gun.reloadSeconds / 2) < 1e-9);
+  driver.dispose();
 });
