@@ -9,6 +9,9 @@ const OFFER = { name: '', swap: false, full: false, verb: '', note: null };
  * so a network client can later fill the same fields from a snapshot sent by the host.
  */
 export class PlayerStatus {
+  /** Raw teammate names last formatted, by row (private, so status stays plain data). */
+  #mateNames = [];
+
   constructor() {
     this.health = 0;
     this.maxHealth = 1;
@@ -146,13 +149,15 @@ export class PlayerStatus {
     for (const other of context.players) {
       if (other === player) continue;
       const mate = this.mates[count] ?? (this.mates[count] = { id: null, name: '', health: 0, maxHealth: 1, down: false, healing: false });
-      if (mate.id !== other.id) {
+      const rawName = other.name ?? other.id;
+      // Names are formatted only when the player or the raw name changes, not every frame.
+      if (mate.id !== other.id || this.#mateNames[count] !== rawName) {
         mate.id = other.id;
-        mate.name = String(other.name ?? other.id).toUpperCase().slice(0, 12);
+        this.#mateNames[count] = rawName;
+        mate.name = PlayerStatus.nameOf(other);
       }
       mate.health = other.damageable.health;
       mate.maxHealth = other.damageable.maxHealth;
-      mate.name = PlayerStatus.nameOf(other);
       mate.down = TeamPresentation.down(other);
       mate.healing = TeamPresentation.carriesHealing(other.weapons?.weapons);
       count++;
