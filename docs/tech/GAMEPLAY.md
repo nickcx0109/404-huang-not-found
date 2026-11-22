@@ -388,12 +388,12 @@ G3 驗收：126 個 node:test 全過，包含每波數量／種類／間隔／�
 - The existing `HealthWidget` / `HealthMeter` show local health at bottom right, red below 30%; ammo sits above it.
 - Debug-only `__gameDebug.damagePlayer(id, amount)` and `giveBandage(id)` support teammate HUD checks, alongside `spawnTeammate()` and `kill(id)`.
 
-## G21 ???? / timed stat effects
+## G21 Adrenaline / timed stat effects
 
 - `Adrenaline extends CarriedItem`: inventory slot 7 (`booster`), maximum one. Primary use consumes it instantly. `registerHealingItems(catalog)` registers bandage and adrenaline in the independent `healing` ItemDeck; healing markers deal both before repeating. Weapons and throwables never draw these items.
 - Each `CombatPlayer` owns DOM-free `TimedEffects`. `refresh(key, seconds, modifiers, time)` replaces the same key, `multiplier(stat, time)` composes active multipliers, and `elapsed(stat, from, to)` integrates rates across start/expiry boundaries. Weapons and movement query generic stats, without item-type checks.
 - Adrenaline lasts exactly 10 simulation seconds: `reloadRate: 2`, `movementSpeed: 1.3`. Reuse refreshes to ten seconds from the latest use; it never stacks or adds remaining time. Pause follows the session clock.
 - Reload work is accelerated even if already underway, for all held guns including holstered reloads. Each update integrates elapsed reload work; crossing expiry spends only the covered portion at double rate. Refresh settles existing reload work before replacing the interval. The nominal weapon reload configuration remains unchanged.
 - `CombatPlayer.syncStats(time)` supplies the controller multiplier for both walking and sprinting. Expired entries are pruned after weapon updates; downing clears effects immediately, and player disposal resets the shared controller on restart/level teardown. Reviving does not restore buffs. No timers or extra event listeners are installed.
-- The existing inventory widget shows the injector icon and ?1 count, and the ordinary item view shows an injector. No separate buff HUD is introduced.
+- The existing inventory widget shows the injector icon and one-item count, and the ordinary item view shows an injector. No separate buff HUD is introduced.
 - Debug-only `__gameDebug.giveAdrenaline()` equips one injector; `fire()` uses it. `snapshot()` exposes `speedMultiplier`, `reloadRate`, and the current weapon's `reloadEndsAt` for smoke checks.
