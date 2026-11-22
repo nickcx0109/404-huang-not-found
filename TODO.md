@@ -63,7 +63,6 @@
 - [ ] **B7** `StaticBatcher` 整關合併、無法剔除，要改成按區塊合併（#9，S1 會遇到）
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
 - [ ] **B15** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、道具欄會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
-- [~] **B13**（進行中：@nickcx0109，分支 fix/weapon-event-payloads）`WEAPON_FIRED`、`WEAPON_RELOADED`、`WEAPON_CHANGED` 的 payload 沒有子彈數，也沒有「開始換彈」的事件；補彈（`refill`）也不發事件。HUD 現在靠 `ui/hud/PlayerStatus.js` 每幀從 Session 抄數字。做連線（G8）時要嘛在事件裡帶上數字，要嘛讓快照填 `PlayerStatus`。
 - [ ] **B16** 視窗很矮時（例如 640×360）右邊的彈藥會蓋到道具欄下面幾格：`.hud` 的字級最小 10px，高度再小就放不下。G15 之前就有；可以在矮視窗縮小道具欄或改成橫排。
 
 ## 其他

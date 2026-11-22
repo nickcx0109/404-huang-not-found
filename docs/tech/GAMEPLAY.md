@@ -167,9 +167,11 @@ classDiagram
 | `ITEM_THROWN` | `item.thrown` | `{ownerId,itemId,effect}`；`ThrowFire` 通知 |
 | `EXPLODED` | `effect.exploded` | `{kind,x,y,z,radius,ownerId}`；手榴彈爆炸通知，`EffectViews` 畫閃光 |
 | `ENEMY_SPAWNED` | `enemy.spawned` | `{enemy,wave}`；Session 通知 |
-| `WEAPON_FIRED` | `weapon.fired` | `{ownerId,weaponId,hit}`；Weapon 通知，miss 時 hit 為 null |
-| `WEAPON_RELOADED` | `weapon.reloaded` | `{ownerId,weaponId}`；Weapon 換彈完成通知 |
-| `WEAPON_CHANGED` | `weapon.changed` | `{ownerId,weaponId}`；WeaponHolder 通知 |
+| `WEAPON_FIRED` | `weapon.fired` | `{ownerId,weaponId,ammo,reserve,count?,hit}`；Weapon 通知，miss 時 hit 為 null |
+| `WEAPON_RELOADED` | `weapon.reloaded` | `{ownerId,weaponId,ammo,reserve,count?}`；Weapon 換彈完成通知 |
+| `WEAPON_RELOAD_STARTED` | `weapon.reload-started` | `{ownerId,weaponId,ammo,reserve,count?,duration}`; real seconds at start, including buffs and expiry |
+| `WEAPON_REFILLED` | `weapon.refilled` | `{ownerId,weaponId,ammo,reserve,count?}`; emitted by refill(ctx) only when ammunition changes |
+| `WEAPON_CHANGED` | `weapon.changed` | `{ownerId,weaponId,ammo,reserve,count?}`；WeaponHolder 通知 |
 | `STATE_CHANGED` | `game.state-changed` | `{state,wave}`；Session 通知，state 是 lobby／playing／wave-break／game-over／victory |
 | `WAVE_STARTED` | `wave.started` | `{wave,count}`；Session 通知，count 是整波預計總數（含尚未出生者），在第一隻出生前發送 |
 | `WAVE_CLEARED` | `wave.cleared` | `{wave,kills}`；Session 通知，kills 為本局累計 |
@@ -177,6 +179,8 @@ classDiagram
 | `VICTORY` | `game.victory` | `{wave,kills}`；VictoryState 進入時由 Session 通知，一局只進入一次 |
 | `PROMPT_CHANGED` | `hud.prompt-changed` | `{id,text,progress}`；任何模組 → HUD，在畫面下方顯示一行提示。`progress` 是 0–1（省略就不畫進度線）；`text` 給 `null` 表示收掉這個 `id` 的提示 |
 | `ANNOUNCED` | `hud.announced` | `{text}`；任何模組 → HUD，在畫面中上顯示一張字卡，約 2 秒後淡出 |
+
+Weapon event counts are fresh post-action snapshots. Non-ammunition weapons report null ammo/reserve; stacks add count. WEAPON_CHANGED includes stack absorption, even in a holstered slot. AMMO_REFILLED remains the per-crate notification. Reload duration reflects effects at start; later effects can change completion. HeldWeaponDriver still polls reload/progress to support equipping during a reload.
 
 Payload 中的 entity 是同步事件借用的實體參照，不是網路快照。長期保存請複製所需數值與當時 id；物件池會重用該物件。訂閱 `on()` 回傳的取消函式由訂閱者在 dispose 時呼叫。
 
@@ -236,7 +240,7 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 - 規則都是 `SoundRule` 子類，只聽事件：`WeaponSounds`（自己的 `WEAPON_FIRED`、`WEAPON_CHANGED`、`WEAPON_RELOADED`，用 `register(武器 id, { fire, hit, held, working })` 查表）、`HitSounds`（自己子彈的命中、爆頭、擊殺）、`PlayerSounds`（受傷、治療、丟東西）、`PickupSounds`（`register(武器 id, 音效)`：槍是金屬卡榫聲、刀和電鋸是拿起重物的聲音，沒登記的補給品是塞進包包的沙沙聲；彈藥箱是壓子彈的喀喀聲。不用叮咚提示音）、`ZombieSounds`（`register(敵人類別, { spawn, groan, death })`，沒登記的用 `Enemy` 的；隨機一隻每 1.5～3.5 秒叫一聲）、`WorldSounds`（爆炸、波次開始、清完、結束）。
 - 音檔在 `web/assets/sfx/`：刀、電鋸、爆炸、殭屍從舊專案複製（CC0）；五把槍的槍聲（`gun/`）來自 gunsoundeffect.com。來源都在 `CREDITS.md`。`manifest.json` 是「音效名稱 → 檔名（陣列就隨機挑）」。沒有音檔的（換彈、受傷等）用 `SynthSounds.js` 的合成配方，音檔載入前或載入失敗也會先用合成的。
 - 新增武器的聲音：`installAudio` 裡 `WeaponSounds` 加一行 `register`；有音檔就放進 `sfx/`、寫進 `manifest.json`，沒有就在 `SynthSounds.js` 加一個配方。
-- 還沒有：開始換彈的聲音（沒有這個事件，見 B13，現在只有換完的「喀」）；隊友的聲音（等 G8）。
+- Reload-start sounds are not subscribed yet; teammate sounds await G8.
 
 ## G22 難度倍數
 
@@ -279,7 +283,7 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 
 - 只有 `?play=1` 才建立：`installGameplay` 建 `weapons/FirstPersonWeapon.js`，設成 `app.overlay`。`App` 每幀呼叫 `overlay.update`，`PostFX.render` 在場景畫完、後製之前畫它。沒有 `play=1` 時 `overlay` 不存在，畫面不變。
 - 誰畫什麼：`views/standardViewModels.js` 把武器 id 對到 `WeaponView` 子類（握的位置、動畫片段），`models/standardModels.js` 對到模型工廠。手槍是 G9 的 `pistol.glb`，其他十把用 `models/ModelKit.js` 拿 Three.js 幾何體拼，顏色取 `art/style/chapters/weapons.json` 的 `_assets.colors`。
-- 什麼時候動：`views/HeldWeaponDriver.js`（不依賴 Three.js）聽 `WEAPON_CHANGED`（拿出）、`WEAPON_FIRED`（開槍、揮砍、丟出）、`WEAPON_RELOADED`（換彈結束）。換彈開始和繃帶進度沒有事件，每幀讀武器的 `reloading`、`progress(time)`。換彈動畫會依武器的 `reloadSeconds` 調快或調慢。不改任何武器的邏輯。
+- `views/HeldWeaponDriver.js` listens for WEAPON_CHANGED, WEAPON_FIRED and WEAPON_RELOADED. It still polls reloading and progress(time), including reloadSecondsLeft(time), so equipping during a reload works.
 - 槍口火光只在模型有 `muzzle` 標記時出現（只有槍有）。武士刀每刀左右交替，和 `SlashWidget` 的刀光同步；刀光畫在 HUD 的 canvas 上，在模型前面，不會被擋住。
 - 新增一把武器的樣子：寫一個 `WeaponView` 子類（`views/RifleView.js` 當範例，常用動畫用 `views/ClipKit.js`），寫模型工廠，然後在上面兩個檔案各加一行。
 - 除錯：`?play=1&debug=1` 時 `window.__weaponView.equip('katana')` 換成任一把，`freeze('fire', 0.05)` 停在某個動畫瞬間，`now()` 看現在播什麼。

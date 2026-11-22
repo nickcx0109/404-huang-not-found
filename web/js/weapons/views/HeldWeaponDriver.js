@@ -5,8 +5,8 @@ import { EVENTS } from '../../game/events.js';
  *
  * It only listens and reads; it never changes a weapon. The game's events say when the weapon in
  * hand changes (WEAPON_CHANGED), fires (WEAPON_FIRED) and finishes a reload (WEAPON_RELOADED).
- * There is no event for the start of a reload or for a bandage being applied, so `update` reads
- * those from the weapon itself (`reloading`, `progress(time)`).
+ * `update` still reads reload and bandage state (`reloading`, `progress(time)`) so equipping
+ * during an ongoing reload also starts the view at the correct remaining duration.
  *
  * The target is whatever draws the weapon (WeaponRig):
  *   equip(weaponId|null), fire({hit}), reload(seconds), finishReload(), showProgress(fraction|null)
