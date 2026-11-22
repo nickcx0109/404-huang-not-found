@@ -1,4 +1,5 @@
 import { ReviveInteraction } from '../pickups/ReviveInteraction.js';
+import { LineOfSight } from '../pickups/LineOfSight.js';
 import { StateMachine } from '../core/StateMachine.js';
 import { DamageInfo } from '../entities/DamageInfo.js';
 import { DamagePipeline, HeadshotRule } from '../entities/DamagePipeline.js';
@@ -23,7 +24,8 @@ export class GameSession {
     this.separation = separation;
     /** Weapons on the ground (a PickupField), or null when the level has none. */
     this.pickups = pickups;
-    this.revives = new ReviveInteraction(ctx.players);
+    const sight = new LineOfSight(ctx.collision);
+    this.revives = new ReviveInteraction(ctx.players, { canReach: (rescuer, downed) => sight.clear(rescuer, downed) });
     /** How this level is won (an Objective); the default never wins. */
     this.objective = objective;
     this.damagePipeline = damagePipeline;

@@ -1,11 +1,13 @@
 /** DOM-free held interaction. Release, lost range, or incapacity resets all progress. */
 export class ReviveInteraction {
-  constructor(players, { radius = 2, seconds = 3, health = 40 } = {}) {
+  constructor(players, { radius = 2, seconds = 3, health = 40, canReach = () => true } = {}) {
     if (![radius, seconds, health].every(value => Number.isFinite(value) && value > 0)) throw new RangeError('Invalid revive tuning');
     this.players = players;
     this.radius = radius;
     this.seconds = seconds;
     this.health = health;
+    /** (rescuer, downed) => boolean; e.g. LineOfSight#clear so walls block a rescue. */
+    this.canReach = canReach;
     this.held = new Set();
     this.tasks = new Map();
   }
@@ -16,7 +18,7 @@ export class ReviveInteraction {
     for (const mate of this.players) {
       if (mate === player || !mate.downed) continue;
       const next = Math.hypot(mate.position.x - player.position.x, mate.position.z - player.position.z);
-      if (next <= distance) { target = mate; distance = next; }
+      if (next <= distance && this.canReach(player, mate)) { target = mate; distance = next; }
     }
     return target;
   }
