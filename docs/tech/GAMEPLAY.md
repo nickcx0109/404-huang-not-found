@@ -255,6 +255,12 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 5. 在共用組合入口 `game/installGameplay.js` 匯入新類別，呼叫 `player.weapons.add(new 你的類別())`。WeaponHolder 已支援數字鍵切換，不需改 Enemy。
 6. 自己補假時鐘測試（射速、空彈、換彈、切槍），用 Conventional Commit 提交，一把武器一組 commit。
 
+### G17 狙擊槍
+
+- `Sniper`：傷害 150、射程 120 m、5 發彈匣／25 備彈、每發間隔 1.2 秒，換彈 2.8 秒。沿用 `Weapon` 與 `HitscanFire`，地上撿到後放主武器格。
+- 在 `installGameplay` 的 `WeaponCatalog` 註冊，加入 `weapon` 牌堆；沿用共用拾取輪廓及 HUD 彈藥，另有側欄圖示、第一人稱模型與動畫。不提供瞄準鏡或縮放。
+- `?play=1&debug=1` 的 `__gameDebug.giveSniper()` 可直接裝備並更新 HUD，供煙霧測試。
+
 ### G23 衝鋒槍和左輪
 
 - `SubmachineGun`（id `smg`）：傷害 13、40 發彈匣／240 備彈、0.06 秒冷卻（約每分鐘 1000 發）、1.6 秒換彈、散布 0.02、射程 45 m，按住連射。

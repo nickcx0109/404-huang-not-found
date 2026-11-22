@@ -1,3 +1,4 @@
+import { buildSniper } from './sniperModel.js';
 import { ModelKit } from './ModelKit.js';
 import { WeaponModel } from '../WeaponModel.js';
 import { buildRifle, buildSmg, buildShotgun, buildRevolver } from './gunModels.js';
@@ -14,6 +15,7 @@ export const STANDARD_MODELS = Object.freeze({
   pistol: context => WeaponModel.load(context.modelsUrl, 'pistol', context.surface),
   revolver: built(buildRevolver),
   rifle: built(buildRifle),
+  sniper: built(buildSniper),
   smg: built(buildSmg),
   shotgun: built(buildShotgun),
   bat: built(buildBat),

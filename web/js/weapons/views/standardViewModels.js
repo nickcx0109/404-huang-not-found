@@ -1,6 +1,7 @@
 import { ViewModelRegistry } from './ViewModelRegistry.js';
 import { PistolView } from '../PistolView.js';
 import { RevolverView } from './RevolverView.js';
+import { SniperView } from './SniperView.js';
 import { RifleView } from './RifleView.js';
 import { SmgView } from './SmgView.js';
 import { ShotgunView } from './ShotgunView.js';
@@ -20,6 +21,7 @@ export const VIEWS = Object.freeze({
   pistol: PistolView,
   revolver: RevolverView,
   rifle: RifleView,
+  sniper: SniperView,
   smg: SmgView,
   shotgun: ShotgunView,
   bat: BatView,

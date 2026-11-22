@@ -732,6 +732,7 @@
 
 .hud-inventory__icon--pistol,
 .hud-inventory__icon--rifle,
+.hud-inventory__icon--sniper,
 .hud-inventory__icon--shotgun,
 .hud-inventory__icon--bat,
 .hud-inventory__icon--smg,
@@ -823,3 +824,5 @@
   .hud-ammo { bottom: 2.4em; }
   .hud-team { bottom: 8.6em; }
 }
+
+.hud-inventory__icon--sniper { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 28'%3E%3Cpath d='M2 12L22 10H66V8H76V11H118V14H76V17H56L54 24H47V17H32L22 18L3 24ZM33 3H64V7H33Z'/%3E%3C/svg%3E"); }

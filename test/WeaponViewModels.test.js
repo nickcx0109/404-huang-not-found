@@ -60,7 +60,7 @@ test('every weapon in the game has a first-person view whose ids and clips fit t
 test('only guns light the muzzle flash; blades swing without one', () => {
   for (const [id, View] of Object.entries(VIEWS)) {
     const shot = View.clips.fire?.events.some(e => e.name === 'shot') ?? false;
-    const gun = ['pistol', 'revolver', 'rifle', 'smg', 'shotgun'].includes(id);
+    const gun = ['pistol', 'revolver', 'rifle', 'smg', 'shotgun', 'sniper'].includes(id);
     assert.equal(shot, gun, id);
   }
 });

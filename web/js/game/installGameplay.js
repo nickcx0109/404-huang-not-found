@@ -23,6 +23,7 @@ import { Bat } from '../weapons/Bat.js';
 import { Rifle } from '../weapons/Rifle.js';
 import { Shotgun } from '../weapons/Shotgun.js';
 import { SubmachineGun } from '../weapons/SubmachineGun.js';
+import { Sniper } from '../weapons/Sniper.js';
 import { Revolver } from '../weapons/Revolver.js';
 import { Bandage } from '../weapons/Bandage.js';
 import { Grenade } from '../weapons/Grenade.js';
@@ -74,6 +75,7 @@ export function createGameplayRun(app) {
   ctx.players.push(player);
   const catalog = new WeaponCatalog()
     .register('rifle', { create: () => new Rifle(), name: 'RIFLE', look: { length: 0.95, height: 0.14, width: 0.12 } })
+    .register('sniper', { create: () => new Sniper(), name: 'SNIPER', look: { length: 1.2, height: 0.14, width: 0.1 } })
     .register('shotgun', { create: () => new Shotgun(), name: 'SHOTGUN', look: { length: 0.85, height: 0.12, width: 0.14 } })
     .register('smg', { create: () => new SubmachineGun(), name: 'SMG', look: { length: 0.55, height: 0.16, width: 0.1 } })
     .register('revolver', { create: () => new Revolver(), name: 'REVOLVER', look: { length: 0.34, height: 0.14, width: 0.07 } })
@@ -119,6 +121,7 @@ export function createGameplayRun(app) {
     .register('rifle', { pitch: 0.9, yaw: 0.35 })
     .register('smg', { pitch: 0.6, yaw: 0.45 })
     .register('shotgun', { pitch: 4.5, yaw: 0.8 })
+    .register('sniper', { pitch: 5, yaw: 0.6 })
     .register('revolver', { pitch: 4, yaw: 0.6 });
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, recoil);
   app.effectViews = EffectViews.standard(ctx.scene, ctx, ctx.events);
@@ -193,6 +196,14 @@ function installDebug(app, lifecycle) {
     damagePlayer: (id, amount) => {
       const player = app.game.playerById(id);
       player.damageable.takeDamage(new DamageInfo({ amount, sourceId: 'debug', targetId: id }));
+      refresh();
+    },
+    giveSniper: () => {
+      app.game.context.players[0].weapons.equip(new Sniper());
+      refresh();
+    },
+    switchWeapon: index => {
+      app.events.emit(EVENTS.SWITCH_REQUESTED, { ownerId: app.game.context.players[0].id, index });
       refresh();
     },
     giveBandage: id => {
