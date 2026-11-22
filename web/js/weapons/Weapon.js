@@ -39,6 +39,11 @@ export class Weapon {
     return this.usesAmmo && (this.ammo < this.magazine || this.reserve < this.maxReserve);
   }
 
+  /** Fresh plain event state; non-ammunition weapons report null counts. */
+  ammoSnapshot() {
+    return { ammo: this.usesAmmo ? this.ammo : null, reserve: this.usesAmmo ? this.reserve : null };
+  }
+
   fire(ctx) {
     this.update(0, ctx);
     if (this.reloading || (this.usesAmmo && this.ammo === 0) || ctx.time + 1e-9 < this.nextFireAt) return false;
@@ -47,7 +52,7 @@ export class Weapon {
     this.nextFireAt = ctx.time + this.cooldownSeconds;
     const hit = this.fireMode.fire(shot, ctx, this.ownerId);
     this.onFired(ctx, hit);
-    ctx.events.emit(EVENTS.WEAPON_FIRED, { ownerId: this.ownerId, weaponId: this.id, hit });
+    ctx.events.emit(EVENTS.WEAPON_FIRED, { ownerId: this.ownerId, weaponId: this.id, ...this.ammoSnapshot(), hit });
     return true;
   }
 
@@ -63,6 +68,10 @@ export class Weapon {
     this.reloadEndsAt = ctx.time + this.reloadSeconds;
     this._reloadUpdatedAt = ctx.time;
     this._reloadEffects = this._ownerEffects(ctx);
+    ctx.events.emit(EVENTS.WEAPON_RELOAD_STARTED, {
+      ownerId: this.ownerId, weaponId: this.id, ...this.ammoSnapshot(),
+      duration: this.reloadSecondsLeft(ctx.time),
+    });
     return true;
   }
 
@@ -79,7 +88,7 @@ export class Weapon {
     this.ammo += amount;
     this.reserve -= amount;
     this.reloadEndsAt = null;
-    ctx.events.emit(EVENTS.WEAPON_RELOADED, { ownerId: this.ownerId, weaponId: this.id });
+    ctx.events.emit(EVENTS.WEAPON_RELOADED, { ownerId: this.ownerId, weaponId: this.id, ...this.ammoSnapshot() });
   }
 
   /**
@@ -96,10 +105,14 @@ export class Weapon {
     return ctx.players?.find(player => player.id === this.ownerId)?.effects ?? null;
   }
 
-  refill() {
+  /** Fill ammunition and cancel a reload. Pass the gameplay context to publish the change. */
+  refill(ctx) {
+    if (!this.canRefill) return false;
     this.ammo = this.magazine;
     this.reserve = this.maxReserve;
     this.reloadEndsAt = null;
+    ctx?.events.emit(EVENTS.WEAPON_REFILLED, { ownerId: this.ownerId, weaponId: this.id, ...this.ammoSnapshot() });
+    return true;
   }
 
   /** Right mouse button. Most weapons have no second action; items like the bandage override it. */

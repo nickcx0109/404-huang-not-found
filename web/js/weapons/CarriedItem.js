@@ -24,6 +24,10 @@ export class CarriedItem extends Weapon {
     return false;
   }
 
+  ammoSnapshot() {
+    return { ...super.ammoSnapshot(), count: this.count };
+  }
+
   get depleted() {
     return this.count <= 0;
   }

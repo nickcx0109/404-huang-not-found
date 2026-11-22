@@ -72,7 +72,7 @@ export class LoadoutHolder extends WeaponHolder {
     // The same item tops up the stack in the slot; whatever does not fit stays on the ground.
     if (previous?.canAbsorb(weapon)) {
       const usedUp = previous.absorb(weapon);
-      this.events.emit(EVENTS.WEAPON_CHANGED, { ownerId: this.ownerId, weaponId: previous.id });
+      this.events.emit(EVENTS.WEAPON_CHANGED, { ownerId: this.ownerId, weaponId: previous.id, ...previous.ammoSnapshot() });
       return usedUp ? null : weapon;
     }
     if (this.index !== index) this.current?.holster();
@@ -80,7 +80,7 @@ export class LoadoutHolder extends WeaponHolder {
     weapon.ownerId = this.ownerId;
     this.weapons[index] = weapon;
     this.index = index;
-    this.events.emit(EVENTS.WEAPON_CHANGED, { ownerId: this.ownerId, weaponId: weapon.id });
+    this.events.emit(EVENTS.WEAPON_CHANGED, { ownerId: this.ownerId, weaponId: weapon.id, ...weapon.ammoSnapshot() });
     return previous;
   }
 

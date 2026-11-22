@@ -41,7 +41,7 @@ export class AmmoCrate extends Entity {
   /** Fills the player's guns. @returns {boolean} whether anything was filled */
   use(player, ctx) {
     if (!this.ready(ctx.time) || !AmmoCrate.needs(player)) return false;
-    for (const weapon of player.weapons.weapons) if (weapon?.canRefill) weapon.refill();
+    for (const weapon of player.weapons.weapons) if (weapon?.canRefill) weapon.refill(ctx);
     this.readyAt = ctx.time + this.cooldownSeconds;
     ctx.events.emit(EVENTS.AMMO_REFILLED, { ownerId: player.id, crateId: this.id });
     return true;

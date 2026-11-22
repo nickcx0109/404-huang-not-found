@@ -25,7 +25,7 @@ export class WeaponHolder {
     if (index === this.index) return true;
     this.current?.holster();
     this.index = index;
-    this.events.emit(EVENTS.WEAPON_CHANGED, { ownerId: this.ownerId, weaponId: this.current.id });
+    this.events.emit(EVENTS.WEAPON_CHANGED, { ownerId: this.ownerId, weaponId: this.current.id, ...this.current.ammoSnapshot() });
     return true;
   }
 
