@@ -34,16 +34,16 @@ test('PlayerStatus lists the other players as teammates', () => {
   const body = (id, health, extra = {}) => ({ id, position: { x: 0, y: 0, z: 0 }, damageable: { health, maxHealth: 100 },
     weapons: { current: null }, ...extra });
   const session = { state: 'playing', wave: 1, canMove: true,
-    context: { time: 0, enemies: [], players: [body('p1', 100), body('p2', 40, { name: 'Mako' }), body('p3', 0)] } };
+    context: { time: 0, enemies: [], players: [body('p1', 100), body('p2', 40, { name: 'Mako' }), body('p3', 0, { downed: true })] } };
   const status = new PlayerStatus().read(session, 'p2');
   assert.equal(status.health, 40);
   assert.deepEqual(status.mates, [
-    { id: 'p1', name: 'P1', health: 100, maxHealth: 100, down: false },
-    { id: 'p3', name: 'P3', health: 0, maxHealth: 100, down: true },
+    { id: 'p1', name: 'P1', health: 100, maxHealth: 100, down: false, healing: false },
+    { id: 'p3', name: 'P3', health: 0, maxHealth: 100, down: true, healing: false },
   ]);
 
   session.context.players[2].downed = false;
   session.context.players.shift();
   status.read(session, 'p2');
-  assert.deepEqual(status.mates, [{ id: 'p3', name: 'P3', health: 0, maxHealth: 100, down: false }]);
+  assert.deepEqual(status.mates, [{ id: 'p3', name: 'P3', health: 0, maxHealth: 100, down: false, healing: false }]);
 });

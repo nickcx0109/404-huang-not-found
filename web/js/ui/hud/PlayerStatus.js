@@ -1,3 +1,5 @@
+import { TeamPresentation } from './logic/TeamPresentation.js';
+
 /** Scratch record for the pickup offer; its two values are copied out at once, so one is enough. */
 const OFFER = { name: '', swap: false, full: false, verb: '', note: null };
 
@@ -48,7 +50,7 @@ export class PlayerStatus {
     this.yaw = 0;
     /** Enemies as plain records { id, x, z }, so a widget can tell where a hit came from. */
     this.threats = [];
-    /** The other players as plain records { id, name, health, maxHealth, down }. */
+    /** The other players as plain records { id, name, health, maxHealth, down, healing }. */
     this.mates = [];
   }
 
@@ -143,15 +145,16 @@ export class PlayerStatus {
     let count = 0;
     for (const other of context.players) {
       if (other === player) continue;
-      const mate = this.mates[count] ?? (this.mates[count] = { id: null, name: '', health: 0, maxHealth: 1, down: false });
+      const mate = this.mates[count] ?? (this.mates[count] = { id: null, name: '', health: 0, maxHealth: 1, down: false, healing: false });
       if (mate.id !== other.id) {
         mate.id = other.id;
         mate.name = String(other.name ?? other.id).toUpperCase().slice(0, 12);
       }
       mate.health = other.damageable.health;
       mate.maxHealth = other.damageable.maxHealth;
-      // Until downed-and-revive exists (TODO G7), a player without health counts as down.
-      mate.down = other.downed ?? other.damageable.health <= 0;
+      mate.name = PlayerStatus.nameOf(other);
+      mate.down = TeamPresentation.down(other);
+      mate.healing = TeamPresentation.carriesHealing(other.weapons?.weapons);
       count++;
     }
     this.mates.length = count;

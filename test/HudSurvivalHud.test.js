@@ -333,7 +333,15 @@ test('TeamWidget lists the other players, marks low health and shows who is down
   hud.updateGame(0, session);
   assert.equal(team.rows.length, 1);
   const row = team.rows[0];
-  assert.equal(row.el.children[0].textContent, 'MAKO');
+  assert.equal(row.name.textContent, 'MAKO');
+  assert.equal(row.avatar.textContent, 'MA');
+  assert.equal(row.icon.hidden, true);
+  mate.weapons.weapons = [{ slot: 'healing', count: 1 }];
+  hud.updateGame(0, session);
+  assert.equal(row.icon.hidden, false);
+  mate.weapons.weapons[0].count = 0;
+  hud.updateGame(0, session);
+  assert.equal(row.icon.hidden, true);
   assert.equal(row.fill.style.transform, 'scaleX(1.0000)');
   for (let step = 0; step < 100; step++) hud.updateGame(0.05, session);
   assert.equal(team.el.classList.contains('is-awake'), false);
@@ -345,6 +353,7 @@ test('TeamWidget lists the other players, marks low health and shows who is down
   assert.equal(row.el.classList.contains('is-low'), true);
   assert.equal(row.el.classList.contains('is-down'), false);
 
+  mate.downed = true;
   mate.damageable.health = 0;
   for (let step = 0; step < 200; step++) hud.updateGame(0.05, session);
   assert.equal(row.el.classList.contains('is-down'), true);

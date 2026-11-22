@@ -374,3 +374,10 @@ G3 驗收：126 個 node:test 全過，包含每波數量／種類／間隔／�
 - `hold(playerId, holding)` supplies input; release, blur, pointer unlock, lost range, or a downed rescuer cancels progress. `targetFor`, `offerFor`, and `progressFor` expose the same priority to input, HUD, and level interactions. Rescue takes E before pickups/ammo and pauses obstacle clearing. Healing remains on mouse buttons.
 - The existing `PlayerStatus.action/actionProgress` and `PromptWidget` draw rescue progress. Downed players cannot walk, shoot, reload, switch, or take items; enemy brains select the nearest standing player. Playing and WaveBreak enter GameOver only when no player has positive health.
 - With `?play=1&debug=1`, `__gameDebug.spawnTeammate()` creates a stationary fake teammate and returns its ID. `kill(id)` downs that player (omitting ID targets the local player); `holdRevive(holding, ownerId)` supplies rescue input; `moveTeammate(id, x, z)` changes position for cancellation checks. `snapshot().players` contains IDs, downed flags, and health. A fake teammate may rescue the local player through `holdRevive(true, mateId)`.
+
+## G15 / G16b Team HUD
+
+- `PlayerStatus.mates` reuses plain `{ id, name, health, maxHealth, down, healing }` records. `down` follows `player.downed`; `healing` means a carried item has the `healing` slot and positive stock, including unequipped items.
+- DOM-free `TeamPresentation` owns badge text, the healing icon, and inventory capability checks. `TeamWidget` draws a CSS avatar, call sign, health bar, DOWN state and medical cross at bottom left. Rows are rebuilt only when roster IDs change.
+- The existing `HealthWidget` / `HealthMeter` show local health at bottom right, red below 30%; ammo sits above it.
+- Debug-only `__gameDebug.damagePlayer(id, amount)` and `giveBandage(id)` support teammate HUD checks, alongside `spawnTeammate()` and `kill(id)`.
