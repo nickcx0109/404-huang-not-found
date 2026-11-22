@@ -32,6 +32,7 @@ export function installAudio({ events, player, enemies, playerId }) {
     .register('pistol', { fire: 'shot_pistol' })
     .register('revolver', { fire: 'shot_revolver' })
     .register('rifle', { fire: 'shot_rifle' })
+    .register('sniper', { fire: 'shot_revolver' })
     .register('smg', { fire: 'shot_smg' })
     .register('shotgun', { fire: 'shot_shotgun' })
     .register('bat', { fire: 'swing', hit: 'bat_hit' })
@@ -40,7 +41,7 @@ export function installAudio({ events, player, enemies, playerId }) {
   board.install(new HitSounds(events, playerId));
   board.install(new PlayerSounds(events, playerId));
   board.install(new PickupSounds(events, playerId)
-    .register(['rifle', 'shotgun', 'smg', 'revolver'], 'pickup_gun')
+    .register(['rifle', 'shotgun', 'smg', 'revolver', 'sniper'], 'pickup_gun')
     .register(['katana', 'chainsaw'], 'pickup_melee'));
   board.install(new ZombieSounds(events, enemies)
     .register(Enemy, { groan: 'zombie_groan', death: 'zombie_death' })
