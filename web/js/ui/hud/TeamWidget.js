@@ -1,9 +1,10 @@
 import { EVENTS } from '../../game/events.js';
 import { HudWidget } from './HudWidget.js';
+import { TeamPresentation } from './logic/TeamPresentation.js';
 import { HealthMeter } from './logic/HealthMeter.js';
 
 /**
- * Teammates, bottom left above the player's own health: a call sign and a very thin bar each.
+ * Teammates, bottom left: a call sign and a very thin bar each.
  * A teammate who is down gets a red call sign and the word DOWN.
  * With nobody else in the game the widget is empty.
  */
@@ -38,6 +39,15 @@ export class TeamWidget extends HudWidget {
         row.el.classList.toggle('is-down', mate.down);
         this.attention.poke();
       }
+      if (mate.name !== row.name.textContent) {
+        row.name.textContent = mate.name;
+        row.avatar.textContent = TeamPresentation.avatar(mate.name);
+      }
+      if (Boolean(mate.healing) !== row.healing) {
+        row.healing = Boolean(mate.healing);
+        row.icon.hidden = !row.healing;
+        this.attention.poke();
+      }
       trouble = trouble || mate.down || row.meter.low;
     }
     this.attention.pin(trouble);
@@ -55,10 +65,18 @@ export class TeamWidget extends HudWidget {
     for (const row of this.rows) row.el.remove();
     this.rows = mates.map(mate => {
       const el = this.part('div', 'hud-team__row');
-      this.part('span', 'hud-team__name', el).textContent = mate.name;
+      const avatar = this.part('span', 'hud-team__avatar', el);
+      avatar.setAttribute('aria-hidden', 'true');
+      const name = this.part('span', 'hud-team__name', el);
+      const icon = this.part('span', 'hud-team__healing', el);
+      icon.textContent = TeamPresentation.healingIcon.glyph;
+      icon.setAttribute('title', TeamPresentation.healingIcon.label);
+      icon.setAttribute('aria-label', TeamPresentation.healingIcon.label);
+      icon.setAttribute('role', 'img');
+      icon.hidden = true;
       this.part('span', 'hud-team__state', el).textContent = 'DOWN';
       const fill = this.part('i', 'hud-team__fill', this.part('div', 'hud-team__bar', el));
-      return { id: mate.id, el, fill, meter: new HealthMeter(), down: false };
+      return { id: mate.id, el, fill, name, avatar, icon, healing: false, meter: new HealthMeter(), down: false };
     });
   }
 }

@@ -6,7 +6,7 @@ import { BrushStroke } from './logic/BrushStroke.js';
 const HIT_FLASH_SECONDS = 0.22;
 
 /**
- * Health, bottom left: a number and one brush stroke.
+ * Health, bottom right: a number and one brush stroke.
  * When hurt the stroke drops at once and leaves a dark red piece behind that drains away;
  * below the low-health threshold the number turns red and throbs.
  */

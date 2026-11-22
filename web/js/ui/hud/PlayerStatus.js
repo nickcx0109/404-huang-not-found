@@ -1,3 +1,5 @@
+import { TeamPresentation } from './logic/TeamPresentation.js';
+
 /** Scratch record for the pickup offer; its two values are copied out at once, so one is enough. */
 const OFFER = { name: '', swap: false, full: false, verb: '', note: null };
 
@@ -7,6 +9,9 @@ const OFFER = { name: '', swap: false, full: false, verb: '', note: null };
  * so a network client can later fill the same fields from a snapshot sent by the host.
  */
 export class PlayerStatus {
+  /** Raw teammate names last formatted, by row (private, so status stays plain data). */
+  #mateNames = [];
+
   constructor() {
     this.health = 0;
     this.maxHealth = 1;
@@ -48,7 +53,7 @@ export class PlayerStatus {
     this.yaw = 0;
     /** Enemies as plain records { id, x, z }, so a widget can tell where a hit came from. */
     this.threats = [];
-    /** The other players as plain records { id, name, health, maxHealth, down }. */
+    /** The other players as plain records { id, name, health, maxHealth, down, healing }. */
     this.mates = [];
   }
 
@@ -143,15 +148,18 @@ export class PlayerStatus {
     let count = 0;
     for (const other of context.players) {
       if (other === player) continue;
-      const mate = this.mates[count] ?? (this.mates[count] = { id: null, name: '', health: 0, maxHealth: 1, down: false });
-      if (mate.id !== other.id) {
+      const mate = this.mates[count] ?? (this.mates[count] = { id: null, name: '', health: 0, maxHealth: 1, down: false, healing: false });
+      const rawName = other.name ?? other.id;
+      // Names are formatted only when the player or the raw name changes, not every frame.
+      if (mate.id !== other.id || this.#mateNames[count] !== rawName) {
         mate.id = other.id;
-        mate.name = String(other.name ?? other.id).toUpperCase().slice(0, 12);
+        this.#mateNames[count] = rawName;
+        mate.name = PlayerStatus.nameOf(other);
       }
       mate.health = other.damageable.health;
       mate.maxHealth = other.damageable.maxHealth;
-      // Until downed-and-revive exists (TODO G7), a player without health counts as down.
-      mate.down = other.downed ?? other.damageable.health <= 0;
+      mate.down = TeamPresentation.down(other);
+      mate.healing = TeamPresentation.carriesHealing(other.weapons?.weapons);
       count++;
     }
     this.mates.length = count;

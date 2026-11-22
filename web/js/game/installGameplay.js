@@ -190,6 +190,15 @@ function installDebug(app, lifecycle) {
       refresh();
       return mate.id;
     },
+    damagePlayer: (id, amount) => {
+      const player = app.game.playerById(id);
+      player.damageable.takeDamage(new DamageInfo({ amount, sourceId: 'debug', targetId: id }));
+      refresh();
+    },
+    giveBandage: id => {
+      app.game.playerById(id).weapons.add(new Bandage());
+      refresh();
+    },
     holdRevive: (holding, ownerId = app.game.context.players[0].id) => app.game.revives.hold(ownerId, holding),
     moveTeammate: (id, x, z) => {
       const mate = app.game.playerById(id);
