@@ -236,7 +236,7 @@ LevelData ──▶ SceneBuilder ──▶ CollisionWorld   碰撞（只看 coll
 
 Palette（art/style/palette.json ＋ chapters/<章>.json）──▶ Atmosphere ──▶ 霧、背景、半球光、月光（霧色是「畫面上看到的顏色」）
                                                ──▶ Flashlight（玩家的 SpotLight）
-                                               ──▶ PostFX（tone mapping、暗角、顆粒、1/4 解析度 bloom）
+                                               ──▶ PostFX（tone mapping、暗角、顆粒、1/4 解析度 bloom） -> FXAA (disable: `?aa=0`)
 
 PlayerController  pointer lock + WASD，眼睛高度 1.7 m，和 CollisionWorld 做 AABB 碰撞
 PathFinder        在 CollisionWorld 上找走得通的路線；檢查灰盒用（不是遊戲裡殭屍的尋路）
