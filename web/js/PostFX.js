@@ -1,12 +1,14 @@
 import * as THREE from 'three';
+import { FXAAPass } from './FXAAPass.js';
+import { resolveAntialias } from './core/antialias.js';
 import { resolveBloomLevels } from './core/bloomLevels.js';
 
 // PostFX: lightweight post-processing.
 //   scene -> HDR target -> [optional bloom, from quarter resolution down] -> one final pass:
 //   exposure + ACES tone mapping, saturation, vignette, film grain, sRGB.
-// No MSAA and no full-resolution blur passes (PERFORMANCE_PLAN 3.2-6).
+// Optional final FXAA filters the display-encoded composite (no MSAA).
 // On integrated GPUs the cost of a pass is roughly the number of pixels it writes, so the
-// chain has exactly two full-resolution passes (scene, final) and everything else is small.
+// chain has two full-resolution passes plus FXAA when enabled; bloom stays small.
 // All numbers arrive through setParams() from Atmosphere (palette.json).
 // Size of the largest bloom level relative to the screen: 4 = quarter resolution.
 // (2 = half resolution looks slightly tighter but writes 4x the pixels: measured
@@ -167,7 +169,7 @@ const FINAL_FRAGMENT = [
 
 export class PostFX {
   /** @param {THREE.WebGLRenderer} renderer */
-  constructor(renderer) {
+  constructor(renderer, { antialias, search = globalThis.location?.search || '' } = {}) {
     this.renderer = renderer;
     this.hdr = PostFX.supportsHalfFloatTargets(renderer);
     if (!this.hdr) {
@@ -177,6 +179,9 @@ export class PostFX {
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
     this.width = Math.max(1, size.x);
     this.height = Math.max(1, size.y);
+
+    this.antialiasEnabled = resolveAntialias(antialias, search);
+    this._fxaa = new FXAAPass(this.width, this.height);
 
     this.sceneTarget = this._target(this.width, this.height, true);
     this.bloomTargets = [];
@@ -313,6 +318,7 @@ export class PostFX {
     this.width = Math.max(1, size.x);
     this.height = Math.max(1, size.y);
     this.sceneTarget.setSize(this.width, this.height);
+    this._fxaa.resize(this.width, this.height);
     this._final.uniforms.uAspect.value = this.width / this.height;
     this._rebuildBloomTargets();
   }
@@ -384,11 +390,13 @@ export class PostFX {
       u.uBloom.value = 0;
     }
     u.uTime.value = time;
-    this._pass(this._final, null);
+    this._pass(this._final, this.antialiasEnabled ? this._fxaa.target : null);
+    if (this.antialiasEnabled) this._pass(this._fxaa.material, null);
   }
 
   dispose() {
     this.sceneTarget.dispose();
+    this._fxaa.dispose();
     this.bloomTargets.forEach((t) => t.dispose());
     [this._prefilter, this._downsample, this._upsample, this._final].forEach((m) => m.dispose());
     this._quad.geometry.dispose();

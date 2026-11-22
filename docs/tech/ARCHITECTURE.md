@@ -88,3 +88,5 @@ unsubscribe();
 - 截圖維持 `node tools/art/shots.mjs --level ch2 --out <目錄>`；可用 `--format png` 拍改前、改後兩份，再用 `node tools/art/compare.mjs <改前> <改後>` 比較：`same` 完全相同，`noise` 只有軟體繪圖造成的少數像素差一兩階，`DIFF` 才是畫面改變（結束碼 1）。走動模式另外確認沒有 console error。
 - `?level`、`?shot`、`?t`、`?debug`、`?perf`、`?models` 等既有參數不變。`window.__ready`、`window.__error`、`window.__stats`、`window.__app` 保留給工具；它們不是舊式的類別命名空間。
 - 已知問題以 [KNOWN_ISSUES.md](KNOWN_ISSUES.md) 為準；#1 起始重疊瞬移與 #2 出生點尺寸檢查已各自修復及加測試。沒有改關卡、材質、palette 或既有燈光；mood 新增一個正確的出生點重疊警告。
+
+PostFX composites exposure, ACES, saturation, vignette, sRGB and grain, then runs a separate `FXAAPass` on the display-encoded result without further colour conversion. FXAA uses drawing-buffer texel sizes, updated after resize/pixel-ratio changes. It defaults on; `?aa=0` disables it. The constructor option `{ antialias: false }` takes precedence over the URL, and `postfx.antialiasEnabled` can change at runtime for quality tiers. Disabling it sends the original composite directly to screen and skips the extra draw call.
