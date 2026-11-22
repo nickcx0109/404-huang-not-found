@@ -25,6 +25,7 @@ import { Shotgun } from '../weapons/Shotgun.js';
 import { SubmachineGun } from '../weapons/SubmachineGun.js';
 import { Sniper } from '../weapons/Sniper.js';
 import { Revolver } from '../weapons/Revolver.js';
+import { Adrenaline } from '../weapons/Adrenaline.js';
 import { Bandage } from '../weapons/Bandage.js';
 import { Grenade } from '../weapons/Grenade.js';
 import { Molotov } from '../weapons/Molotov.js';
@@ -38,6 +39,7 @@ import { RecoilKick } from '../player/RecoilKick.js';
 import { LoadoutHolder } from '../weapons/LoadoutHolder.js';
 import { WeaponCatalog } from '../pickups/WeaponCatalog.js';
 import { PickupField } from '../pickups/PickupField.js';
+import { registerHealingItems } from '../pickups/healingItems.js';
 import { ItemDeck } from '../pickups/ItemDeck.js';
 import { WeaponPickupViews } from '../pickups/WeaponPickupViews.js';
 import { SurvivalHud } from '../ui/hud/SurvivalHud.js';
@@ -85,12 +87,11 @@ export function createGameplayRun(app) {
     .register('chainsaw', { create: () => new Chainsaw(), name: 'CHAINSAW', pool: ['weapon', 'melee'],
       look: { length: 0.85, height: 0.26, width: 0.22 } })
     // Healing and throwable spots draw from their own pools, never from the guns.
-    .register('bandage', { create: () => new Bandage(), name: 'BANDAGE', pool: 'healing',
-      look: { length: 0.22, height: 0.08, width: 0.16 } })
     .register('grenade', { create: () => new Grenade(), name: 'GRENADE', pool: 'throwable',
       look: { length: 0.12, height: 0.12, width: 0.1 } })
     .register('molotov', { create: () => new Molotov(), name: 'MOLOTOV', pool: 'throwable',
       look: { length: 0.28, height: 0.1, width: 0.1 } });
+  registerHealingItems(catalog);
   // Dealt like cards, so every weapon lies somewhere before any lies twice.
   const deck = new ItemDeck(catalog, ctx.rng);
   const pickups = PickupField.fromLevel(app.level, catalog, ctx.rng, pool => deck.next(pool));
@@ -206,6 +207,10 @@ function installDebug(app, lifecycle) {
       app.events.emit(EVENTS.SWITCH_REQUESTED, { ownerId: app.game.context.players[0].id, index });
       refresh();
     },
+    giveAdrenaline: () => {
+      app.game.context.players[0].weapons.equip(new Adrenaline());
+      refresh();
+    },
     giveBandage: id => {
       app.game.playerById(id).weapons.add(new Bandage());
       refresh();
@@ -228,6 +233,9 @@ function installDebug(app, lifecycle) {
       const ctx = app.game.context;
       return { state: app.game.state, wave: app.game.wave, kills: app.game.kills,
         players: ctx.players.map(player => ({ id: player.id, downed: player.downed, health: player.damageable.health })),
+        speedMultiplier: app.player.speedMultiplier,
+        reloadRate: ctx.players[0].effects.multiplier('reloadRate', ctx.time),
+        reloadEndsAt: ctx.players[0].weapons.current?.reloadEndsAt,
         time: ctx.time, health: ctx.players[0].damageable.health,
         ammo: ctx.players[0].weapons.current.ammo,
         inventory: ctx.players[0].weapons.weapons.map(weapon => weapon?.id ?? null),

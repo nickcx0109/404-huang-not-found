@@ -3,7 +3,7 @@ import { ModelKit } from './ModelKit.js';
 import { WeaponModel } from '../WeaponModel.js';
 import { buildRifle, buildSmg, buildShotgun, buildRevolver } from './gunModels.js';
 import { buildBat, buildKatana, buildChainsaw } from './meleeModels.js';
-import { buildGrenade, buildMolotov, buildBandage } from './itemModels.js';
+import { buildGrenade, buildMolotov, buildBandage, buildAdrenaline } from './itemModels.js';
 
 const built = build => context => build(new ModelKit(context.colors));
 
@@ -24,4 +24,5 @@ export const STANDARD_MODELS = Object.freeze({
   grenade: built(buildGrenade),
   molotov: built(buildMolotov),
   bandage: built(buildBandage),
+  adrenaline: built(buildAdrenaline),
 });

@@ -40,3 +40,12 @@ export function buildBandage(kit) {
   kit.box([0.016, 0.004, 0.02], 'gun_steel_worn', [0.01, -0.032, 0.06], { look: { metalness: 0.6 } });
   return kit.build('bandage');
 }
+
+/** Adrenaline injector: barrel, plunger and short metal tip. */
+export function buildAdrenaline(kit) {
+  kit.cylinder(0.014, 0.014, 0.09, 'cloth', [0, 0, 0], { axis: 'y', sides: 12 });
+  kit.cylinder(0.008, 0.008, 0.03, 'gun_steel', [0, 0.06, 0], { axis: 'y', sides: 10 });
+  kit.box([0.04, 0.006, 0.025], 'gun_steel_worn', [0, 0.078, 0]);
+  kit.cylinder(0.002, 0.002, 0.035, 'gun_steel', [0, -0.06, 0], { axis: 'y', sides: 6 });
+  return kit.build('adrenaline');
+}
