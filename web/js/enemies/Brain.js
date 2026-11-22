@@ -9,17 +9,24 @@ export class ChaseBrain extends Brain {
     super();
     this.root = new Selector(
       new Sequence(
-        new Condition((enemy, ctx) => enemy.canAttack(ctx.players[0], ctx)),
-        new Action((enemy, dt, ctx) => { enemy.attack(ctx.players[0], ctx); return STATUS.SUCCESS; })
+        new Condition((enemy, ctx) => enemy.canAttack(enemy.chaseTarget, ctx)),
+        new Action((enemy, dt, ctx) => { enemy.attack(enemy.chaseTarget, ctx); return STATUS.SUCCESS; })
       ),
       new Action((enemy, dt, ctx) => {
-        enemy.moveToward(ctx.players[0], dt, ctx);
+        enemy.moveToward(enemy.chaseTarget, dt, ctx);
         return STATUS.RUNNING;
       })
     );
   }
 
   update(enemy, dt, ctx) {
+    enemy.chaseTarget = null;
+    let distance = Infinity;
+    for (const player of ctx.players) {
+      if (!player.damageable.alive || player.downed) continue;
+      const next = Math.hypot(player.position.x - enemy.position.x, player.position.z - enemy.position.z);
+      if (next < distance) { distance = next; enemy.chaseTarget = player; }
+    }
     return this.root.tick(enemy, dt, ctx);
   }
 }

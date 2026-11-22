@@ -28,15 +28,17 @@ export class PlayerCombat {
     };
     this._onContextMenu = event => { if (this.controller.locked) event.preventDefault(); };
     this._onMouseUp = event => { if (event.button === 0) this.trigger.release(); };
-    this._onBlur = () => this.trigger.release();
+    this._onKeyUp = event => { if (event.code === 'KeyE') ctx.session?.revives.hold(ownerId, false); };
+    this._onBlur = () => { this.trigger.release(); ctx.session?.revives.hold(ownerId, false); };
     this._onPointerLockChange = () => {
-      if (!document.pointerLockElement) this.trigger.release();
+      if (!document.pointerLockElement) this._onBlur();
     };
     this._onKeyDown = event => {
       if (event.repeat || !this.controller.locked) return;
       if (event.code === 'KeyR') ctx.events.emit(EVENTS.RELOAD_REQUESTED, this._ownerRequest);
       else if (event.code === 'KeyE') {
         // E uses the nearest ground item or ammunition box.
+        ctx.session.revives.hold(ownerId, true);
         ctx.events.emit(EVENTS.PICKUP_REQUESTED, this._ownerRequest);
       }
       else if (/^Digit[1-9]$/.test(event.code)) {
@@ -59,6 +61,7 @@ export class PlayerCombat {
     window.addEventListener('blur', this._onBlur);
     document.addEventListener('pointerlockchange', this._onPointerLockChange);
     window.addEventListener('keydown', this._onKeyDown);
+    window.addEventListener('keyup', this._onKeyUp);
   }
 
   updateAim() {
@@ -96,5 +99,7 @@ export class PlayerCombat {
     window.removeEventListener('blur', this._onBlur);
     document.removeEventListener('pointerlockchange', this._onPointerLockChange);
     window.removeEventListener('keydown', this._onKeyDown);
+    window.removeEventListener('keyup', this._onKeyUp);
+    this.context.session?.revives.hold(this.ownerId, false);
   }
 }

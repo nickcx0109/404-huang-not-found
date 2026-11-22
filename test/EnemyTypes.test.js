@@ -168,7 +168,8 @@ test('Exploder damages every exposed player in its blast, then dies once without
   assert.equal(enemy.detonated, true);
   assert.equal(requests.length, 4);
   assert.ok(requests.every(info => info instanceof DamageInfo && info.kind === 'explosion' && info.sourceId === enemy.id));
-  assert.deepEqual(deaths, [player.id, enemy.id]);
+  assert.equal(player.downed, true);
+  assert.deepEqual(deaths, [enemy.id]);
   assert.equal(session.kills, 0);
   enemy.update(0.05, ctx);
   enemy.attack(nearby, ctx);

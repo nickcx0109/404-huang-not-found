@@ -1,5 +1,5 @@
 import { Entity } from '../entities/Entity.js';
-import { Damageable } from '../entities/Damageable.js';
+import { DownedHealth } from './DownedHealth.js';
 import { WeaponHolder } from '../weapons/WeaponHolder.js';
 import { PLAYER_BODY } from './PlayerBody.js';
 
@@ -9,7 +9,8 @@ export class CombatPlayer extends Entity {
     super(id, controller);
     this.controller = controller;
     this.body = PLAYER_BODY;
-    this.damageable = new Damageable(this, 100, events);
+    this.downed = false;
+    this.damageable = new DownedHealth(this, 100, events);
     this.weapons = weapons;
   }
 

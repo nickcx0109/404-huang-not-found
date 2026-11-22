@@ -11,6 +11,10 @@ export class MovementLock {
 
   update() {
     this.controller.rooted = this.session.isRooted(this.playerId);
+    if (this.session.playerById?.(this.playerId)?.downed) {
+      this.controller.velocityX = 0;
+      this.controller.velocityZ = 0;
+    }
   }
 
   dispose() {

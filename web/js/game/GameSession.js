@@ -1,3 +1,4 @@
+import { ReviveInteraction } from '../pickups/ReviveInteraction.js';
 import { StateMachine } from '../core/StateMachine.js';
 import { DamageInfo } from '../entities/DamageInfo.js';
 import { DamagePipeline, HeadshotRule } from '../entities/DamagePipeline.js';
@@ -22,6 +23,7 @@ export class GameSession {
     this.separation = separation;
     /** Weapons on the ground (a PickupField), or null when the level has none. */
     this.pickups = pickups;
+    this.revives = new ReviveInteraction(ctx.players);
     /** How this level is won (an Objective); the default never wins. */
     this.objective = objective;
     this.damagePipeline = damagePipeline;
@@ -89,7 +91,8 @@ export class GameSession {
 
   /** True when this player may not walk: the item in their hand keeps them still. */
   isRooted(playerId) {
-    return this.playerById(playerId)?.weapons.current?.holdsOwnerStill === true;
+    const player = this.playerById(playerId);
+    return Boolean(player && (player.downed || !player.damageable.alive || player.weapons.current?.holdsOwnerStill));
   }
 
   playerById(id) {
@@ -101,6 +104,7 @@ export class GameSession {
     if (!Number.isFinite(dt) || dt < 0 || dt > 0.05 + 1e-9) throw new RangeError('Use simulation steps of 0..0.05 seconds');
     this.context.time += dt;
     this.machine.update(dt);
+    this.revives.update(this.canMove ? dt : 0);
   }
 
   changeState(state) {
@@ -174,6 +178,7 @@ export class GameSession {
   updateBreak(dt) {
     for (const player of this.context.players) player.update(dt, this.context);
     this.updateEffects(dt);
+    if (!this.anyPlayerAlive) { this.changeState(this.states.gameOver); return; }
     if (this.advanceObjective(dt)) return;
     if (this.context.time + 1e-9 >= this.breakEndsAt) this.changeState(this.states.playing);
   }
@@ -211,7 +216,9 @@ export class GameSession {
   /** Takes the nearest weapon on the ground, swapping it with the one in that slot. Allowed whenever players can move. */
   pickUp(ownerId) {
     const player = this.playerById(ownerId);
-    if (!this.pickups || !this.canMove || !player?.damageable.alive) return false;
+    if (!this.canMove || !player?.damageable.alive) return false;
+    if (this.revives.take(player)) return true;
+    if (!this.pickups) return false;
     return this.pickups.take(player, this.context);
   }
 
