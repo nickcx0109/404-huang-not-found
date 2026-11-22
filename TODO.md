@@ -19,7 +19,7 @@
 
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker` 這兩個範例。
 
-- [ ] **G7 倒地和救援**
+- [~] **G7 倒地和救援**（進行中：@nickcx0109，分支 feat/downed-revive）
   - 內容：生命歸零先倒地，隊友靠近按住 E 數秒救起；全部倒地才 GameOver。先在單人可測的狀態下做好（例如 debug 加一個假隊友）。
   - 完成：倒地、救起、全滅三種情況都有測試。
   - 介面已經有隊友列（`web/js/ui/hud/TeamWidget.js`）：玩家物件有 `downed` 就照它顯示「DOWN」，沒有就把血量歸零當成倒地。
