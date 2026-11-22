@@ -45,6 +45,7 @@ export class PlayerController {
     this.enabled = false;
     /** While true the keys stop moving and jumping the player (set from the game, e.g. while healing). */
     this.rooted = false;
+    this.speedMultiplier = 1;
     this.onLockChange = null;
     this._movement = { x: 0, z: 0, hitX: false, hitZ: false };
     /** Space jumps; the jump only lifts the eyes, walls still stop the player as if on the ground. */
@@ -104,7 +105,7 @@ export class PlayerController {
       strafe /= length;
     }
 
-    const speed = active && k.sprint ? o.sprintSpeed : o.walkSpeed;
+    const speed = (active && k.sprint ? o.sprintSpeed : o.walkSpeed) * this.speedMultiplier;
     const sin = Math.sin(this.yaw);
     const cos = Math.cos(this.yaw);
     // forward = (-sin, -cos), right = (cos, -sin) on the XZ plane

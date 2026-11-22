@@ -61,11 +61,18 @@ export class Weapon {
     this.update(0, ctx);
     if (!this.usesAmmo || this.reloading || this.ammo === this.magazine || this.reserve === 0) return false;
     this.reloadEndsAt = ctx.time + this.reloadSeconds;
+    this._reloadUpdatedAt = ctx.time;
     return true;
   }
 
   update(dt, ctx) {
-    if (!this.reloading || ctx.time + 1e-9 < this.reloadEndsAt) return;
+    if (!this.reloading) return;
+    const effects = ctx.players?.find(player => player.id === this.ownerId)?.effects;
+    const from = this._reloadUpdatedAt ?? ctx.time;
+    const elapsed = effects?.elapsed('reloadRate', from, ctx.time) ?? ctx.time - from;
+    this.reloadEndsAt -= elapsed - (ctx.time - from);
+    this._reloadUpdatedAt = ctx.time;
+    if (ctx.time + 1e-9 < this.reloadEndsAt) return;
     const amount = Math.min(this.magazine - this.ammo, this.reserve);
     this.ammo += amount;
     this.reserve -= amount;
