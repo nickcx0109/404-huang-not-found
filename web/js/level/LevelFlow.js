@@ -78,6 +78,9 @@ export class LevelFlow {
    * @returns {{exitId: string, progress: number}|null} the block the player can clear right
    *   now and how far along they are (0..1), for a prompt; null when there is none
    */
+  /** Cancels held progress while a higher priority interaction owns E. */
+  cancelInteraction() { this._held = 0; this._focus = null; }
+
   update(dt, holding) {
     if (this._leaving) return null;
 

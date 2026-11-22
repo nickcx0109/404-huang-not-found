@@ -111,6 +111,13 @@ export function installLevelFlow(app) {
   return {
     flow,
     update(dt) {
+      const local = app.game?.context.players[0];
+      const blocked = app.game && (!app.game.canMove || !local?.damageable.alive || app.game.revives.targetFor(local));
+      if (blocked) {
+        flow.cancelInteraction();
+        prompt.show(null);
+        return;
+      }
       prompt.show(flow.update(dt, holding && app.player.locked));
     },
     dispose() {

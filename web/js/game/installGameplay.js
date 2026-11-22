@@ -180,8 +180,24 @@ function installDebug(app, lifecycle) {
     ready: () => app.gameplayReady,
     start: () => { app.game.start(); app.game.update(0); refresh(); },
     restart: () => { lifecycle.restart(); refresh(); },
-    kill: () => {
-      const player = app.game.context.players[0];
+    spawnTeammate: () => {
+      const ctx = app.game.context;
+      const local = ctx.players[0];
+      const mate = new CombatPlayer('debug-mate-' + ctx.players.length,
+        { x: local.position.x + 1, z: local.position.z }, ctx.events);
+      mate.name = 'DEBUG MATE';
+      ctx.players.push(mate);
+      refresh();
+      return mate.id;
+    },
+    holdRevive: (holding, ownerId = app.game.context.players[0].id) => app.game.revives.hold(ownerId, holding),
+    moveTeammate: (id, x, z) => {
+      const mate = app.game.playerById(id);
+      mate.controller.x = mate.position.x = x;
+      mate.controller.z = mate.position.z = z;
+    },
+    kill: (id = app.game.context.players[0].id) => {
+      const player = app.game.playerById(id);
       player.damageable.takeDamage(new DamageInfo({ amount: player.damageable.maxHealth,
         sourceId: 'debug', targetId: player.id }));
       app.game.update(0);
@@ -191,6 +207,7 @@ function installDebug(app, lifecycle) {
     snapshot: () => {
       const ctx = app.game.context;
       return { state: app.game.state, wave: app.game.wave, kills: app.game.kills,
+        players: ctx.players.map(player => ({ id: player.id, downed: player.downed, health: player.damageable.health })),
         time: ctx.time, health: ctx.players[0].damageable.health,
         ammo: ctx.players[0].weapons.current.ammo,
         inventory: ctx.players[0].weapons.weapons.map(weapon => weapon?.id ?? null),

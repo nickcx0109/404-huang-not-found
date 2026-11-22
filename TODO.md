@@ -19,10 +19,6 @@
 
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker` 這兩個範例。
 
-- [~] **G7 倒地和救援**（進行中：@nickcx0109，分支 feat/downed-revive）
-  - 內容：生命歸零先倒地，隊友靠近按住 E 數秒救起；全部倒地才 GameOver。先在單人可測的狀態下做好（例如 debug 加一個假隊友）。
-  - 完成：倒地、救起、全滅三種情況都有測試。
-  - 介面已經有隊友列（`web/js/ui/hud/TeamWidget.js`）：玩家物件有 `downed` 就照它顯示「DOWN」，沒有就把血量歸零當成倒地。
 - [ ] **G8 區網多人連線**（大項，認領前先拆小）
   - 起點：`GAMEPLAY.md` 的「傷害與行為的邊界」第 5 點；舊原型的 `reference/old-web-prototype/prototype-web/server.mjs`（WebSocket 房間轉送）和 `core/net.js`、`core/coop.js`。
   - 內容：Host 跑 `GameSession`，Client 只送輸入，Host 傳快照；顯示其他玩家；`ChaseBrain` 改成追最近的玩家（現在只追 `ctx.players[0]`）；連線時把第二章的 `alarm.light.count` 降到 1 或 0（動態燈上限）。
@@ -84,6 +80,8 @@
 ---
 
 ## 已完成
+
+- G7 倒地和救援（PR #40）
 
 格式：`代號 標題（PR #編號）`。
 

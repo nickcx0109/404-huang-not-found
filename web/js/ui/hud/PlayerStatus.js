@@ -109,7 +109,8 @@ export class PlayerStatus {
     this.magazine = weapon ? weapon.magazine : 0;
     this.reserve = weapon ? weapon.reserve : 0;
     this.reloading = weapon ? Boolean(weapon.reloading) : false;
-    const offer = player && session.canMove ? session.pickups?.offerFor(player, OFFER, context.time) : null;
+    const offer = player?.damageable.alive && session.canMove ?
+      (session.revives?.offerFor(player, OFFER) ?? session.pickups?.offerFor(player, OFFER, context.time)) : null;
     this.pickup = offer ? offer.name : null;
     this.pickupSwap = offer ? offer.swap : false;
     this.pickupFull = offer ? offer.full : false;
@@ -117,6 +118,8 @@ export class PlayerStatus {
     this.pickupNote = offer ? offer.note ?? null : null;
     this._readSlots(player);
     this._readAction(context, player);
+    const revive = session.revives?.progressFor(player);
+    if (revive) { this.action = revive.text; this.actionProgress = revive.fraction; }
     this.state = session.state;
     this.canRestart = Boolean(session.canRestart);
     this.wave = session.wave;
