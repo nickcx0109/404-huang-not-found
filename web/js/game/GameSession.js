@@ -238,6 +238,8 @@ export class GameSession {
     for (const unsubscribe of this._subscriptions) unsubscribe();
     this.machine.change(null);
     this.factory.dispose();
+    for (const player of this.context.players) player.dispose();
+    this.context.players.length = 0;
     this.context.enemies.length = 0;
     this.context.effects.length = 0;
     this.context.session = null;

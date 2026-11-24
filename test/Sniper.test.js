@@ -3,12 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { EventBus } from '../web/js/core/EventBus.js';
 import { Aabb, CollisionWorld } from '../web/js/CollisionWorld.js';
+import { createSession } from '../web/js/game/createSession.js';
 import { EVENTS } from '../web/js/game/events.js';
 import { Sniper } from '../web/js/weapons/Sniper.js';
-import { WeaponCatalog } from '../web/js/pickups/WeaponCatalog.js';
-import { PickupField } from '../web/js/pickups/PickupField.js';
-import { ItemDeck } from '../web/js/pickups/ItemDeck.js';
-import { LoadoutHolder } from '../web/js/weapons/LoadoutHolder.js';
 import { VIEWS } from '../web/js/weapons/views/standardViewModels.js';
 
 const context = () => ({ events: new EventBus(), time: 0 });
@@ -87,25 +84,26 @@ for (const [distance, expectedHits] of [[119, 1], [121, 0]]) {
   });
 }
 
-test('Production catalog deals a sniper at weapon spots and pickup equips primary', () => {
-  // Execute the composition root's actual catalog expression, without importing its browser/Three.js views.
-  const source = readFileSync(new URL('../web/js/game/installGameplay.js', import.meta.url), 'utf8');
-  const expression = source.match(/const catalog = ([\s\S]*?);\s*\/\/ Dealt/)[1];
-  const catalog = new Function('WeaponCatalog', 'Sniper', 'return ' + expression)(WeaponCatalog, Sniper);
-  assert.ok(catalog.idsIn('weapon').includes('sniper'));
-  assert.ok(!catalog.idsIn('healing').includes('sniper'));
-  assert.ok(catalog.create('sniper') instanceof Sniper);
-  const deck = new ItemDeck(catalog, () => 0);
-  const dealt = catalog.idsIn('weapon').map(() => deck.next('weapon'));
-  assert.ok(dealt.includes('sniper'));
-  const roll = (catalog.idsIn('weapon').indexOf('sniper') + 0.5) / catalog.idsIn('weapon').length;
-  const field = PickupField.fromLevel({ markers: [{ id: 'ground', type: 'weapon', x: 0, z: 0 }] }, catalog, () => roll);
-  const ctx = context();
-  const player = { id: 'player', position: { x: 0, z: 0 }, body: { radius: 0.3 },
-    weapons: new LoadoutHolder('player', ctx.events) };
+test('Production catalog deals a sniper at weapon spots and pickup equips primary', t => {
+  const level = JSON.parse(readFileSync(new URL('../web/levels/ch2.json', import.meta.url), 'utf8'));
+  const controller = { ...level.spawns.players[0] };
+  const session = createSession(level, { players: [{ id: 'player', controller }], rng: () => 0 });
+  t.after(() => session.dispose());
+  const [field] = session.pickups.parts;
+  const pickup = field.pickups.find(pickup => pickup.weapon instanceof Sniper);
+  assert.ok(pickup);
+  assert.ok(level.markers.some(marker => marker.id === pickup.id && marker.type === 'weapon'));
+  assert.ok(!field.catalog.idsIn('healing').includes('sniper'));
+  controller.x = pickup.position.x;
+  controller.z = pickup.position.z;
+  session.start();
+  session.update(0);
+  session.update(1 / 30);
+
+  const player = session.playerById('player');
   assert.equal(field.offerFor(player).name, 'SNIPER');
-  assert.equal(field.take(player, ctx), true);
+  assert.equal(session.pickUp(player.id), true);
   assert.equal(player.weapons.inSlot('primary').id, 'sniper');
   assert.equal(player.weapons.current.ammo, 5);
-  assert.equal(field.pickups[0].empty, true);
+  assert.equal(pickup.empty, true);
 });
