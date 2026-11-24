@@ -48,6 +48,20 @@ export class WsTransport {
     });
   }
 
+  /**
+   * Shares an existing HTTP server (server/http/HttpApp): WebSocket upgrades on any path of its
+   * port come here, plain requests stay with the HTTP server. Listening and closing that server
+   * is the caller's job; `close()` only drops the sockets.
+   * @param {import('node:http').Server} httpServer
+   */
+  attach(httpServer) {
+    const wss = new WebSocketServer({ server: httpServer, maxPayload: this.maxPayload });
+    wss.on('error', error => this.onError(error));
+    wss.on('connection', socket => this.accept(socket));
+    this.wss = wss;
+    return this;
+  }
+
   accept(socket) {
     const connection = new WsConnection(socket);
     this.roomServer.connect(connection);
