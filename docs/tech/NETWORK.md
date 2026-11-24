@@ -55,6 +55,12 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 
 快照裡的玩家：`{id, x, y, z, yaw, pitch, health, downed, alive, weapon, ammo, reserve}`；殭屍：`{id, type, x, z, yaw, health, state}`。
 
+- 快照：`tick` 是 server 的模擬步數，`time` 是那一步的 server 時間（和 `pong.s` 同一個時鐘）。`health` 也四捨五入到小數點後 2 位。
+- 玩家的 `ammo`、`reserve`：`ammo` 是 `null` 表示這把武器沒有子彈（近戰、道具）；`ammo` 是數字而 `reserve` 是 `null` 表示備彈無限（開局手槍；JSON 沒有 Infinity）。`event` 裡武器事件的 `ammo`、`reserve` 也一樣。
+- 殭屍的 `type` 是註冊名稱（`walker`、`runner`、`tank`、`exploder`）；`state` 是 `chase`（有追的對象）、`idle`、`dead`（這一步剛死，下一步就不在快照裡）；`yaw` 是面向它追的玩家，沒有對象時維持上一次的方向。
+- `pickups` 是 `[{id, item}]`：關卡上每個武器點和上面現在放的東西（`WeaponCatalog` 的 id），被拿走沒留東西時 `item` 是 `null`。
+- `event` 轉送的事件和 `detail`（都是純資料，不送 entity）：`weapon.fired` `{ownerId, weaponId, ammo, reserve, count?, hit: {targetId, hitPart}|null}`、`weapon.reload-started`（多 `duration`）、`weapon.reloaded`、`weapon.changed`、`entity.damaged` `{targetId, sourceId, amount, health, hitPart, kind, downed}`（玩家被打到 0 血就是 `downed: true`，玩家沒有 `entity.died`）、`entity.died` `{targetId, sourceId}`、`entity.healed` `{targetId, sourceId, amount, health}`（救起來也是這個）、`enemy.spawned` `{id, type, x, z, wave}`、`weapon.picked-up` `{ownerId, pickupId, weaponId, droppedId}`、`ammo.refilled` `{ownerId, crateId}`、`item.thrown` `{ownerId, itemId}`、`effect.exploded` `{kind, x, y, z, radius, ownerId}`、`wave.started` `{wave, count}`、`wave.cleared` `{wave, kills}`、`game.state-changed` `{state, wave}`、`game.over`、`game.victory` `{wave, kills}`。
+
 ## 手感
 
 1. **自己的移動零延遲。** 瀏覽器照舊用 `PlayerController` 算移動，送 `input` 給 server。server 用 `RemoteController` 收下位置，檢查兩次 input 之間的移動距離不超過「速度 × 經過時間 × 1.5 + 0.5 m」，也檢查碰撞；不合理就夾回去，並在快照裡給正確位置，client 看到差距超過 1 m 才拉回。
@@ -62,6 +68,17 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 3. **開槍倒回時間。** server 每一步把殭屍位置存進歷史（約 1 秒）。收到 `fire` 時，把殭屍暫時放回 `at − 100 ms`（client 看到的時間）的位置做命中判定，再放回去。倒回最多 250 ms，超過就用 250 ms。
 4. **本地先播回饋。** 槍聲、火光、後座、彈殼在本地按下去就播；傷害數字、殭屍死亡、子彈數以 server 為準。
 5. **頻率。** 模擬每秒 30 步（`update(1/30)`），快照每秒 20 次，input 每秒 30 次。快照只送離任何玩家 60 m 內的殭屍。
+
+## server 實作（G8d）
+
+`server/game/` 裡的類別，房間開始後才建立；server 不 import three.js。
+
+- `SessionRoomGame extends RoomGame`：`server/main.mjs` 的 `createGame` 每個房間建一個。開始時讀 `web/levels/<level>.json`，`p1`～`p3` 站在關卡的 `spawns.players[0..2]`（不夠就用最後一個），呼叫 `createSession()` 再 `start()`；讀檔失敗或沒有出生點就丟錯，房間收到 `start-failed` 留在 lobby。`tick(dt)` 把真實經過的時間累積成固定的 1/30 秒步，快照每 50 ms 一張（每秒 20 張；一步是 33 ms，所以三步裡送兩張，落在第 2、3、5、6… 步）。計時器晚了最多一次補 5 步，其餘丟掉。
+- `RemoteController`：每個玩家一個，`input` 收進來就處理，不等下一步。`seq` 不比上一個大就整則忽略；`ack` 是最後處理的 `seq`。允許的距離是 `PLAYER_SPEED.sprint × speedMultiplier × 經過時間 × 1.5 + 0.5 m`，經過時間是兩則 input 抵達 server 的間隔，最多算 1 秒。超過就沿原方向縮短，再用 `CollisionWorld.move` 走一次，所以穿不過牆。`session.canMove` 是 false 或 `session.isRooted(id)` 時只改視角不移動。`y` 夾在 0～1 m（只有跳躍會離地），`pitch` 夾在 ±85°。
+- `fire` 是扣一次扳機：server 發一次 `FIRE_REQUESTED`，武器自己的冷卻決定有沒有射出去。自動武器按住時，client 每次本地扳機會發射就送一則 `fire`（最多和 input 一樣每秒 30 次）。
+- 動作：`ActionRegistry` 依 `kind` 找處理類別。`fire`、`secondary` 先用這個玩家最後接受的姿勢填 `ctx.aim`；`fire` 在 `ShotRewind` 裡判定：殭屍暫時放到 `EnemyHistory` 在 `at − 100 ms` 的位置（最多倒回 250 ms，不會超過現在），判定完放回去。`pickup`、`secondary` 先把玩家位置同步成最後接受的座標。`revive` 呼叫 `session.revives.hold(id, holding)`。
+- 有人離開：那個玩家從 `ctx.players` 拿掉並 dispose，放開救援，其他人繼續玩；最後一個人離開時 Session dispose。
+- 測試：`test/SessionRoomGame.test.js` 用真的 `RoomServer` 加假連線跑完整流程，並用 `web/js/net/protocol.js` 的 `parseServerMessage` 檢查每一則送出的訊息。
 
 ## 部署
 

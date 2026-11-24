@@ -114,9 +114,10 @@ classDiagram
 | `weapons/WeaponHolder.js` | `add`、`switchTo`、`current`、`update`。切走的槍仍會完成換彈，切槍不重設冷卻 |
 | `player/CombatPlayer.js`、`player/PlayerCombat.js` | 前者接合走動控制器、Damageable、WeaponHolder；後者是瀏覽器輸入與重用瞄準向量，不決定命中結果 |
 | `player/PlayerBody.js` | `PLAYER_BODY` 是玩家半徑 0.35 m、身高 1.8 m、視線高度 1.7 m 的單一來源，PlayerController、LevelData、PathFinder 共用 |
+| `player/PlayerSpeed.js` | `PLAYER_SPEED` 是走路 4.5 m/s、衝刺 7.0 m/s 的單一來源，PlayerController 和 server 的 `RemoteController` 速度檢查共用；不 import three.js |
 | `enemies/Enemy.js` | Entity 子類與 Damageable 組合，持有 Brain、重用路徑、碰撞結果與命中盒；`activate/deactivate` 為物件池生命週期 |
 | `enemies/Brain.js`、`enemies/behaviour/Nodes.js` | Brain Strategy 與最小 reactive 行為樹；Sequence 遇非成功就停止，Selector 遇非失敗就停止，running 會向上傳遞；下次 tick 從首個子節點重新判斷，沒有有記憶的游標 |
-| `enemies/EnemyFactory.js` | `register(type, EnemySubclass)`、`create(type, spawn)`、`release(enemy)`、`dispose()`；每種類型獨立 ObjectPool，拒絕重複註冊與重複歸還 |
+| `enemies/EnemyFactory.js` | `register(type, EnemySubclass)`、`create(type, spawn)`、`release(enemy)`、`dispose()`；每種類型獨立 ObjectPool，拒絕重複註冊與重複歸還；建出來的殭屍帶 `type`（註冊名稱，例如 `walker`），連線快照用它 |
 | `ui/hud/SurvivalHud.js` | 遊戲內介面，繼承既有 Hud（`showError`、`#error`、debug/perf 顯示保留），裡面裝一組 `HudWidget`。只有 `play=1` 才建立；字型、`css/hud.css` 也是這時才加進頁面 |
 | `ui/hud/HudWidget.js` 和各元件 | 每個元件一個類別、一個檔案：血量、彈藥、準星、受傷效果、提示文字、事件字卡、隊友、頂端狀態列。`bind()` 訂閱事件處理「某一刻發生的事」，`sync(status)` 收目前的數字、有變才寫 DOM；元件不持有遊戲物件 |
 | `ui/hud/PlayerStatus.js` | HUD 唯一會讀 Session 的類別，每幀把血量、彈藥、波次、位置、隊友抄成普通數字。事件沒帶的數字（子彈數、是否換彈中）從這裡來；之後連線時 Client 可以用 Host 的快照填同樣的欄位 |
@@ -144,6 +145,8 @@ classDiagram
 - 寫入位移前，先確認 `session.canMove` 並檢查 `session.isRooted(playerId)`。倒地、失去行動能力或手上的道具要求站定時，保留原本的腳底座標。控制器座標會由模擬步直接複製，位移限制由 Server 在寫入前執行。
 - 每次分派開火或其他需要瞄準的命令前，依該玩家最近一次接受的姿勢填入共用的 `session.context.aim.origin` 和 `direction`。瞄準可以立即使用已接受的姿勢。射線從 `(x, y + PLAYER_BODY.eyeHeight, z)` 出發，`y` 是腳底高度。`yaw`、`pitch` 用弧度，`yaw = 0` 朝 −Z，正 `yaw` 向左轉，正 `pitch` 向上。瀏覽器的 `PlayerCombat` 直接讀取相機，射線起點包含跳躍偏移。
 
+- G8d 的實作在 `server/game/`：`RemoteController` 就是上面的控制器，`accept(input, now)` 做速度和碰撞檢查，`aimInto(aim)` 填瞄準射線。`ChaseBrain` 每步追最近的、活著且沒倒地的玩家（單人時就是那一個人）。細節見 [連線設計](NETWORK.md) 的「server 實作」。
+
 ## 設計模式對照
 
 | 模式 | 實際位置與理由 |
@@ -160,6 +163,9 @@ classDiagram
 | Factory／Registry | EnemyFactory 依字串類型建構已註冊子類；不靠大量 if/else 或匯入各種具體敵人。`WeaponCatalog`（含 pool）、`EffectViews.register`、`RecoilKick.register` 也是註冊表 |
 | Template Method（投擲物） | `ThrownObject.update` 固定「重力 → 撞牆 → 落地 → afterMove」，`ThrownGrenade`、`ThrownMolotov` 只覆寫 `onWall`、`onGround`、`afterMove` |
 | 多型 hook | `Weapon.secondary`、`holster`、`progress`、`depleted`、`canAbsorb`、`absorb`、`refuses` 預設什麼都不做，`CarriedItem`、`Bandage` 覆寫；`LoadoutHolder`、Session、HUD 只呼叫介面，不判斷種類 |
+| Strategy（server 遊戲） | `Room` 持有一個 `RoomGame`，預設什麼都不做（只當大廳）；`SessionRoomGame` 繼承它，在房間開始時用 `createSession()` 跑同一套 `GameSession` |
+| Command／Registry（連線動作） | `ActionRegistry` 依 `action.kind` 找 `ActionHandler` 子類（`FireAction`、`SwitchAction`、`ReviveAction`…），轉成 Session 原本的 `*_REQUESTED` 命令，沒有 switch |
+| Observer（事件轉送） | `EventRelay` 訂閱 Session 的 EventBus，依 `RelayedEvent` 清單把事件抄成純資料送給房間裡每個人 |
 | Observer＋Strategy（音效） | `SoundRule` 子類（`WeaponSounds`、`HitSounds`、`PlayerSounds`、`PickupSounds`、`ZombieSounds`、`WorldSounds`）訂閱事件、叫 `SoundBoard.play`；聲音本身是 `Sound` 子類（`SampleSound` 音檔、`SynthSound` 程式合成），武器和殭屍完全不知道有音效 |
 
 ## 事件清單
