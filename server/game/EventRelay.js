@@ -38,7 +38,7 @@ export function standardRelayedEvents() {
       hitPart: info.hitPart ?? null, kind: info.kind ?? null, downed: entity.downed === true,
     })),
     new RelayedEvent(EVENTS.ENTITY_DIED, ({ entity, info }) => ({
-      targetId: entity.id, sourceId: info?.sourceId ?? null,
+      targetId: entity.id, sourceId: info?.sourceId ?? null, kind: info?.kind ?? null,
     })),
     new RelayedEvent(EVENTS.ENTITY_HEALED, ({ entity, sourceId, amount, health }) => ({
       targetId: entity.id, sourceId: sourceId ?? null, amount: coord(amount), health: coord(health),
