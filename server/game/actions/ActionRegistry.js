@@ -1,3 +1,4 @@
+import { InteractAction } from './InteractAction.js';
 import { EVENTS } from '../../../web/js/game/events.js';
 import {
   ActionHandler, RequestAction, PositionedAction, AimedAction, FireAction, SwitchAction, CycleAction, ReviveAction,
@@ -20,6 +21,7 @@ export class ActionRegistry {
       new CycleAction(),
       new PositionedAction('pickup', EVENTS.PICKUP_REQUESTED),
       new ReviveAction(),
+      new InteractAction(),
     ]);
   }
 

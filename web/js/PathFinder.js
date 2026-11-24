@@ -36,6 +36,9 @@ export class PathFinder {
     this._routeFrom = null;
   }
 
+  /** Clear cached walkability after authoritative collision changes. */
+  invalidate() { this._state.fill(UNKNOWN); }
+
   createRoute() {
     const count = this.cols * this.rows;
     this._routeQueue ??= new Int32Array(count);

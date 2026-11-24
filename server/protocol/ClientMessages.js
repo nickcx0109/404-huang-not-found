@@ -42,6 +42,8 @@ export function actionSchema() {
     switch: { index: new IntegerField({ min: 0, max: 16 }) },
     cycle: { step: new ChoiceField([-1, 1]) },
     pickup: {},
+    interact: { holding: new BooleanField() },
+    interact: { holding: new BooleanField() },
     revive: { holding: new BooleanField() },
   });
 }
