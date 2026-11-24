@@ -6,6 +6,44 @@ AOOP 期末專題（第 8 組）：網頁版第一人稱殭屍生存遊戲。
 
 舊專案的網頁原型放在 [`reference/`](reference/README.md)，只供參考。
 
+## 線上多人
+
+一個 Node server 同時送出網頁和連線（同一個 port），細節在 [`docs/tech/NETWORK.md`](docs/tech/NETWORK.md)「部署」。
+
+**本機開 server**（Node 22 以上）：
+
+```bash
+npm ci
+npm start                 # PORT=9000 npm start 換 port
+```
+
+打開 <http://localhost:8787/>（會轉到 `web/index.html?play=1`）。同一個區網的其他電腦用 `http://<這台的 IP>:8787/`。
+
+**開房和加入：**
+
+1. 一個人在開始畫面輸入名字，按「建立隊伍」，畫面上會出現 4 碼隊伍編號（可以按「複製編號」）。
+2. 把編號告訴隊友。隊友打開同一個網址，在「輸入編號加入」輸入編號；也可以直接分享 `https://<網址>/?join=編號`。
+3. 最多 3 人，到齊後任何人按「開始遊戲」。
+
+**量延遲：** `node tools/net-latency.mjs wss://<網址> 50`（本機用 `ws://localhost:8787`），印出 RTT 的 min／median／p95／max 和時鐘差。
+
+**部署到 Fly.io（東京，不會休眠）：** 需要 Fly 帳號和信用卡（按用量計費，一台 shared-cpu-1x 很便宜）。
+
+```bash
+# 1. 安裝 flyctl：https://fly.io/docs/flyctl/install/ ，然後登入
+fly auth login
+# 2. 建 app，不要馬上部署。問要不要沿用現有的 fly.toml 時選 Yes，app 名稱取一個沒人用的
+fly launch --no-deploy
+# 3. 部署。--ha=false 只開一台：隊伍存在記憶體裡，兩台的話隊友會連到不同台、找不到隊伍
+fly deploy --ha=false
+fly scale count 1         # 確認只有一台
+fly open                  # 打開 https://<app>.fly.dev/
+```
+
+之後改了程式再 `fly deploy` 就好。`fly logs` 看 server 輸出。
+
+**或部署到 Render（新加坡）：** Render 後台 → New → Blueprint → 選這個 repo，會讀 [`render.yaml`](render.yaml)，然後按 Deploy。免費方案閒置約 15 分鐘會休眠（隊伍會消失，下一次開啟要等幾十秒），示範前先打開一次，或改用付費方案。
+
 ## Commit 統計（暫時）
 
 > 統計到 2026-11-24，`origin/main`（commit `dbf807d`）。行數不含 `package-lock.json`、二進位檔（圖片、GLB、音效）和 `reference/`（Liang 匯入舊原型的 29,287 行另外算，不列在表裡）。
