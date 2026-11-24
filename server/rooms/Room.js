@@ -35,6 +35,19 @@ export class Room {
     return [...this.members.values()].map(({ id, name }) => ({ id, name }));
   }
 
+  /**
+   * The player id that may press start: the earliest member still in the room (members keep
+   * join order), so the creator first and, when the host leaves, whoever joined next. null when empty.
+   */
+  get host() {
+    for (const id of this.members.keys()) return id;
+    return null;
+  }
+
+  isHost(playerId) {
+    return playerId !== null && playerId !== undefined && playerId === this.host;
+  }
+
   /** null when a new member may join, otherwise the refusal code. */
   admitRefusal() {
     if (this.isPlaying) return AdmitRefusal.STARTED;
@@ -110,7 +123,8 @@ export class Room {
 
   /** The `room` message as one member sees it. */
   describeFor(playerId) {
-    return { t: 'room', code: this.code, you: playerId, players: this.players, level: this.level, state: this.state };
+    return { t: 'room', code: this.code, you: playerId, host: this.host, players: this.players, level: this.level,
+      state: this.state };
   }
 
   /** Sends every member the current roster with their own `you`. */
