@@ -59,6 +59,20 @@ test('SnapshotBuffer keeps about one second of history and rejects older snapsho
   assert.equal(buffer.size, 0);
 });
 
+test('SnapshotBuffer lets a late snapshot replace the retained predecessor when it is closer', () => {
+  const buffer = new SnapshotBuffer({ duration: 1000 });
+  buffer.push(snap(0, { tick: 0, enemies: [zombie(1, 0, 0)] }));
+  buffer.push(snap(1100, { tick: 22, enemies: [zombie(1, 11, 0)] }));
+  buffer.push(snap(2000, { tick: 40, enemies: [zombie(1, 20, 0)] }));
+  assert.deepEqual(buffer._snapshots.map((s) => s.time), [0, 1100, 2000]);
+  assert.equal(buffer.push(snap(999, { tick: 19, enemies: [zombie(1, 9.99, 0)] })), true);
+  assert.deepEqual(buffer._snapshots.map((s) => s.time), [999, 1100, 2000]);
+  close(buffer.sample(1000).enemies[0].x, 9.99 + (11 - 9.99) / 101);
+  // An even later one that is farther than the retained predecessor is still stale.
+  assert.equal(buffer.push(snap(500, { tick: 10 })), false);
+  assert.deepEqual(buffer._snapshots.map((s) => s.time), [999, 1100, 2000]);
+});
+
 test('SnapshotBuffer interpolates positions linearly and angles the short way', () => {
   const buffer = new SnapshotBuffer();
   buffer.push(snap(1000, { players: [player('p1', 0, 0, 3.0)], enemies: [zombie(7, 10, 10, -3.0)] }));

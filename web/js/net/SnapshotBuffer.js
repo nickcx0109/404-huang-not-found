@@ -73,8 +73,6 @@ export class SnapshotBuffer {
     if (!snapshot || !Number.isFinite(snapshot.time)) return false;
     if (!Array.isArray(snapshot.players) || !Array.isArray(snapshot.enemies)) return false;
     const list = this._snapshots;
-    const newest = list.at(-1);
-    if (newest && snapshot.time < newest.time - this.duration) return false;
     const duplicate = list.some((s) => s.time === snapshot.time
       || (snapshot.tick !== undefined && s.tick === snapshot.tick));
     if (duplicate) return false;
@@ -82,7 +80,8 @@ export class SnapshotBuffer {
     while (index > 0 && list[index - 1].time > snapshot.time) index--;
     list.splice(index, 0, snapshot);
     this._prune();
-    return true;
+    // A late snapshot before the cutoff survives only if it is now the closest predecessor.
+    return list.includes(snapshot);
   }
 
   /**
