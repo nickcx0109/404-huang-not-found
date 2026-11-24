@@ -111,6 +111,15 @@ export class RemoteController {
     return exact ? InputResult.MOVED : InputResult.CLAMPED;
   }
 
+  /**
+   * A new connection took this player over (a rejoin): its first input seq may be lower than the
+   * old ack, so the ack starts again, and the quiet time while away earns no extra walking.
+   */
+  resume(now) {
+    this.ack = -1;
+    this.lastInputAt = now;
+  }
+
   /** Writes this player's view ray into `aim` ({origin, direction}), from the eyes along yaw/pitch. */
   aimInto(aim) {
     const cosPitch = Math.cos(this.pitch);

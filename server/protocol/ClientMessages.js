@@ -2,6 +2,7 @@ import { MessageSchema } from './MessageSchema.js';
 import { VariantSchema } from './VariantSchema.js';
 import { TextField, NumberField, IntegerField, BooleanField, ChoiceField } from './Fields.js';
 import { RoomCodes, CODE_ALPHABET, CODE_LENGTH } from '../rooms/RoomCodes.js';
+import { TOKEN_PATTERN } from '../rooms/RejoinTokens.js';
 
 /** A well-formed team code after trimming and upper-casing; anything else is bad-message, not no-room. */
 const CODE_PATTERN = new RegExp(`^[${CODE_ALPHABET}]{${CODE_LENGTH}}$`);
@@ -19,6 +20,7 @@ export function clientSchemas() {
     new MessageSchema('join', {
       name: name(),
       code: new TextField({ min: CODE_LENGTH, max: CODE_LENGTH, pattern: CODE_PATTERN, transform: RoomCodes.normalize }),
+      token: new TextField({ min: 16, max: 64, pattern: TOKEN_PATTERN, optional: true }),
     }),
     new MessageSchema('leave'),
     new MessageSchema('start'),

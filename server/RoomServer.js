@@ -2,10 +2,14 @@ import { Client } from './Client.js';
 import { Room } from './rooms/Room.js';
 import { RoomGame } from './rooms/RoomGame.js';
 import { RoomCodes } from './rooms/RoomCodes.js';
+import { RejoinTokens } from './rooms/RejoinTokens.js';
 import { LevelCatalog } from './rooms/LevelCatalog.js';
 import { MessageParser } from './protocol/ClientMessages.js';
 import { ErrorCode } from './protocol/ErrorCodes.js';
 import { defaultCommands } from './commands/index.js';
+
+/** How long a dropped player's seat is held during a game (docs/tech/NETWORK.md, 斷線重連). */
+export const REJOIN_GRACE_MS = 60_000;
 
 /**
  * Owns every room and routes client messages to commands.
@@ -22,6 +26,8 @@ export class RoomServer {
    *   now?: () => number,
    *   logger?: { error: (...args: unknown[]) => void },
    *   levels?: LevelCatalog,  which `create.level` names exist; defaults to web/levels/*.json read once
+   *   rejoinGraceMs?: number,  how long a dropped player's seat is held during a game
+   *   tokens?: RejoinTokens,
    * }} [options]
    */
   constructor({
@@ -32,7 +38,11 @@ export class RoomServer {
     now = () => Date.now(),
     logger = console,
     levels = LevelCatalog.fromDirectory(),
+    rejoinGraceMs = REJOIN_GRACE_MS,
+    tokens = new RejoinTokens(),
   } = {}) {
+    this.rejoinGraceMs = rejoinGraceMs;
+    this.tokens = tokens;
     this.logger = logger;
     this.levels = levels;
     this.codes = codes;
@@ -65,17 +75,28 @@ export class RoomServer {
     }
   }
 
+  /** The connection closed: a game holds the seat for a rejoin, a lobby lets the player go. */
   disconnect(connection) {
     const client = this.clients.get(connection);
     if (!client) return;
-    this.leaveRoom(client);
     this.clients.delete(connection);
+    const { room, playerId } = client;
+    if (!room) return;
+    client.exit();
+    room.drop(playerId, this.now() + this.rejoinGraceMs);
+    if (room.isEmpty) this.rooms.delete(room.code);
   }
 
-  /** Advances every room by one fixed step. */
+  /** Advances every room by one fixed step and frees seats held past their rejoin deadline. */
   tick(dt) {
+    const now = this.now();
     for (const room of this.rooms.values()) {
       try {
+        room.expire(now);
+        if (room.isEmpty) {
+          this.rooms.delete(room.code);
+          continue;
+        }
         room.tick(dt);
       } catch (error) {
         this.logger.error(`[room-server] tick failed in room ${room.code}:`, error);
@@ -85,7 +106,7 @@ export class RoomServer {
 
   openRoom(level) {
     const code = this.codes.next(candidate => this.rooms.has(candidate));
-    const room = new Room(code, level, this.createGame({ code, level }), { logger: this.logger });
+    const room = new Room(code, level, this.createGame({ code, level }), { logger: this.logger, tokens: this.tokens });
     this.rooms.set(code, room);
     return room;
   }
@@ -96,6 +117,19 @@ export class RoomServer {
 
   seat(client, room, name) {
     client.enter(room, room.add(client, name));
+  }
+
+  /**
+   * Seats the client in the seat `token` belongs to. A connection still holding that seat (one
+   * the server has not seen close yet) loses it quietly. Returns false on a bad token.
+   */
+  reclaim(client, room, token) {
+    if (!room.canReclaim(token)) return false;
+    this.leaveRoom(client);
+    const { id, previous } = room.reclaim(token, client);
+    if (previous && previous !== client) previous.exit?.();
+    client.enter(room, id);
+    return true;
   }
 
   /** Takes the client out of its room, deleting the room when it empties. */

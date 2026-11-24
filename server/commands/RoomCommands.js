@@ -18,14 +18,18 @@ export class CreateCommand extends Command {
   }
 }
 
-/** `join`: enter an existing lobby by code. A refused join keeps the sender where it was. */
+/**
+ * `join`: enter an existing lobby by code, or, with the `token` of a seat in the room, take
+ * that seat back (also during a game). A refused join keeps the sender where it was.
+ */
 export class JoinCommand extends Command {
   constructor() { super('join'); }
 
-  execute(server, client, { name, code }) {
+  execute(server, client, { name, code, token }) {
     const room = server.findRoom(code);
     if (!room) return server.fail(client, ErrorCode.NO_ROOM);
     if (client.room === room) return client.send(room.describeFor(client.playerId));
+    if (server.reclaim(client, room, token)) return;
     const refusal = room.admitRefusal();
     if (refusal) return server.fail(client, refusal);
     server.leaveRoom(client);

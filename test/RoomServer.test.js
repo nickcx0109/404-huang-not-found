@@ -33,9 +33,11 @@ test('create opens a room with a fresh code and replies with room', () => {
   const server = makeServer();
   const { host, code } = createRoom(server);
   assert.equal(code, 'AAAA');
-  assert.deepEqual(host.last, {
+  const { token, ...room } = host.last;
+  assert.deepEqual(room, {
     t: 'room', code: 'AAAA', you: 'p1', host: 'p1', players: [{ id: 'p1', name: 'Ann' }], level: 'ch2', state: 'lobby',
   });
+  assert.match(token, /^[A-Za-z0-9_-]{22}$/);
   assert.equal(createRoom(server, 'Bo').code, 'BBBB');
   assert.equal(server.rooms.size, 2);
 });
@@ -62,7 +64,9 @@ test('join by code adds the player and updates everyone', () => {
   const guest = connect(server, 'Bo');
   send(server, guest, { t: 'join', name: 'Bo', code: code.toLowerCase() });
   const players = [{ id: 'p1', name: 'Ann' }, { id: 'p2', name: 'Bo' }];
-  assert.deepEqual(guest.last, { t: 'room', code, you: 'p2', host: 'p1', players, level: 'ch2', state: 'lobby' });
+  const { token, ...room } = guest.last;
+  assert.deepEqual(room, { t: 'room', code, you: 'p2', host: 'p1', players, level: 'ch2', state: 'lobby' });
+  assert.notEqual(token, host.last.token, 'every seat has its own token');
   assert.deepEqual(host.last.players, players);
   assert.equal(host.last.you, 'p1');
 });
@@ -184,7 +188,7 @@ test('a game sends each player their own message, and survivors keep getting tic
   server.tick(1 / 30);
   assert.deepEqual(host.ofType('snapshot'), [{ t: 'snapshot', tick: 1, ack: 'ack-p1' }]);
   assert.deepEqual(guest.ofType('snapshot'), [{ t: 'snapshot', tick: 1, ack: 'ack-p2' }]);
-  server.disconnect(host);
+  send(server, host, { t: 'leave' });
   server.tick(1 / 30);
   server.tick(1 / 30);
   assert.deepEqual(guest.ofType('snapshot').map(message => message.tick), [1, 2, 3]);
@@ -358,7 +362,7 @@ test('input and action reach the room game only while playing', () => {
   send(server, host, { ...input, seq: 2 });
   send(server, host, { t: 'action', seq: 3, kind: 'fire', at: 4000 });
   server.tick(0.25);
-  server.disconnect(host);
+  send(server, host, { t: 'leave' });
   assert.deepEqual(calls, [
     ['start', code], ['input', 'p1', 2], ['action', 'p1', 'fire'], ['tick', 0.25], ['left', 'p1'], ['end', code],
   ]);

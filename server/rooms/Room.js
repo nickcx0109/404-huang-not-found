@@ -1,5 +1,6 @@
 import { RoomGame } from './RoomGame.js';
 import { ErrorCode } from '../protocol/ErrorCodes.js';
+import { RejoinTokens } from './RejoinTokens.js';
 
 export const RoomState = Object.freeze({ LOBBY: 'lobby', PLAYING: 'playing' });
 
@@ -12,12 +13,18 @@ export const StartResult = Object.freeze({ STARTED: 'started', ALREADY_PLAYING: 
 /**
  * One team: up to three members and a lobby that becomes a game on `start()`.
  * A member is anything with `send(message)`; the room knows nothing about sockets.
+ *
+ * Every seat has a rejoin token, sent only to its own player. When a member's connection drops
+ * during a game the seat is held (`drop`): the player stays in the game, standing still, until
+ * the deadline; `reclaim(token, member)` gives the seat back, and `expire(now)` frees seats
+ * whose deadline passed as if the player had left.
  */
 export class Room {
   static CAPACITY = 3;
 
-  constructor(code, level, game = new RoomGame(), { logger = console } = {}) {
+  constructor(code, level, game = new RoomGame(), { logger = console, tokens = new RejoinTokens() } = {}) {
     this.logger = logger;
+    this.tokens = tokens;
     this.code = code;
     this.level = level;
     this.game = game;
@@ -30,9 +37,15 @@ export class Room {
   get isFull() { return this.members.size >= Room.CAPACITY; }
   get isPlaying() { return this.state === RoomState.PLAYING; }
 
-  /** Player list in join order, as sent in `room` messages. */
+  /** Player list in join order, as sent in `room` messages; a held seat says `away: true`. */
   get players() {
-    return [...this.members.values()].map(({ id, name }) => ({ id, name }));
+    return [...this.members.values()].map(({ id, name, awayUntil }) =>
+      (awayUntil === null ? { id, name } : { id, name, away: true }));
+  }
+
+  /** True while the player's seat is held for a rejoin. */
+  isAway(playerId) {
+    return (this.members.get(playerId)?.awayUntil ?? null) !== null;
   }
 
   /**
@@ -60,7 +73,7 @@ export class Room {
     const refusal = this.admitRefusal();
     if (refusal) throw new Error(`Room ${this.code} refused a member: ${refusal}`);
     const id = this.freePlayerId();
-    this.members.set(id, { id, name, member });
+    this.members.set(id, { id, name, member, token: this.tokens.issue(), awayUntil: null });
     this.announce();
     return id;
   }
@@ -72,6 +85,62 @@ export class Room {
     if (this.isEmpty) this.game.end(this);
     else this.announce();
     return true;
+  }
+
+  /**
+   * The member's connection is gone. In the lobby that is leaving; during a game the seat is
+   * held until `until` (server ms) so the player can come back with their token.
+   * @returns {boolean} true when the seat is held, false when the player was removed
+   */
+  drop(playerId, until) {
+    const entry = this.members.get(playerId);
+    if (!entry) return false;
+    if (!this.isPlaying) {
+      this.remove(playerId);
+      return false;
+    }
+    entry.member = null;
+    entry.awayUntil = until;
+    this.game.memberAway(this, playerId);
+    this.announce();
+    return true;
+  }
+
+  /** May `token` take a seat back? */
+  canReclaim(token) {
+    return this.seatOf(token) !== null;
+  }
+
+  /**
+   * Gives the seat that owns `token` to `member`: a held seat comes back, and a seat whose old
+   * connection the server has not noticed is dead yet is taken over.
+   * @returns {{id: string, previous: object|null}|null}  `previous` is the member it replaced; null on a bad token
+   */
+  reclaim(token, member) {
+    const entry = this.seatOf(token);
+    if (!entry) return null;
+    const previous = entry.member;
+    const wasAway = entry.awayUntil !== null;
+    entry.member = member;
+    entry.awayUntil = null;
+    if (wasAway) this.game.memberBack(this, entry.id);
+    this.announce();
+    return { id: entry.id, previous };
+  }
+
+  /** Frees every held seat whose deadline is at or before `now`; returns their player ids. */
+  expire(now) {
+    const expired = [...this.members.values()]
+      .filter(({ awayUntil }) => awayUntil !== null && awayUntil <= now)
+      .map(({ id }) => id);
+    for (const id of expired) this.remove(id);
+    return expired;
+  }
+
+  seatOf(token) {
+    if (typeof token !== 'string' || token.length === 0) return null;
+    for (const entry of this.members.values()) if (entry.token === token) return entry;
+    return null;
   }
 
   /**
@@ -112,19 +181,20 @@ export class Room {
 
   sendTo(playerId, message) {
     const entry = this.members.get(playerId);
-    if (!entry) return false;
+    if (!entry?.member) return false;
     entry.member.send(message);
     return true;
   }
 
+  /** Sends to every connected member (held seats have nobody to send to). */
   broadcast(message) {
-    for (const { member } of this.members.values()) member.send(message);
+    for (const { member } of this.members.values()) member?.send(message);
   }
 
-  /** The `room` message as one member sees it. */
+  /** The `room` message as one member sees it, with that member's own rejoin token. */
   describeFor(playerId) {
     return { t: 'room', code: this.code, you: playerId, host: this.host, players: this.players, level: this.level,
-      state: this.state };
+      state: this.state, token: this.members.get(playerId)?.token ?? null };
   }
 
   /** Sends every member the current roster with their own `you`. */

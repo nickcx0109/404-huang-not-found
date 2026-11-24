@@ -127,7 +127,20 @@ export class SessionRoomGame extends RoomGame {
     });
   }
 
-  /** The player leaves the run; everyone else keeps playing. */
+  /**
+   * The player's connection dropped: they stay in the run where they stood (no inputs come, so
+   * they do not move) and let go of a revive; the seat waits for a rejoin.
+   */
+  memberAway(room, playerId) {
+    this.session?.revives.hold(playerId, false);
+  }
+
+  /** The player is back on a new connection, which numbers its inputs from scratch. */
+  memberBack(room, playerId) {
+    this.controllers.get(playerId)?.resume(this.now());
+  }
+
+  /** The player leaves the run (or their held seat expired); everyone else keeps playing. */
   memberLeft(room, playerId) {
     if (!this.controllers.delete(playerId) || !this.session) return;
     const ctx = this.session.context;

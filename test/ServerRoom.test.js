@@ -45,10 +45,12 @@ test('Room admits three members with ids p1..p3 and refuses a fourth', () => {
   assert.equal(room.add(c, 'Cy'), 'p3');
   assert.equal(room.admitRefusal(), AdmitRefusal.FULL);
   assert.throws(() => room.add(new FakeMember(), 'Dee'), /full/);
-  assert.deepEqual(a.last, {
+  const { token, ...message } = a.last;
+  assert.deepEqual(message, {
     t: 'room', code: 'ABCD', you: 'p1', host: 'p1', level: 'ch2', state: RoomState.LOBBY,
     players: [{ id: 'p1', name: 'Ann' }, { id: 'p2', name: 'Bo' }, { id: 'p3', name: 'Cy' }],
   });
+  assert.equal(typeof token, 'string');
   assert.equal(c.last.you, 'p3');
 });
 
