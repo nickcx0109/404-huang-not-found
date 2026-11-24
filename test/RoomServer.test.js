@@ -135,6 +135,68 @@ test('a refused join keeps the player in their current room', () => {
   assert.equal(server.findRoom(playing.code).size, 1);
 });
 
+class SilentLogger {
+  constructor() { this.errors = []; }
+  error(...args) { this.errors.push(args); }
+}
+
+test('create keeps the player in their old room when no code is free', () => {
+  const calls = [];
+  class SpyGame extends RoomGame {
+    memberLeft(room, id) { calls.push(['left', id]); }
+    end(room) { calls.push(['end', room.code]); }
+  }
+  const logger = new SilentLogger();
+  const server = makeServer({
+    codes: new RoomCodes({ random: () => 0, maxAttempts: 3 }),
+    createGame: () => new SpyGame(),
+    logger,
+  });
+  const { host, code } = createRoom(server);
+  const guest = connect(server, 'Bo');
+  send(server, guest, { t: 'join', name: 'Bo', code });
+  const roster = host.last.players;
+  send(server, guest, { t: 'create', name: 'Bo', level: 'ch3' });
+  assert.deepEqual(guest.last, { t: 'error', code: 'server-error' });
+  assert.equal(logger.errors.length, 1);
+  assert.deepEqual(calls, [], 'the old room never saw the player leave');
+  assert.equal(server.rooms.size, 1);
+  const room = server.findRoom(code);
+  assert.deepEqual(room.players, roster);
+  assert.equal(server.clients.get(guest).playerId, 'p2');
+  assert.equal(server.clients.get(guest).room, room);
+  send(server, guest, { t: 'ping', c: 1 });
+  assert.deepEqual(guest.last, { t: 'pong', c: 1, s: 5000 });
+});
+
+test('create keeps the player in their old room when the game factory throws', () => {
+  let made = 0;
+  const logger = new SilentLogger();
+  const server = makeServer({
+    createGame: () => { if (made++ > 0) throw new Error('boom'); return new RoomGame(); },
+    logger,
+  });
+  const { host, code } = createRoom(server);
+  send(server, host, { t: 'create', name: 'Ann', level: 'ch3' });
+  assert.deepEqual(host.last, { t: 'error', code: 'server-error' });
+  assert.deepEqual([...server.rooms.keys()], [code]);
+  assert.equal(server.findRoom(code).size, 1);
+});
+
+test('a throwing game tick is logged and does not stop other rooms', () => {
+  const ticks = [];
+  class TickGame extends RoomGame {
+    constructor(code) { super(); this.code = code; }
+    tick(room) { if (room.code === 'AAAA') throw new Error('bad tick'); ticks.push(room.code); }
+  }
+  const logger = new SilentLogger();
+  const server = makeServer({ createGame: ({ code }) => new TickGame(code), logger });
+  for (const name of ['Ann', 'Bo']) send(server, createRoom(server, name).host, { t: 'start' });
+  server.tick(1 / 30);
+  assert.deepEqual(ticks, ['BBBB']);
+  assert.equal(logger.errors.length, 1);
+});
+
 test('malformed messages get bad-message and change nothing', () => {
   const server = makeServer();
   const client = connect(server, 'Ann');

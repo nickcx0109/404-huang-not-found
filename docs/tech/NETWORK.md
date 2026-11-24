@@ -48,7 +48,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 | `t` | 欄位 | 說明 |
 |---|---|---|
 | `room` | `code`, `you`（玩家 id）, `players:[{id,name}]`, `level`, `state` | 進房間或名單變動時送 |
-| `error` | `code`：`no-room`、`full`、`started`、`bad-message` | 被拒絕的原因 |
+| `error` | `code`：`no-room`、`full`、`started`、`bad-message`、`server-error` | 被拒絕的原因；`server-error` 是 server 處理這則訊息時出錯，狀態維持原樣（例如建房失敗時人還在原本的房間） |
 | `pong` | `c`, `s`（server 時間 ms） | 對時 |
 | `snapshot` | `tick`, `time`（server ms）, `ack`（這個玩家最後處理的 input `seq`）, `state`, `wave`, `kills`, `players:[…]`, `enemies:[…]`, `pickups?` | 每秒 20 次 |
 | `event` | `name`（`game/events.js` 的事件名）, `detail` | 需要立刻反應的事件：開槍、命中、死亡、倒地、波次開始、撿到東西。只送畫面和音效需要的欄位 |

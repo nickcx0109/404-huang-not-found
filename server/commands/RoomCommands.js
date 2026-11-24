@@ -1,13 +1,18 @@
 import { Command } from './Command.js';
 import { ErrorCode } from '../protocol/ErrorCodes.js';
 
-/** `create`: open a new room and seat the sender as its first player. */
+/**
+ * `create`: open a new room and seat the sender as its first player.
+ * The new room is opened before the sender leaves the old one, so a failure
+ * (no free code, game factory error) leaves the sender where it was.
+ */
 export class CreateCommand extends Command {
   constructor() { super('create'); }
 
   execute(server, client, { name, level }) {
+    const room = server.openRoom(level);
     server.leaveRoom(client);
-    server.seat(client, server.openRoom(level), name);
+    server.seat(client, room, name);
   }
 }
 

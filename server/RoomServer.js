@@ -19,6 +19,7 @@ export class RoomServer {
    *   parser?: MessageParser,
    *   commands?: import('./commands/Command.js').Command[],
    *   now?: () => number,
+   *   logger?: { error: (...args: unknown[]) => void },
    * }} [options]
    */
   constructor({
@@ -27,7 +28,9 @@ export class RoomServer {
     parser = new MessageParser(),
     commands = defaultCommands(),
     now = () => Date.now(),
+    logger = console,
   } = {}) {
+    this.logger = logger;
     this.codes = codes;
     this.createGame = createGame;
     this.parser = parser;
@@ -49,7 +52,13 @@ export class RoomServer {
     const message = this.parser.parse(text);
     const command = message && this.commands.get(message.t);
     if (!command) return this.fail(client, ErrorCode.BAD_MESSAGE);
-    command.execute(this, client, message);
+    try {
+      command.execute(this, client, message);
+    } catch (error) {
+      // One bad command must not take the process (and every other room) down.
+      this.logger.error(`[room-server] ${message.t} failed:`, error);
+      this.fail(client, ErrorCode.SERVER_ERROR);
+    }
   }
 
   disconnect(connection) {
@@ -61,7 +70,13 @@ export class RoomServer {
 
   /** Advances every room by one fixed step. */
   tick(dt) {
-    for (const room of this.rooms.values()) room.tick(dt);
+    for (const room of this.rooms.values()) {
+      try {
+        room.tick(dt);
+      } catch (error) {
+        this.logger.error(`[room-server] tick failed in room ${room.code}:`, error);
+      }
+    }
   }
 
   openRoom(level) {
