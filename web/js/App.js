@@ -12,6 +12,7 @@ import { PathFinder } from './PathFinder.js';
 import { Hud } from './Hud.js';
 import { EventBus } from './core/EventBus.js';
 import { clampFrameTime } from './core/frameTime.js';
+import { resolveServerUrl } from './net/ServerConfig.js';
 
 // App: wires the modules together.
 //   LevelData -> SceneBuilder (-> PropFactory) -> scene + collision
@@ -47,6 +48,8 @@ export class AppOptions {
     this.flashlight = params.get('flashlight') !== '0';
     this.dummies = flag('dummies');
     this.play = params.get('play') === '1';
+    // ?server=ws://host:port (or DEFAULT_SERVER_URL) offers team play on the start screen; null hides it.
+    this.server = this.play && !this.shot ? resolveServerUrl(params.get('server')) : null;
     // ?models=0 shows the greybox stand-ins even where a model exists.
     this.models = params.get('models') !== '0';
     // Seconds on the animation clock for ?shot= (flicker and beacons are functions of time).
@@ -93,6 +96,11 @@ export class App {
     this.level = level;
     await palette.ensure(options.palette || level.palette);
     this.style = palette.resolve(options.palette || level.palette, options.preset);
+    if (options.server) {
+      // Pages that can go online keep fewer dynamic lights (see LightBudget).
+      const { LightBudget } = await import('./net/LightBudget.js');
+      new LightBudget().apply(this.style);
+    }
 
     this._createRenderer();
     this.scene = new THREE.Scene();
