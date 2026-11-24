@@ -1,5 +1,6 @@
 import { Command } from './Command.js';
 import { ErrorCode } from '../protocol/ErrorCodes.js';
+import { StartResult } from '../rooms/Room.js';
 
 /**
  * `create`: open a new room and seat the sender as its first player.
@@ -47,6 +48,7 @@ export class StartCommand extends Command {
 
   execute(server, client) {
     if (!client.inRoom) return server.fail(client, ErrorCode.NO_ROOM);
-    if (!client.room.start()) server.fail(client, ErrorCode.STARTED);
+    // A failed start already told every member start-failed.
+    if (client.room.start() === StartResult.ALREADY_PLAYING) server.fail(client, ErrorCode.STARTED);
   }
 }

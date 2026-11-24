@@ -193,6 +193,26 @@ test('create keeps the player in their old room when the game factory throws', (
   assert.equal(server.findRoom(code).size, 1);
 });
 
+test('a failed start tells every member start-failed and the room can try again', () => {
+  let attempts = 0;
+  class FlakyGame extends RoomGame {
+    start() { if (attempts++ === 0) throw new Error('not ready'); }
+  }
+  const server = makeServer({ createGame: () => new FlakyGame(), logger: new SilentLogger() });
+  const { host, code } = createRoom(server);
+  const guest = connect(server, 'Bo');
+  send(server, guest, { t: 'join', name: 'Bo', code });
+  host.clear();
+  guest.clear();
+  send(server, guest, { t: 'start' });
+  assert.deepEqual(host.sent, [{ t: 'error', code: 'start-failed' }]);
+  assert.deepEqual(guest.sent, [{ t: 'error', code: 'start-failed' }]);
+  assert.equal(server.findRoom(code).state, 'lobby');
+  send(server, host, { t: 'start' });
+  assert.equal(host.last.state, 'playing');
+  assert.equal(guest.last.state, 'playing');
+});
+
 test('a throwing game tick is logged and does not stop other rooms', () => {
   const ticks = [];
   class TickGame extends RoomGame {

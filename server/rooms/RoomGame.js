@@ -5,8 +5,16 @@
  * A game talks to players through `room.sendTo(playerId, message)` and `room.broadcast(message)`.
  */
 export class RoomGame {
-  /** The room switched from lobby to playing. */
-  start(room) {}
+  /**
+   * The room wants to switch from lobby to playing. Return false or throw to
+   * refuse (e.g. the level failed to load); the room then stays in the lobby
+   * and members get `start-failed`. The room is still in the lobby during
+   * this call and becomes playing right after it succeeds.
+   * @returns {boolean | void}
+   */
+  start(room) {
+    return true;
+  }
 
   /** One fixed simulation step while the room is playing. */
   tick(room, dt) {}

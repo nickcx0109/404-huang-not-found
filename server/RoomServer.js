@@ -85,7 +85,7 @@ export class RoomServer {
 
   openRoom(level) {
     const code = this.codes.next(candidate => this.rooms.has(candidate));
-    const room = new Room(code, level, this.createGame({ code, level }));
+    const room = new Room(code, level, this.createGame({ code, level }), { logger: this.logger });
     this.rooms.set(code, room);
     return room;
   }

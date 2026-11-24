@@ -1,9 +1,13 @@
 import { RoomGame } from './RoomGame.js';
+import { ErrorCode } from '../protocol/ErrorCodes.js';
 
 export const RoomState = Object.freeze({ LOBBY: 'lobby', PLAYING: 'playing' });
 
 /** Why a room refuses a new member; the values are the protocol's error codes. */
 export const AdmitRefusal = Object.freeze({ FULL: 'full', STARTED: 'started' });
+
+/** Outcome of Room.start(). */
+export const StartResult = Object.freeze({ STARTED: 'started', ALREADY_PLAYING: 'already-playing', FAILED: 'failed' });
 
 /**
  * One team: up to three members and a lobby that becomes a game on `start()`.
@@ -12,7 +16,8 @@ export const AdmitRefusal = Object.freeze({ FULL: 'full', STARTED: 'started' });
 export class Room {
   static CAPACITY = 3;
 
-  constructor(code, level, game = new RoomGame()) {
+  constructor(code, level, game = new RoomGame(), { logger = console } = {}) {
+    this.logger = logger;
     this.code = code;
     this.level = level;
     this.game = game;
@@ -56,13 +61,28 @@ export class Room {
     return true;
   }
 
-  /** Lobby to playing. Returns false when the game had already started. */
+  /**
+   * Lobby to playing, only once the game has started. If the game refuses
+   * (returns false) or throws, the room stays in the lobby and every member
+   * gets `error` `start-failed`.
+   * @returns {string} a StartResult value
+   */
   start() {
-    if (this.isPlaying) return false;
+    if (this.isPlaying) return StartResult.ALREADY_PLAYING;
+    let started;
+    try {
+      started = this.game.start(this) !== false;
+    } catch (error) {
+      this.logger.error(`[room ${this.code}] game failed to start:`, error);
+      started = false;
+    }
+    if (!started) {
+      this.broadcast({ t: 'error', code: ErrorCode.START_FAILED });
+      return StartResult.FAILED;
+    }
     this.state = RoomState.PLAYING;
-    this.game.start(this);
     this.announce();
-    return true;
+    return StartResult.STARTED;
   }
 
   tick(dt) {

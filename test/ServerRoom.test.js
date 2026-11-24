@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Room, RoomState, AdmitRefusal } from '../server/rooms/Room.js';
+import { Room, RoomState, AdmitRefusal, StartResult } from '../server/rooms/Room.js';
 import { RoomGame } from '../server/rooms/RoomGame.js';
 import { RoomCodes, CODE_ALPHABET } from '../server/rooms/RoomCodes.js';
 import { FakeMember } from './support/FakeMember.js';
@@ -71,8 +71,8 @@ test('Room start switches to playing once and drives the game strategy', () => {
   room.tick(1 / 30);
   room.receiveInput('p1', { seq: 1 });
   assert.deepEqual(game.calls, [], 'lobby rooms do not run the game');
-  assert.equal(room.start(), true);
-  assert.equal(room.start(), false);
+  assert.equal(room.start(), StartResult.STARTED);
+  assert.equal(room.start(), StartResult.ALREADY_PLAYING);
   assert.equal(room.admitRefusal(), AdmitRefusal.STARTED);
   assert.deepEqual(a.ofType('event'), [{ t: 'event', name: 'go' }]);
   assert.equal(a.last.state, RoomState.PLAYING);
@@ -85,6 +85,37 @@ test('Room start switches to playing once and drives the game strategy', () => {
     ['start', 'WXYZ'], ['tick', 0.5], ['input', 'p1', 7], ['action', 'p1', 'fire'], ['left', 'p1'], ['end', 'WXYZ'],
   ]);
   assert.equal(room.isEmpty, true);
+});
+
+test('Room stays in the lobby when the game refuses or fails to start', () => {
+  const errors = [];
+  const logger = { error: (...args) => errors.push(args) };
+  for (const game of [
+    new (class extends RoomGame { start() { return false; } })(),
+    new (class extends RoomGame { start() { throw new Error('level missing'); } })(),
+  ]) {
+    const room = new Room('ABCD', 'ch2', game, { logger });
+    const [a, b] = [new FakeMember(), new FakeMember()];
+    room.add(a, 'Ann');
+    room.add(b, 'Bo');
+    a.clear();
+    b.clear();
+    assert.equal(room.start(), StartResult.FAILED);
+    assert.equal(room.state, RoomState.LOBBY);
+    assert.equal(room.admitRefusal(), null, 'others can still join');
+    for (const member of [a, b]) assert.deepEqual(member.sent, [{ t: 'error', code: 'start-failed' }]);
+  }
+  assert.equal(errors.length, 1, 'only the throw is logged');
+});
+
+test('Room is still in the lobby while the game starts', () => {
+  const seen = [];
+  const game = new (class extends RoomGame { start(room) { seen.push(room.state); return true; } })();
+  const room = new Room('ABCD', 'ch2', game);
+  room.add(new FakeMember(), 'Ann');
+  assert.equal(room.start(), StartResult.STARTED);
+  assert.deepEqual(seen, [RoomState.LOBBY]);
+  assert.equal(room.state, RoomState.PLAYING);
 });
 
 test('Room sendTo targets one member and broadcast reaches everyone', () => {
