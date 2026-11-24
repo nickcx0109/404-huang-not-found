@@ -126,6 +126,49 @@ test('leaving updates the others and the last one out deletes the room', () => {
   assert.equal(server.clients.size, 1);
 });
 
+test('a reused slot is not touched when its previous owner disconnects later', () => {
+  const server = makeServer();
+  const { host, code } = createRoom(server);
+  const leaver = connect(server, 'Bo');
+  send(server, leaver, { t: 'join', name: 'Bo', code });
+  send(server, leaver, { t: 'leave' });
+  const newcomer = connect(server, 'Cy');
+  send(server, newcomer, { t: 'join', name: 'Cy', code });
+  assert.equal(newcomer.last.you, 'p2', 'the freed slot is reused');
+  const before = { host: host.sent.length, newcomer: newcomer.sent.length };
+  server.disconnect(leaver);
+  const room = server.findRoom(code);
+  assert.deepEqual(room.players, [{ id: 'p1', name: 'Ann' }, { id: 'p2', name: 'Cy' }]);
+  assert.equal(server.clients.get(newcomer).playerId, 'p2');
+  assert.equal(server.clients.get(newcomer).room, room);
+  assert.equal(host.sent.length, before.host, 'no roster change was announced');
+  assert.equal(newcomer.sent.length, before.newcomer);
+});
+
+test('a game sends each player their own message, and survivors keep getting ticks', () => {
+  class SnapshotGame extends RoomGame {
+    constructor() { super(); this.tickCount = 0; }
+    tick(room) {
+      this.tickCount++;
+      for (const { id } of room.players) room.sendTo(id, { t: 'snapshot', tick: this.tickCount, ack: `ack-${id}` });
+    }
+  }
+  const server = makeServer({ createGame: () => new SnapshotGame() });
+  const { host, code } = createRoom(server);
+  const guest = connect(server, 'Bo');
+  send(server, guest, { t: 'join', name: 'Bo', code });
+  send(server, host, { t: 'start' });
+  server.tick(1 / 30);
+  assert.deepEqual(host.ofType('snapshot'), [{ t: 'snapshot', tick: 1, ack: 'ack-p1' }]);
+  assert.deepEqual(guest.ofType('snapshot'), [{ t: 'snapshot', tick: 1, ack: 'ack-p2' }]);
+  server.disconnect(host);
+  server.tick(1 / 30);
+  server.tick(1 / 30);
+  assert.deepEqual(guest.ofType('snapshot').map(message => message.tick), [1, 2, 3]);
+  assert.equal(host.ofType('snapshot').length, 1);
+  assert.deepEqual(guest.ofType('room').at(-1).players, [{ id: 'p2', name: 'Bo' }]);
+});
+
 test('a connection is in at most one room', () => {
   const server = makeServer();
   const first = createRoom(server, 'Ann');
