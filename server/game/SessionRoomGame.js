@@ -4,6 +4,7 @@ import { RoomGame } from '../rooms/RoomGame.js';
 import { SHIPPED_LEVELS_DIR } from '../rooms/LevelCatalog.js';
 import { createSession } from '../../web/js/game/createSession.js';
 import { RemoteController } from './RemoteController.js';
+import { InputThrottle } from './InputThrottle.js';
 import { EnemyHistory } from './EnemyHistory.js';
 import { ShotRewind } from './ShotRewind.js';
 import { SnapshotWriter } from './SnapshotWriter.js';
@@ -50,6 +51,8 @@ export class SessionRoomGame extends RoomGame {
     this.rewind = new ShotRewind(history);
     this.session = null;
     this.controllers = new Map();
+    /** One InputThrottle per player in front of their controller (G8n). */
+    this.inputs = new Map();
     this.tickCount = 0;
     this._accumulator = 0;
     this._sinceSnapshot = 0;
@@ -71,6 +74,7 @@ export class SessionRoomGame extends RoomGame {
     for (const [id, controller] of controllers) controller.attach(session, id);
     this.session = session;
     this.controllers = controllers;
+    this.inputs = new Map([...controllers].map(([id, controller]) => [id, new InputThrottle(controller)]));
     this.relay.attach(session.context.events, message => room.broadcast(message));
     session.start();
     return true;
@@ -92,6 +96,8 @@ export class SessionRoomGame extends RoomGame {
       this._accumulator = 0;
     }
     const now = this.now();
+    // Inputs that came too fast were held back; the newest of each player's lands before the step.
+    for (const throttle of this.inputs.values()) throttle.flush(now);
     for (let step = 0; step < steps; step++) {
       // Steps that catch up are spread back over the time they stand for, one step apart.
       this.step(room, now - (steps - 1 - step) * STEP_SECONDS * 1000);
@@ -116,19 +122,36 @@ export class SessionRoomGame extends RoomGame {
   }
 
   input(room, playerId, message) {
-    this.controllers.get(playerId)?.accept(message, this.now());
+    this.inputs.get(playerId)?.offer(message, this.now());
   }
 
   action(room, playerId, message) {
     const controller = this.controllers.get(playerId);
     if (!controller || !this.session) return;
+    // The browser sends its pose right before an action; aim with it, not with an older one.
+    this.inputs.get(playerId)?.flush(this.now());
     this.actions.dispatch({
       session: this.session, playerId, controller, message, now: this.now(), rewind: this.rewind,
     });
   }
 
-  /** The player leaves the run; everyone else keeps playing. */
+  /**
+   * The player's connection dropped: they stay in the run where they stood (no inputs come, so
+   * they do not move) and let go of a revive; the seat waits for a rejoin.
+   */
+  memberAway(room, playerId) {
+    this.session?.revives.hold(playerId, false);
+  }
+
+  /** The player is back on a new connection, which numbers its inputs from scratch. */
+  memberBack(room, playerId) {
+    this.controllers.get(playerId)?.resume(this.now());
+    this.inputs.get(playerId)?.reset();
+  }
+
+  /** The player leaves the run (or their held seat expired); everyone else keeps playing. */
   memberLeft(room, playerId) {
+    this.inputs.delete(playerId);
     if (!this.controllers.delete(playerId) || !this.session) return;
     const ctx = this.session.context;
     const player = this.session.playerById(playerId);
@@ -143,6 +166,7 @@ export class SessionRoomGame extends RoomGame {
     this.session?.dispose();
     this.session = null;
     this.controllers.clear();
+    this.inputs.clear();
     this.history.clear();
   }
 }

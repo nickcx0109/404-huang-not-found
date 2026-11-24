@@ -25,7 +25,13 @@ export class RoomGame {
   /** A validated `action` message from a member of a playing room. */
   action(room, playerId, message) {}
 
-  /** A member left or disconnected; other members may remain. */
+  /** A member's connection dropped during the game; the seat is held for a rejoin (the player stays). */
+  memberAway(room, playerId) {}
+
+  /** A held seat was taken back by the same player on a new connection. */
+  memberBack(room, playerId) {}
+
+  /** A member left, or a held seat expired; other members may remain. */
   memberLeft(room, playerId) {}
 
   /** The last member left and the room is being deleted. */

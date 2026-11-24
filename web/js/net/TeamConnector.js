@@ -37,9 +37,10 @@ export class TeamConnector {
     return this._request(() => this.client.create(name, level));
   }
 
-  join(name, code) {
+  /** `token`: a rejoin token kept from an earlier `room` of this team (RejoinTickets), or null. */
+  join(name, code, token = null) {
     if (!TeamCode.isValid(code)) return Promise.reject(new TeamError('bad-code'));
-    return this._request(() => this.client.join(name, code));
+    return this._request(() => this.client.join(name, code, token));
   }
 
   _request(send) {

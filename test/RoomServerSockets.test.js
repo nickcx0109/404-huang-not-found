@@ -71,7 +71,8 @@ test('WsTransport.listen rejects when the port is taken', async t => {
 });
 
 test('real ws sockets can create, join, start, ping and leave', async t => {
-  const rooms = new RoomServer();
+  // No grace: a seat held after a socket closes in the game is freed by the next tick.
+  const rooms = new RoomServer({ rejoinGraceMs: 0 });
   const transport = new WsTransport(rooms);
   const port = await transport.listen(0, '127.0.0.1');
   t.after(() => transport.close());
@@ -106,9 +107,13 @@ test('real ws sockets can create, join, start, ping and leave', async t => {
   assert.equal((await guest.next()).state, 'playing');
 
   await guest.close();
-  assert.deepEqual((await host.next()).players, [{ id: 'p1', name: 'Ann' }]);
+  assert.deepEqual((await host.next()).players, [{ id: 'p1', name: 'Ann' }, { id: 'p2', name: 'Bo', away: true }],
+    'a socket closed during the game holds its seat');
+  rooms.tick(0);
+  assert.deepEqual((await host.next()).players, [{ id: 'p1', name: 'Ann' }], 'the held seat expires');
   await host.close();
   for (let i = 0; i < 100 && rooms.clients.size > 0; i++) await new Promise(resolve => setTimeout(resolve, 10));
-  assert.equal(rooms.rooms.size, 0, 'closing the last socket deletes the room');
+  rooms.tick(0);
+  assert.equal(rooms.rooms.size, 0, 'the last seat expiring deletes the room');
   assert.equal(rooms.clients.size, 0);
 });

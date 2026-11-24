@@ -270,7 +270,13 @@ export class OnlineMode extends GameMode {
 
   _room(room) {
     const renamed = this.view.applyRoom(room);
-    if (this.view.connection === 'reconnecting') this.view.connection = 'open';
+    if (this.view.connection === 'reconnecting') {
+      // Back in the seat after a dropped connection: the server restarted our input acks and
+      // kept the player where they stood, so let the next snapshot place us and send at once.
+      this.view.connection = 'open';
+      this.reconciler.reset();
+      this.inputs.reset();
+    }
     if (renamed && this.onRenamed) {
       // Everything here was built for the old id (HUD, sounds, recoil, combat): hand the client,
       // still in the team, to a fresh mode instead of patching each part.

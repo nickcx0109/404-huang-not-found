@@ -23,8 +23,8 @@
 ## 隊伍編號
 
 - 建房間的人拿到 4 碼編號，字元只用 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`（去掉容易看錯的 0 O 1 I L）。
-- 最多 3 人；遊戲開始後不能再加入（G8 先不做中途加入）。
-- 房間裡最後一個人離開，房間就刪掉。建房的人離開不會解散房間（server 跑遊戲，誰走都一樣）。
+- 最多 3 人；遊戲開始後新的人不能加入，只有斷線的人能用 rejoin token 回到自己的位置（見「斷線重連」）。
+- 房間裡最後一個人離開（或最後一個保留的位置過期），房間就刪掉。建房的人離開不會解散房間（server 跑遊戲，誰走都一樣）。
 - **房主**：建房的人是房主，只有房主能按開始。房主離開時，房主換成還在房間裡最早加入的人（`Room.host` 照加入順序取第一個；編號會被重用，所以不一定是 p1）。
 - 一個連線同時只在一個房間。
 
@@ -37,7 +37,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 | `t` | 欄位 | 說明 |
 |---|---|---|
 | `create` | `name`, `level` | 建房間；`level` 是 `web/levels/` 的檔名（不含 `.json`） |
-| `join` | `name`, `code` | 加入房間 |
+| `join` | `name`, `code`, `token?` | 加入房間；帶上這個房間某個位置的 `token`（自己的 `room` 訊息給的）就拿回那個位置，遊戲開始後也可以（見「斷線重連」）。沒有或不對的 `token` 照一般加入處理（遊戲已開始就回 `started`） |
 | `leave` | | 離開房間 |
 | `start` | | 只有房主（`room.host`）可以按開始，其他人會收到 `not-host` |
 | `ping` | `c`（client 時間 ms） | 對時用，server 回 `pong` |
@@ -48,7 +48,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 
 | `t` | 欄位 | 說明 |
 |---|---|---|
-| `room` | `code`, `you`（玩家 id）, `host`（房主的玩家 id）, `players:[{id,name}]`, `level`, `state` | 進房間或名單變動時送（房主換人也會送）；`protocol.js` 把 `host` 當可有可無，沒有 `host` 的舊 server 照舊讓任何人開始 |
+| `room` | `code`, `you`（玩家 id）, `host`（房主的玩家 id）, `players:[{id,name,away?}]`, `level`, `state`, `token` | 進房間或名單變動時送（房主換人、有人斷線或回來也會送）；`token` 是收到的人自己那個位置的 rejoin token（每個人只收到自己的）；`away: true` 表示那個人斷線、位置保留中；`protocol.js` 把 `host`、`token` 當可有可無，沒有 `host` 的舊 server 照舊讓任何人開始 |
 | `error` | `code`：`no-room`、`full`、`started`、`bad-message`、`bad-level`、`not-host`、`start-failed`、`server-error` | 被拒絕的原因；`not-host` 是不是房主的人按了開始（房間還在 lobby 才會回這個，已經開始就回 `started`），只回給按的人；`start-failed` 是遊戲沒能開始（例如關卡載入失敗），房間裡每個人都會收到，房間留在 `lobby`，可以再按一次開始；`bad-level` 是 `create` 的 `level` 不在 server 啟動時讀到的 `web/levels/*.json` 裡；`server-error` 是 server 處理這則訊息時出錯，狀態維持原樣（例如建房失敗時人還在原本的房間） |
 | `pong` | `c`, `s`（server 時間 ms） | 對時 |
 | `snapshot` | `tick`, `time`（server ms）, `ack`（這個玩家最後處理的 input `seq`）, `state`, `wave`, `kills`, `players:[…]`, `enemies:[…]`, `pickups?`, `crates?`, `effects?`，以及 HUD 用的 `goal`, `objective`, `breakSeconds` | 每秒 20 次 |
@@ -66,6 +66,18 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 - `protocol.js` 檢查：`crates`、`effects` 可以沒有；有的話每一筆都要符合上面的形狀，不然整張快照丟掉。
 - `event` 轉送的事件和 `detail`（都是純資料，不送 entity）：`weapon.fired` `{ownerId, weaponId, ammo, reserve, count?, hit: {targetId, hitPart}|null}`、`weapon.reload-started`（多 `duration`）、`weapon.reloaded`、`weapon.changed`、`entity.damaged` `{targetId, sourceId, amount, health, hitPart, kind, downed}`（玩家被打到 0 血就是 `downed: true`，玩家沒有 `entity.died`）、`entity.died` `{targetId, sourceId, kind}`、`entity.healed` `{targetId, sourceId, amount, health}`（救起來也是這個）、`enemy.spawned` `{id, type, x, z, wave}`、`weapon.picked-up` `{ownerId, pickupId, weaponId, droppedId}`、`ammo.refilled` `{ownerId, crateId}`、`item.thrown` `{ownerId, itemId}`、`effect.exploded` `{kind, x, y, z, radius, ownerId}`、`wave.started` `{wave, count}`、`wave.cleared` `{wave, kills}`、`game.state-changed` `{state, wave}`、`game.over`、`game.victory` `{wave, kills}`。
 
+## 斷線重連（G8i）
+
+- **token。** 每個位置在加入時拿到一個 rejoin token（`RejoinTokens`：128 bit 亂數、base64url，22 個字元），只放在那個人自己的 `room` 訊息裡。換連線回來 token 不變。
+- **保留位置。** 遊戲開始後連線斷了（socket close），`RoomServer.disconnect` 不再讓人離開，而是 `Room.drop` 把位置保留 60 秒（`REJOIN_GRACE_MS`）：同一個玩家 id 留在 `GameSession` 裡，血量、武器、位置都不動；沒有 input 進來所以站在原地（殭屍照樣打得到他，隊友照樣能救），手上的救援放開（`RoomGame.memberAway`）。名單裡那個人多 `away: true`，其他人照常玩。大廳裡斷線照舊等於離開。
+- **拿回位置。** 新連線送 `join` 帶同一個 `code` 和 `token`，`Room.reclaim` 把位置還給他（`RoomGame.memberBack`：`RemoteController.resume` 把 `ack` 歸零到 −1，新連線的 `seq` 可以從 1 重新數），接著每個人收到新的 `room`，他馬上收到快照。舊連線 server 還沒發現斷掉時（TCP 半開）也一樣能拿回，舊連線被靜靜踢出房間。
+- **過期。** `RoomServer.tick` 每步呼叫 `Room.expire(now)`：超過期限的位置當作離開（`memberLeft`，從 session 拿掉）；token 跟著失效，之後再帶它加入就是 `started`。全部位置都過期，房間刪掉。主動按離開（`leave`）是馬上離開，不保留。
+- **瀏覽器。** `NetClient` 記下最後一則 `room` 的 `token`，斷線重連後自動送的 `join` 會帶上；`OnlineMode` 收到重連後的 `room` 時把 `PoseReconciler`、`InputSender` 重設，下一張快照把玩家放回 server 上的位置，編號沒變所以 HUD、音效、開火都不用重建。`OnlineHost` 用 `RejoinTickets` 把 `{code, token}` 存在 sessionStorage `net:rejoin`（只有這個分頁，讀寫都包 try/catch，被擋就不記）：分頁重新整理時自動帶 token 加入同一隊，按離開或加入失敗就清掉。
+
+## input 頻率限制（G8n）
+
+`SessionRoomGame` 在每個 `RemoteController` 前面放一個 `InputThrottle`：距離上一則套用的 input 不到 1/60 秒（`MIN_INPUT_INTERVAL_MS`）的 input 不馬上做 `CollisionWorld.move`，而是變成「待處理」那一則（新的蓋掉舊的，`seq` 比較小的不會蓋掉比較大的）；每次 tick 開始前、和這個玩家的 `action` 處理前（因為瀏覽器動作前會補送姿勢，要用它瞄準）把待處理的套用。所以最新的一則一定會套用、最多晚一步，而不管 client 送多快，一秒最多套用約 60 + 30 則。input 帶的是絕對位置，跳過中間的不會少走路，`ack` 直接跳到套用的那則。
+
 ## 手感
 
 1. **自己的移動零延遲。** 瀏覽器照舊用 `PlayerController` 算移動，送 `input` 給 server。server 用 `RemoteController` 收下位置，檢查移動距離不超過一個跟著時間累積的額度（`MoveBudget`）：每過一秒多「速度 × 1.5」公尺（最多存 1 秒份），另有 0.5 m 寬限，用掉後約 1 秒補滿；額度只隨 server 時間增加，所以送再多則 input 也跑不快。也檢查碰撞；不合理就夾回去，並在快照裡給正確位置，client 看到差距超過 1 m 才拉回。
@@ -82,14 +94,15 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 - `RemoteController`：每個玩家一個，`input` 收進來就處理，不等下一步。`seq` 不比上一個大就整則忽略；`ack` 是最後處理的 `seq`。允許的距離來自 `MoveBudget`（token bucket，單位公尺）：每則 input 抵達時，依和上一則抵達的間隔（最多算 1 秒）補進 `PLAYER_SPEED.sprint × speedMultiplier × 間隔 × 1.5`，這部分最多存 1 秒份（網路卡住後一次到的一串 input 不會被夾）；另外的 0.5 m 寬限池用掉後每秒補 0.5 m、最多 0.5 m。移動先扣累積的距離、再扣寬限，扣的是碰撞之後實際走的距離。所以任何一段時間 T 內最多走「速度 × 1.5 × T + 1 秒份 + 0.5 m + 0.5 m/s × T」，和送多少則 input 無關（以前每則都給 0.5 m，每秒 300 則就能多跑 150 m/s）。超過就沿原方向縮短，再用 `CollisionWorld.move` 走一次，所以穿不過牆。`session.canMove` 是 false 或 `session.isRooted(id)` 時只改視角不移動。`y` 夾在 0～1 m（只有跳躍會離地），`pitch` 夾在 ±85°。
 - `fire` 是扣一次扳機：server 發一次 `FIRE_REQUESTED`，武器自己的冷卻決定有沒有射出去。自動武器按住時，client 每次本地扳機會發射就送一則 `fire`（最多和 input 一樣每秒 30 次）。
 - 動作：`ActionRegistry` 依 `kind` 找處理類別。`fire`、`secondary` 先用這個玩家最後接受的姿勢填 `ctx.aim`；`fire` 在 `ShotRewind` 裡判定：殭屍暫時放到 `EnemyHistory` 在 `at − 100 ms` 的位置（最多倒回 250 ms，不會超過現在），判定完放回去。`pickup`、`secondary` 先把玩家位置同步成最後接受的座標。`revive` 呼叫 `session.revives.hold(id, holding)`。
-- 有人離開：那個玩家從 `ctx.players` 拿掉並 dispose，放開救援，其他人繼續玩；最後一個人離開時 Session dispose。
+- 有人離開（或斷線保留的位置過期）：那個玩家從 `ctx.players` 拿掉並 dispose，放開救援，其他人繼續玩；最後一個人離開時 Session dispose。斷線還在保留期間的玩家留在 session 裡（見「斷線重連」）。
+- `input` 先經過 `InputThrottle`（見「input 頻率限制」），再交給 `RemoteController`。
 - 測試：`test/SessionRoomGame.test.js` 用真的 `RoomServer` 加假連線跑完整流程，並用 `web/js/net/protocol.js` 的 `parseServerMessage` 檢查每一則送出的訊息。
 
 ## 瀏覽器端（G8e）
 
 - **開關。** `?play=1&server=ws://host:port` 才有連線功能；`web/js/net/ServerConfig.js` 的 `DEFAULT_SERVER_URL` 是空字串，部署後可以填上預設 server（網址參數優先）；由 game server 自己送出的網頁不用參數（見「部署」）。只收 `ws:`／`wss:`。沒設定 server 時連線程式完全不載入，單機和以前一樣。
 - **開始畫面。** 有 server 時單機的開始按鈕不變，下面多一區：名字（存在 localStorage `net:player-name`，讀不到就不記）、「建立隊伍」、4 碼編號和「輸入編號加入」（只收 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`，小寫自動轉大寫）。錯誤碼都有中文說明（`teamErrors.js`）。網址加 `&join=CODE` 會自動加入；隊伍玩的關卡和網頁不同時，網頁換到那個關卡再加入一次。
-- **隊伍房間。** 大字顯示編號（可複製）、名單（p1～p3 的顏色和遠端玩家膠囊一樣，房主後面標「（房主）」）、開始和離開。開始按鈕只有房主看得到（`NetworkedSession.isHost`、`SnapshotStatus.isHost`），其他人的提示是「等房主開始」；房主離開後新房主收到 `room` 就會出現按鈕。`start-failed`、`not-host` 顯示在房間裡，可以再按。斷線時 `ConnectionScreen` 顯示「正在重新連線」；重連後 server 拒絕重新加入（遊戲已開始、房間不見）就顯示原因，按鈕回開始畫面。重新加入後 `room.you` 可能換了編號（例如 p2 斷線、p1 離開，p2 回來變成 p1），這時 `OnlineHost` 用同一條連線重建 `OnlineMode`，HUD、音效和開火都換成新編號。
+- **隊伍房間。** 大字顯示編號（可複製）、名單（p1～p3 的顏色和遠端玩家膠囊一樣，房主後面標「（房主）」）、開始和離開。開始按鈕只有房主看得到（`NetworkedSession.isHost`、`SnapshotStatus.isHost`），其他人的提示是「等房主開始」；房主離開後新房主收到 `room` 就會出現按鈕。`start-failed`、`not-host` 顯示在房間裡，可以再按。斷線時 `ConnectionScreen` 顯示「正在重新連線」；重連後帶 token 回到原本的位置（見「斷線重連」），server 拒絕（保留期已過、房間不見）就顯示原因，按鈕回開始畫面。重新加入後 `room.you` 可能換了編號（例如 p2 斷線、p1 離開，p2 回來變成 p1），這時 `OnlineHost` 用同一條連線重建 `OnlineMode`，HUD、音效和開火都換成新編號。
 - **模式。** `installGameplay` 用 `ModeSwitch` 在 `LocalMode`（瀏覽器裡跑 `GameSession`）和 `OnlineMode` 之間切換（Strategy，`GameMode`）。`OnlineMode` 不建 `GameSession`：
   - `PlayerController` 照舊每格算移動，`InputSender` 每秒送 30 次姿勢；`PoseReconciler` 拿 snapshot 的位置和同一個 `ack` 送出的姿勢比，差超過 1 m 才直接拉回（第一張 snapshot 把玩家放到 server 的出生點）。動作送出前先補送一次姿勢，因為 server 用最後收到的姿勢瞄準。自己的 `rooted`（倒地、死亡、正在包紮）和 `speed`（腎上腺素等速度倍率）照 snapshot 套到 `PlayerController`，所以本機走法和 server 的檢查一致，包紮時不會一直被拉回。
   - `PlayerCombat` 照舊發 `*_REQUESTED`，`ActionForwarder` 轉成 `action`。開火用 `FireCadence` 控制：每按一下送一次，自動武器按住時每「冷卻 + 8 ms」（最多每秒 30 次）再送一次。槍和近戰在本機立刻播槍聲、槍口火光、後座力和第一人稱動畫（本機 `weapon.fired`，`hit: null`）；server 回來的同一槍改成 `net.shot-confirmed`，只用來顯示命中標記，傷害數字、擊殺都等 server。投擲物和治療物不預測。
