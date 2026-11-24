@@ -1,4 +1,4 @@
-import { Weapon } from './Weapon.js';
+import { Weapon, wholeIn } from './Weapon.js';
 
 /** Fire mode for items that do their own thing in fire(); it is never asked to shoot. */
 const NO_FIRE = Object.freeze({ fire: () => null });
@@ -46,6 +46,14 @@ export class CarriedItem extends Weapon {
     this.count += moved;
     other.count -= moved;
     return other.count === 0;
+  }
+
+  carryState() {
+    return { count: this.count };
+  }
+
+  restoreCarry(state) {
+    this.count = wholeIn(state?.count, 1, this.maxCount, this.count);
   }
 
   /** Spends one from the stack. */

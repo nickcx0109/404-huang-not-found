@@ -24,6 +24,15 @@ export class Chainsaw extends MeleeWeapon {
     return this.battery / this.maxBattery;
   }
 
+  carryState() {
+    return { battery: this.battery };
+  }
+
+  restoreCarry(state) {
+    const battery = state?.battery;
+    if (Number.isFinite(battery) && battery >= 0 && battery <= this.maxBattery) this.battery = battery;
+  }
+
   /** Keeps cutting while the button is held. */
   get automatic() {
     return true;

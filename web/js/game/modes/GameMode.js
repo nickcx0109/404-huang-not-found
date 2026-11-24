@@ -36,5 +36,13 @@ export class GameMode {
     return false;
   }
 
+  /**
+   * What the local player takes along when the level flow loads another level (a CarryOverState),
+   * or null when this mode keeps nothing. Online play never changes level, so it keeps the default.
+   */
+  carryOver() {
+    return null;
+  }
+
   dispose() {}
 }

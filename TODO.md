@@ -56,7 +56,6 @@
 - [ ] **B18** 第一章的車、卡車替身（`Ch1Props.js` 的 `ch1_*`、`escape_car`）畫出來比 collider 大，B17 量過但沒改：`ch1_car_crashed` 凸出 0.13 m、`ch1_car_flipped` 0.08 m、`ch1_car_hazard` 0.035 m、`escape_car` 0.03 m，`ch1_box_truck` 0.29 m；`ch1_car_blocking`（1.8 m）、`ch1_car_lights`（0.8 m）、`ch1_box_truck_looted`（3.1 m）、`ch1_car_open`（3.8 m）凸出的多半是打開的車門和地上散落的東西。要決定哪些算擋路，再補 `footprint` 或改 collider，記得看出怪路線（`test/CrowdStall.test.js`）
 - [ ] **B7** `StaticBatcher` 整關合併、無法剔除，要改成按區塊合併（#9，S1 會遇到）
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
-- [ ] **B15** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、道具欄會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
 
 ## 其他
 
@@ -68,6 +67,7 @@
 
 ## 已完成
 
+- B15 換樓層保留血量、子彈和道具欄，點一下繼續（PR #60）
 - G8h 快照補上彈藥箱和飛行中的效果：`crates`、`effects` 欄位，瀏覽器用 `AmmoCrateMirror`、`EffectMirror` 畫冷卻中的箱子、飛行中的手榴彈和汽油彈、燃燒的地面（PR #59）
 - G8g 連線防作弊收緊：移動額度跟著時間累積（`MoveBudget`）（PR #58）
 - G8l 只有房主能按開始（PR #58）
