@@ -33,12 +33,13 @@ function sessionSet() {
   };
 }
 
-/** Hides every prop of the level that stands inside the footprint of a removed block. */
-function hideVisuals(root, box) {
+/**
+ * Hides the props bound to a removed block (PropFactory marks each prop root with the id of the
+ * collider it is bound to). Props that merely stand inside the block's box are left alone.
+ */
+export function hideVisuals(root, box) {
   root.children.forEach((object) => {
-    if (!object.userData.propName) return;
-    const { x, z } = object.position;
-    if (x >= box.minX && x <= box.maxX && z >= box.minZ && z <= box.maxZ) object.visible = false;
+    if (object.userData.propName && object.userData.collider === box.id) object.visible = false;
   });
 }
 

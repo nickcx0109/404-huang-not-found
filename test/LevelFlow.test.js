@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Aabb, CollisionWorld } from '../web/js/CollisionWorld.js';
 import { LevelFlow } from '../web/js/level/LevelFlow.js';
+import { hideVisuals } from '../web/js/level/installLevelFlow.js';
 
 function setup({ markers, blocks = [], player = { x: 0, z: 0 }, store = new Set(), name = 'floor1' } = {}) {
   const level = { name, markersOfType: (type) => markers.filter((marker) => marker.type === type) };
@@ -102,4 +103,16 @@ test('LevelFlow leaves a block cleared on an earlier visit open and reports it',
   assert.equal(flow.isBlocked('to_floor2'), false);
   assert.equal(collision.boxes.includes(box), false);
   assert.deepEqual(flow.remembered, [box]);
+});
+
+test('clearing a block hides only the props bound to it, not neighbours inside its grown box', () => {
+  const prop = (name, collider, x, z) => ({ visible: true, position: { x, z }, userData: { propName: name, collider } });
+  const barricade = prop('ch3_barricade', 'block_to_floor2', 0, 0);
+  const sandbags = prop('sandbags', 'block_to_floor2', 0.4, 0.2);
+  const neighbour = prop('crate', 'crate_a', 0.3, 0.1); // stands inside the block's box
+  const loose = prop('papers', null, -0.2, 0);
+  const ground = { visible: true, position: { x: 0, z: 0 }, userData: {} };
+  const root = { children: [barricade, sandbags, neighbour, loose, ground] };
+  hideVisuals(root, new Aabb(-2, 0, -2, 2, 2, 2, 'block_to_floor2'));
+  assert.deepEqual(root.children.map((o) => o.visible), [false, false, true, true, true]);
 });
