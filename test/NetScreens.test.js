@@ -10,6 +10,7 @@ import { ConnectionScreen } from '../web/js/ui/hud/ConnectionScreen.js';
 import { LobbyScreen } from '../web/js/ui/hud/LobbyScreen.js';
 import { OnlineLobbyScreen } from '../web/js/ui/hud/OnlineLobbyScreen.js';
 import { PlayerName } from '../web/js/net/PlayerName.js';
+import { teamErrorText } from '../web/js/net/teamErrors.js';
 
 test('PickupMirror places the level\'s weapon spots and fills them only from snapshots', () => {
   const catalog = createWeaponCatalog();
@@ -42,7 +43,7 @@ test('the team room shows the code and roster until the server game runs', () =>
   const view = new NetworkedSession({ you: 'p2', room });
   let read = status(view);
   assert.equal(read.teamCode, 'AB2C');
-  assert.deepEqual(read.roster, [{ id: 'p1', name: 'Ann', you: false }, { id: 'p2', name: 'Bo', you: true }]);
+  assert.deepEqual(read.roster, [{ id: 'p1', name: 'Ann', you: false, host: false }, { id: 'p2', name: 'Bo', you: true, host: false }]);
   assert.equal(LobbyScreen.describe(read), null, 'the single-player start screen stays hidden online');
   assert.equal(TeamRoomScreen.describe(read).title, 'AB2C');
   assert.equal(TeamRoomScreen.describe(read).action, '開始遊戲');
@@ -58,6 +59,46 @@ test('the team room shows the code and roster until the server game runs', () =>
   read = status(view);
   assert.equal(read.notice, 'started');
   assert.match(ConnectionScreen.describe(read).summary, /已經開始/);
+});
+
+test('only the host sees the start button; the others read 等房主開始', () => {
+  const hosted = { ...room, host: 'p1' };
+  const guestView = new NetworkedSession({ you: 'p2', room: hosted });
+  const hostView = new NetworkedSession({ you: 'p1', room: { ...hosted, you: 'p1' } });
+  assert.equal(guestView.host, 'p1');
+  assert.deepEqual([hostView.isHost, guestView.isHost], [true, false]);
+  assert.equal(new NetworkedSession({ you: 'p2', room }).isHost, true, 'a server that names no host lets anyone start');
+
+  const guest = status(guestView);
+  assert.equal(guest.isHost, false);
+  assert.deepEqual(guest.roster.map(player => player.host), [true, false]);
+  assert.equal(TeamRoomScreen.label(guest.roster[0]), 'Ann（房主）');
+  assert.equal(TeamRoomScreen.label(guest.roster[1]), 'Bo（你）');
+  assert.match(TeamRoomScreen.describe(guest).hint, /等房主開始/);
+  assert.equal(TeamRoomScreen.describe(guest).host, false);
+  const host = status(hostView);
+  assert.equal(host.isHost, true);
+  assert.doesNotMatch(TeamRoomScreen.describe(host).hint, /等房主/);
+
+  const screen = new TeamRoomScreen({ createElement: fakeNode });
+  screen.sync(guest);
+  assert.equal(screen.el.hidden, false);
+  assert.equal(screen.button.hidden, true, 'no start button for a guest');
+  assert.equal(screen.hint.textContent, TeamRoomScreen.describe(guest).hint);
+  assert.equal(screen.roster.children[0].textContent, 'Ann（房主）');
+  screen.sync(host);
+  assert.equal(screen.button.hidden, false);
+
+  // The host leaves: the server names p2, who now gets the button.
+  guestView.applyRoom({ ...hosted, host: 'p2', players: [{ id: 'p2', name: 'Bo' }] });
+  screen.sync(status(guestView));
+  assert.equal(screen.button.hidden, false);
+  // The fake node keeps old children when textContent is cleared; the newest three are the list.
+  assert.equal(screen.roster.children.at(-3).textContent, 'Bo（房主）（你）');
+});
+
+test('not-host has its own text', () => {
+  assert.match(teamErrorText('not-host'), /房主/);
 });
 
 function fakeNode(tag) {

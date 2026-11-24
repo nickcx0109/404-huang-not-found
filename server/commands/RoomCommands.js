@@ -42,13 +42,15 @@ export class LeaveCommand extends Command {
   }
 }
 
-/** `start`: any member may start the game once. */
+/** `start`: only the room's host may start the game, once; anyone else gets not-host. */
 export class StartCommand extends Command {
   constructor() { super('start'); }
 
   execute(server, client) {
     if (!client.inRoom) return server.fail(client, ErrorCode.NO_ROOM);
+    const room = client.room;
+    if (!room.isPlaying && !room.isHost(client.playerId)) return server.fail(client, ErrorCode.NOT_HOST);
     // A failed start already told every member start-failed.
-    if (client.room.start() === StartResult.ALREADY_PLAYING) server.fail(client, ErrorCode.STARTED);
+    if (room.start() === StartResult.ALREADY_PLAYING) server.fail(client, ErrorCode.STARTED);
   }
 }

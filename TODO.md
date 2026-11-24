@@ -25,7 +25,6 @@
   - [ ] **G8i 遊戲中斷線可以回來**：遊戲開始後重新連線，server 會回 `started`，瀏覽器只能顯示「連線中斷」。讓斷線的玩家在同一個位置（同一個編號、血量和武器）回到進行中的遊戲；加測試。
   - [ ] **G8j 聽得到隊友的槍聲**：線上只播自己的槍聲，`WeaponSounds` 只處理自己開的槍。隊友的 `weapon.fired` 依他的位置播 3D 槍聲。
   - [ ] **G8k 線上的關卡出口和障礙物**：`installLevelFlow` 線上整個關掉（`OnlineMode.blocksLevelFlow`）。改成由 server 決定：有人在出口按 E 時送 action，server 處理後用事件通知所有人。
-  - [ ] **G8l 只有房主能按開始**：現在隊伍裡任何人都能按開始。改成只有建立隊伍的人（或 p1）能按，其他人看到「等房主開始」；server 也要檢查。
 - [~] **G9 槍的第一人稱模型和動畫**（進行中：@nickcx0109，分支 feat/weapons-art，暫停）
   - 做到一半，已 push 到分支 `feat/weapons-art`（5 個 commit，還沒開 PR、沒合併）：資產庫的可動零件、手槍模型 `pistol.glb`、`art/manifest/weapons.json`、`web/js/weapons/` 的 `WeaponRig`、`WeaponView`、`PistolView`、`Clip`、`WeaponModel`（開槍、換彈、拿出的動畫）。
   - 接手前：這個分支是從 PR #6 之前的 `main` 開的，要先 `git rebase main`。`web/js/App.js` 會衝突，兩邊的改動都要留。
@@ -63,12 +62,15 @@
 
 ## 其他
 
-- [ ] **G8g 連線防作弊收緊**：`RemoteController` 每則 input 都給 0.5 m 寬限，client 一秒送很多則 input 就能跑得比規定快（每秒 30 則時大約多 15 m/s）。改成寬限跟著時間累積、有上限，或限制 input 頻率；記得加測試。
+- [ ] **G8n 限制 input 頻率**：G8g 之後灌 input 已經跑不快（`MoveBudget` 只跟著時間累積），但每則 input 還是會做一次 `CollisionWorld.move`，一個 client 每秒送幾千則還是會吃 server 的 CPU。用一個獨立的類別丟掉遠快於每秒 30 則的 input（注意最後一則不能丟，不然位置會停在舊的），加測試。
 
 
 ---
 
 ## 已完成
+
+- G8g 連線防作弊收緊：移動額度跟著時間累積（`MoveBudget`）（PR #58）
+- G8l 只有房主能按開始（PR #58）
 
 - B13 武器事件帶子彈數（PR #45）
 

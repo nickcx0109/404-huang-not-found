@@ -48,6 +48,17 @@ export class NetworkedSession {
     return before !== undefined && before !== null && this.you !== before;
   }
 
+  /** The player id of the team's host (who may press start), or null when the server does not say. */
+  get host() {
+    return this.room?.host ?? null;
+  }
+
+  /** May this client press start? A server that names no host lets anyone start. */
+  get isHost() {
+    const host = this.host;
+    return host === null || host === this.you;
+  }
+
   applySnapshot(snapshot) {
     if (this.latest && snapshot.time < this.latest.time) return false;
     this.latest = snapshot;

@@ -4,7 +4,7 @@ import { teamErrorText } from '../../net/teamErrors.js';
 /**
  * The team room (online only): the team code, big and easy to copy, who has joined, and the
  * start and leave buttons. Shown until the server's game is running (states 'team-lobby' and
- * 'starting' of NetworkedSession). Anyone in the team may press start.
+ * 'starting' of NetworkedSession). Only the host (room.host) sees the start button.
  */
 export class TeamRoomScreen extends ScreenWidget {
   constructor(doc) {
@@ -29,9 +29,16 @@ export class TeamRoomScreen extends ScreenWidget {
   static describe(status) {
     if (status.state !== 'team-lobby' && status.state !== 'starting') return null;
     const starting = status.state === 'starting';
+    const host = status.isHost !== false;
+    const waiting = host ? '人到齊後按開始（最多 3 人）' : '等房主開始（最多 3 人）';
     return { title: status.teamCode || '----', summary: '隊伍編號：把它告訴隊友，他們在開始畫面輸入編號加入',
-      hint: starting ? '遊戲開始中…' : '人到齊後，任何人都可以按開始（最多 3 人）',
-      action: starting ? '開始中…' : '開始遊戲' };
+      hint: starting ? '遊戲開始中…' : waiting,
+      action: starting ? '開始中…' : '開始遊戲', host };
+  }
+
+  /** Roster line for one player: the name, then who hosts and who you are. */
+  static label(player) {
+    return player.name + (player.host ? '（房主）' : '') + (player.you ? '（你）' : '');
   }
 
   /** @param {() => void} handler  the start button (it also takes the mouse, like single player) */
@@ -44,6 +51,8 @@ export class TeamRoomScreen extends ScreenWidget {
     if (this.el.hidden) return;
     this._code = status.teamCode;
     this.button.disabled = status.state === 'starting';
+    // Only the host may start; the others read 「等房主開始」 in the hint instead of a button.
+    this.button.hidden = status.isHost === false;
     const roster = JSON.stringify(status.roster);
     if (roster !== this._roster) {
       this._roster = roster;
@@ -51,7 +60,7 @@ export class TeamRoomScreen extends ScreenWidget {
       for (let slot = 0; slot < 3; slot++) {
         const player = status.roster[slot];
         const item = this.part('li', 'hud-net-player is-slot-' + (slot + 1), this.roster);
-        item.textContent = player ? player.name + (player.you ? '（你）' : '') : '等待隊友…';
+        item.textContent = player ? TeamRoomScreen.label(player) : '等待隊友…';
         if (!player) item.classList.add('is-empty');
       }
     }
