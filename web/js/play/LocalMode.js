@@ -1,6 +1,7 @@
 import { GameMode } from '../game/modes/GameMode.js';
 import { GameplayLifecycle } from '../game/GameplayLifecycle.js';
 import { createGameplayRun } from '../game/installGameplay.js';
+import { CarryOverState } from '../game/CarryOverState.js';
 
 /**
  * Single player: the GameSession runs in this page, exactly as before online play existed.
@@ -11,11 +12,18 @@ export class LocalMode extends GameMode {
   /**
    * @param {App} app
    * @param {object} [runOptions]  passed to createGameplayRun (e.g. the lobby screen to use)
+   * @param {CarryOverState|null} [arrival]  what the player brought from the previous level; only the
+   *   first run gets it, a restart starts fresh
    */
-  constructor(app, runOptions = {}) {
+  constructor(app, runOptions = {}, arrival = null) {
     super();
     this.app = app;
-    this.lifecycle = new GameplayLifecycle(app.events, () => createGameplayRun(app, runOptions));
+    let carryOver = arrival;
+    this.lifecycle = new GameplayLifecycle(app.events, () => {
+      const run = createGameplayRun(app, { ...runOptions, carryOver });
+      carryOver = null;
+      return run;
+    });
   }
 
   get session() {
@@ -53,6 +61,10 @@ export class LocalMode extends GameMode {
     const game = this.app.game;
     const local = game.context.players[0];
     return !game.canMove || !local?.damageable.alive || Boolean(game.revives.targetFor(local));
+  }
+
+  carryOver() {
+    return CarryOverState.capture(this.app.game.context.players[0]);
   }
 
   dispose() {

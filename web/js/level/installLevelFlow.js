@@ -1,5 +1,6 @@
 import { LevelFlow } from './LevelFlow.js';
 import { EVENTS } from '../game/events.js';
+import { CarryOverStore } from './CarryOverStore.js';
 
 // Connects LevelFlow to the running page: the E key, the on-screen prompt, hiding a cleared
 // block, loading the next level, and remembering cleared blocks for the browser session.
@@ -85,6 +86,9 @@ export function installLevelFlow(app) {
     player: app.player,
     store: sessionSet(),
     navigate: (target, from) => {
+      // The page reloads, so what the player owns goes through sessionStorage (plain viewer: nothing).
+      const carried = app.mode?.carryOver() ?? null;
+      if (carried) new CarryOverStore().save(target, carried);
       const next = new URLSearchParams(window.location.search);
       next.set('level', target);
       next.set('from', from);

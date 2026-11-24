@@ -1,4 +1,6 @@
-import { createSession } from './createSession.js';
+import { createSession, createWeaponCatalog } from './createSession.js';
+import { CarryOverStore } from '../level/CarryOverStore.js';
+import { ContinueScreen } from '../ui/hud/ContinueScreen.js';
 import { ModeSwitch } from './modes/ModeSwitch.js';
 import { LocalMode } from '../play/LocalMode.js';
 import { createEnemyBox } from '../play/enemyBox.js';
@@ -32,7 +34,13 @@ export async function installGameplay(app) {
     const { OnlineHost } = await import('../play/OnlineHost.js');
     host = new OnlineHost(app, modes);
   }
-  const playAlone = () => modes.use(() => new LocalMode(app, host ? host.localRunOptions() : {}));
+  // What the player brought from the previous level (installLevelFlow saved it); the first run only.
+  let arrival = new CarryOverStore().take(app.level.name);
+  const playAlone = () => modes.use(() => {
+    const mode = new LocalMode(app, host ? host.localRunOptions() : {}, arrival);
+    arrival = null;
+    return mode;
+  });
   host?.onReturn(playAlone);
   playAlone();
   host?.autoJoin();
@@ -54,10 +62,12 @@ export async function installGameplay(app) {
 /**
  * Builds one single-player run.
  * @param {App} app
- * @param {{lobbyScreen?: (doc: Document) => LobbyScreen}} [options]  start screen to use instead of
- *   the plain one (OnlineHost adds the team buttons this way)
+ * @param {{lobbyScreen?: (doc: Document) => LobbyScreen, carryOver?: CarryOverState|null}} [options]
+ *   lobbyScreen: start screen to use instead of the plain one (OnlineHost adds the team buttons this
+ *   way); carryOver: what the player brought from the previous level, put on the new player, with a
+ *   「點一下繼續」 screen instead of the start screen
  */
-export function createGameplayRun(app, { lobbyScreen = null } = {}) {
+export function createGameplayRun(app, { lobbyScreen = null, carryOver = null } = {}) {
   if (document.pointerLockElement) document.exitPointerLock();
   app.player._releaseKeys();
   app.player.enabled = false;
@@ -74,6 +84,11 @@ export function createGameplayRun(app, { lobbyScreen = null } = {}) {
   });
   const ctx = app.game.context;
   const [player] = ctx.players;
+  if (carryOver) {
+    const catalog = createWeaponCatalog();
+    carryOver.applyTo(player, id => catalog.create(id));
+    lobbyScreen = doc => new ContinueScreen(doc);
+  }
   const { weaponPickups, ammoCrates } = app.game.pickups;
   const pickupViews = new WeaponPickupViews(app.scene, weaponPickups, ctx.events);
   const recoil = RecoilKick.standard(ctx.events, player.id, { rng: ctx.rng });
