@@ -8,6 +8,7 @@ const TEXT = Object.freeze({
   started: '這個隊伍已經開始遊戲，無法加入。',
   'bad-level': '伺服器沒有這個關卡。',
   'bad-message': '伺服器看不懂這個要求。',
+  'not-host': '只有房主可以開始遊戲，請等房主按開始。',
   'start-failed': '遊戲沒能開始，請再按一次開始。',
   'server-error': '伺服器發生錯誤，請再試一次。',
   'bad-code': '隊伍編號是 4 個字元。',
