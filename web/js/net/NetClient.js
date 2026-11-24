@@ -267,9 +267,9 @@ export class NetClient {
   _confirmRoom(message) {
     this.room = message;
     this._rejoinPending = false;
-    const me = message.players.find((player) => player?.id === message.you);
-    if (me && typeof me.name === 'string') this._rejoinTarget = { code: message.code, name: me.name };
-    else if (this._rejoinTarget) this._rejoinTarget = { ...this._rejoinTarget, code: message.code };
+    // parseServerMessage guarantees a roster entry for `you` with a string name.
+    const me = message.players.find((player) => player.id === message.you);
+    this._rejoinTarget = { code: message.code, name: me.name };
   }
 
   _handleClose() {

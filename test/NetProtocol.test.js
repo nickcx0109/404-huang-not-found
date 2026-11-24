@@ -42,7 +42,7 @@ test('parseServerMessage ignores malformed frames', () => {
 });
 
 const COMPLETE = Object.freeze({
-  room: { t: 'room', code: 'AB2C', you: 'p1', players: [], level: 'ch2', state: 'lobby' },
+  room: { t: 'room', code: 'AB2C', you: 'p1', players: [{ id: 'p1', name: 'A' }], level: 'ch2', state: 'lobby' },
   error: { t: 'error', code: 'full' },
   pong: { t: 'pong', c: 1, s: 2 },
   snapshot: { t: 'snapshot', tick: 3, time: 100, ack: 2, state: 'playing', wave: 1, kills: 0, players: [], enemies: [] },
@@ -74,6 +74,50 @@ test('parseServerMessage checks field types and the optional pickups list', () =
   for (const message of wrong) assert.equal(parseServerMessage(JSON.stringify(message)), null, JSON.stringify(message));
   const withPickups = { ...COMPLETE.snapshot, pickups: [{ id: 1 }] };
   assert.deepEqual(parseServerMessage(JSON.stringify(withPickups)), withPickups);
+});
+
+test('parseServerMessage requires a complete roster that includes `you`', () => {
+  const rosters = [
+    [],
+    [{ id: 'p2', name: 'B' }],
+    [{ id: 'p1' }],
+    [{ id: 'p1', name: 7 }],
+    [{ id: 'p1', name: 'A' }, null],
+    [{ id: 'p1', name: 'A' }, { name: 'B' }],
+    [{ id: 1, name: 'A' }],
+  ];
+  for (const players of rosters) {
+    assert.equal(parseServerMessage(JSON.stringify({ ...COMPLETE.room, players })), null, JSON.stringify(players));
+  }
+  const ok = { ...COMPLETE.room, players: [{ id: 'p2', name: 'B' }, { id: 'p1', name: 'A' }] };
+  assert.deepEqual(parseServerMessage(JSON.stringify(ok)), ok);
+});
+
+const PLAYER = Object.freeze({ id: 'p1', x: 1, y: 0, z: 2, yaw: 0.5, pitch: 0, health: 100, downed: false, alive: true, weapon: 'pistol', ammo: 12, reserve: 48 });
+const ENEMY = Object.freeze({ id: 7, type: 'walker', x: 3, z: 4, yaw: 1, health: 50, state: 'chase' });
+
+test('parseServerMessage validates snapshot player and zombie records', () => {
+  const ok = { ...COMPLETE.snapshot, players: [PLAYER, { ...PLAYER, id: 'p2', weapon: 'knife', ammo: null, reserve: null }], enemies: [ENEMY, { ...ENEMY, id: 'z8' }] };
+  assert.deepEqual(parseServerMessage(JSON.stringify(ok)), ok);
+  const lobby = { ...COMPLETE.snapshot, state: 'lobby', wave: 0, kills: 0 };
+  assert.deepEqual(parseServerMessage(JSON.stringify(lobby)), lobby);
+
+  const badPlayers = [[{}], [null], [1], [{ ...PLAYER, id: 1 }], [{ ...PLAYER, downed: 0 }], [{ ...PLAYER, ammo: '3' }]];
+  for (const field of Object.keys(PLAYER)) {
+    const { [field]: _omitted, ...partial } = PLAYER;
+    badPlayers.push([partial]);
+  }
+  for (const players of badPlayers) {
+    assert.equal(parseServerMessage(JSON.stringify({ ...COMPLETE.snapshot, players })), null, JSON.stringify(players));
+  }
+  const badEnemies = [[{}], [{ ...ENEMY, id: null }], [{ ...ENEMY, x: '3' }], [{ ...ENEMY, type: 2 }]];
+  for (const field of Object.keys(ENEMY)) {
+    const { [field]: _omitted, ...partial } = ENEMY;
+    badEnemies.push([partial]);
+  }
+  for (const enemies of badEnemies) {
+    assert.equal(parseServerMessage(JSON.stringify({ ...COMPLETE.snapshot, enemies })), null, JSON.stringify(enemies));
+  }
 });
 
 test('parseServerMessage accepts any error code string, including future ones', () => {

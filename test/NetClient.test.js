@@ -438,6 +438,18 @@ test('NetClient rejoins under the name the server confirmed, not a refused reque
   assert.deepEqual(nonPing(factory.last), [{ t: 'join', name: 'Nicky', code: 'QR7T' }]);
 });
 
+test('NetClient ignores a room message with an incomplete roster', () => {
+  const { client, factory, time } = connected({ reconnect: { initialDelay: 100 } });
+  factory.last.receive(room('QR7T'));
+  factory.last.receive({ ...room('ZZ9Z'), players: [{ id: 'p1' }] });
+  factory.last.receive({ ...room('YY8Y'), players: [{ id: 'p2', name: 'Amy' }] });
+  assert.equal(client.room.code, 'QR7T');
+  factory.last.drop();
+  time.advance(100);
+  factory.last.open();
+  assert.deepEqual(nonPing(factory.last), [{ t: 'join', name: 'Nick', code: 'QR7T' }]);
+});
+
 test('NetClient does not rejoin a room it only asked for', () => {
   const { client, factory, time } = connected({ reconnect: { initialDelay: 100 } });
   client.join('Nick', 'QR7T');

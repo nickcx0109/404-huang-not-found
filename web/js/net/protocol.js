@@ -40,6 +40,25 @@ const isFiniteNumber = (value) => typeof value === 'number' && Number.isFinite(v
 const isString = (value) => typeof value === 'string';
 const isArray = (value) => Array.isArray(value);
 const isObject = (value) => value !== null && typeof value === 'object' && !isArray(value);
+const isBoolean = (value) => typeof value === 'boolean';
+const isNumberOrNull = (value) => value === null || isFiniteNumber(value);
+const isList = (value, isItem) => isArray(value) && value.every((item) => isObject(item) && isItem(item));
+const allFinite = (record, keys) => keys.every((key) => isFiniteNumber(record[key]));
+
+/** `room.players` entry: `{ id, name }`. */
+const isRosterEntry = (p) => isString(p.id) && isString(p.name);
+
+/**
+ * Snapshot player: `{ id, x, y, z, yaw, pitch, health, downed, alive, weapon, ammo, reserve }`.
+ * `ammo` and `reserve` are null for weapons without rounds (see game/events.js).
+ */
+const isSnapshotPlayer = (p) => isString(p.id) && allFinite(p, ['x', 'y', 'z', 'yaw', 'pitch', 'health'])
+  && isBoolean(p.downed) && isBoolean(p.alive) && isString(p.weapon)
+  && isNumberOrNull(p.ammo) && isNumberOrNull(p.reserve);
+
+/** Snapshot zombie: `{ id, type, x, z, yaw, health, state }`. */
+const isSnapshotEnemy = (e) => (isString(e.id) || isFiniteNumber(e.id)) && isString(e.type)
+  && allFinite(e, ['x', 'z', 'yaw', 'health']) && isString(e.state);
 
 /**
  * Required fields per server message type (NETWORK.md, Server → Client); anything failing
@@ -47,13 +66,14 @@ const isObject = (value) => value !== null && typeof value === 'object' && !isAr
  * `pickups` is the only optional snapshot field.
  */
 const SERVER_SHAPES = Object.freeze({
-  [SERVER_MESSAGES.ROOM]: (m) => isString(m.code) && isString(m.you) && isArray(m.players)
-    && isString(m.level) && isString(m.state),
+  [SERVER_MESSAGES.ROOM]: (m) => isString(m.code) && isString(m.you) && isList(m.players, isRosterEntry)
+    && m.players.some((player) => player.id === m.you) && isString(m.level) && isString(m.state),
   [SERVER_MESSAGES.ERROR]: (m) => isString(m.code),
   [SERVER_MESSAGES.PONG]: (m) => isFiniteNumber(m.c) && isFiniteNumber(m.s),
   [SERVER_MESSAGES.SNAPSHOT]: (m) => isFiniteNumber(m.tick) && isFiniteNumber(m.time) && isFiniteNumber(m.ack)
     && isString(m.state) && isFiniteNumber(m.wave) && isFiniteNumber(m.kills)
-    && isArray(m.players) && isArray(m.enemies) && (m.pickups === undefined || isArray(m.pickups)),
+    && isList(m.players, isSnapshotPlayer) && isList(m.enemies, isSnapshotEnemy)
+    && (m.pickups === undefined || isArray(m.pickups)),
   [SERVER_MESSAGES.EVENT]: (m) => isString(m.name) && isObject(m.detail),
 });
 
