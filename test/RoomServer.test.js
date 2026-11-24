@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { RoomServer } from '../server/RoomServer.js';
 import { RoomCodes } from '../server/rooms/RoomCodes.js';
 import { RoomGame } from '../server/rooms/RoomGame.js';
+import { LevelCatalog } from '../server/rooms/LevelCatalog.js';
 import { FakeMember } from './support/FakeMember.js';
 
 /** A server with predictable codes: AAAA, BBBB, CCCC, ... */
@@ -10,7 +11,7 @@ function makeServer(options = {}) {
   let next = 0;
   const alphabetSize = 31;
   const codes = new RoomCodes({ random: () => (Math.floor(next++ / 4) % alphabetSize + 0.5) / alphabetSize });
-  return new RoomServer({ codes, now: () => 5000, ...options });
+  return new RoomServer({ codes, now: () => 5000, levels: new LevelCatalog(['ch2', 'ch3']), ...options });
 }
 
 function connect(server, label) {
@@ -44,6 +45,15 @@ test('a new room never reuses the code of a live room', () => {
   const server = makeServer({ codes: new RoomCodes({ random: () => draws.shift() ?? 0 }) });
   assert.equal(createRoom(server).code, 'AAAA');
   assert.equal(createRoom(server, 'Bo').code, 'BBBB');
+});
+
+test('create with a level outside the catalog gets bad-level and changes nothing', () => {
+  const server = makeServer();
+  const { host, code } = createRoom(server);
+  send(server, host, { t: 'create', name: 'Ann', level: 'ch9' });
+  assert.deepEqual(host.last, { t: 'error', code: 'bad-level' });
+  assert.deepEqual([...server.rooms.keys()], [code]);
+  assert.equal(server.clients.get(host).room.code, code);
 });
 
 test('join by code adds the player and updates everyone', () => {

@@ -10,6 +10,7 @@ export class CreateCommand extends Command {
   constructor() { super('create'); }
 
   execute(server, client, { name, level }) {
+    if (!server.levels.has(level)) return server.fail(client, ErrorCode.BAD_LEVEL);
     const room = server.openRoom(level);
     server.leaveRoom(client);
     server.seat(client, room, name);

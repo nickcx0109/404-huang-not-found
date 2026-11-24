@@ -4,5 +4,6 @@ export const ErrorCode = Object.freeze({
   FULL: 'full',
   STARTED: 'started',
   BAD_MESSAGE: 'bad-message',
+  BAD_LEVEL: 'bad-level',
   SERVER_ERROR: 'server-error',
 });

@@ -2,6 +2,7 @@ import { Client } from './Client.js';
 import { Room } from './rooms/Room.js';
 import { RoomGame } from './rooms/RoomGame.js';
 import { RoomCodes } from './rooms/RoomCodes.js';
+import { LevelCatalog } from './rooms/LevelCatalog.js';
 import { MessageParser } from './protocol/ClientMessages.js';
 import { ErrorCode } from './protocol/ErrorCodes.js';
 import { defaultCommands } from './commands/index.js';
@@ -20,6 +21,7 @@ export class RoomServer {
    *   commands?: import('./commands/Command.js').Command[],
    *   now?: () => number,
    *   logger?: { error: (...args: unknown[]) => void },
+   *   levels?: LevelCatalog,  which `create.level` names exist; defaults to web/levels/*.json read once
    * }} [options]
    */
   constructor({
@@ -29,8 +31,10 @@ export class RoomServer {
     commands = defaultCommands(),
     now = () => Date.now(),
     logger = console,
+    levels = LevelCatalog.fromDirectory(),
   } = {}) {
     this.logger = logger;
+    this.levels = levels;
     this.codes = codes;
     this.createGame = createGame;
     this.parser = parser;
