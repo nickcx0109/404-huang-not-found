@@ -22,7 +22,7 @@ export class GameSession {
     this.factory = factory;
     this.director = director;
     this.separation = separation;
-    /** Weapons on the ground (a PickupField), or null when the level has none. */
+    /** Ground pickups and ammo crate interactions, or null when the level has none. */
     this.pickups = pickups;
     const sight = new LineOfSight(ctx.collision);
     this.revives = new ReviveInteraction(ctx.players, { canReach: (rescuer, downed) => sight.clear(rescuer, downed) });
@@ -237,6 +237,7 @@ export class GameSession {
     this.disposed = true;
     for (const unsubscribe of this._subscriptions) unsubscribe();
     this.machine.change(null);
+    this.revives.dispose();
     this.factory.dispose();
     for (const player of this.context.players) player.dispose();
     this.context.players.length = 0;

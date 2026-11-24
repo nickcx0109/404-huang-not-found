@@ -1,6 +1,8 @@
 import { ObjectPool } from '../core/ObjectPool.js';
 import { Enemy } from './Enemy.js';
 
+export const ENEMY_ID_PREFIX = 'enemy-';
+
 export class EnemyFactory {
   /**
    * @param {(enemy: Enemy) => void} [prepare]  runs once on each newly built enemy, before it enters the
@@ -34,7 +36,7 @@ export class EnemyFactory {
     const pool = this.registry.get(type);
     if (!pool) throw new Error('Unknown enemy type: ' + type);
     const enemy = pool.acquire();
-    enemy.activate('enemy-' + this.nextId++, spawn, this.ctx);
+    enemy.activate(ENEMY_ID_PREFIX + this.nextId++, spawn, this.ctx);
     this.active.set(enemy, pool);
     return enemy;
   }

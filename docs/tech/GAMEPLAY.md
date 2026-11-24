@@ -134,10 +134,15 @@ classDiagram
 
 `createSession(levelRaw, { players, difficulty, events, rng, collision, createEnemyView })` 接收已解析的關卡 JSON，也接受瀏覽器已載入的 `LevelData`。回傳處於 Lobby 的 `GameSession`，呼叫 `start()` 後以 `update(dt)` 推進，結束時以 `dispose()` 釋放模擬資源並重設控制器的速度倍率。工廠建立波次、敵人工廠、關卡目標、地上物品和彈藥箱，並為每位玩家配置獨立的手槍和球棒。
 
-- `players` 中每筆是 `{ id, name?, controller }`，`id` 在同一局內須唯一。呼叫端先把控制器放到指定位置，再交給工廠；單機模式照既有的出生點選項呼叫 `PlayerController.spawnAt()`。
+- `players` 中每筆是 `{ id, name?, controller }`。`id` 須為非空白字串，在同一局內唯一，且 `enemy-` 前綴保留給 `EnemyFactory`。工廠先檢查整份名單，再配置裝備及發送事件。呼叫端先把控制器放到指定位置，再交給工廠。單機模式照既有的出生點選項呼叫 `PlayerController.spawnAt()`。
 - 控制器只需提供有限數值 `x`、`z`，以及可選的腳底高度 `y`（預設為 0），單位為公尺。每個遊戲步讀取座標，並把移動效果的倍率寫入可寫的 `speedMultiplier` 欄位。一般資料物件即可，無須實作方法。
-- `yaw`、`pitch` 可由控制器以弧度保存，供呼叫端更新瞄準。送出開火或其他需要瞄準的命令前，先依該玩家的視角填入 `session.context.aim.origin` 和 `direction`。瀏覽器由 `PlayerCombat` 讀取相機來完成這一步。
 - `difficulty` 接受 `Difficulty` 實例。`events`、`rng`、`collision` 和 `createEnemyView` 都可省略。瀏覽器傳入既有的事件匯流排和碰撞世界，讓移動、尋路和路障共用同一份碰撞資料，並提供 `createEnemyView(type, context)` 建立敵人視圖。Node 可直接建立無視圖的 Session。
+
+### G8d 遠端控制器契約
+
+- Server 將通過驗證的座標寫入各玩家的控制器。`CombatPlayer.update` 在 Playing 或 WaveBreak 的模擬步把控制器座標複製到 `player.position`。拾取與救援查詢使用最近一次同步的位置。要讓同一批輸入中的拾取看見新座標，先更新控制器並推進一次模擬，再送出 `PICKUP_REQUESTED`。持續按住救援的距離會在每步同步座標後重新判定。
+- 寫入位移前，先確認 `session.canMove` 並檢查 `session.isRooted(playerId)`。倒地、失去行動能力或手上的道具要求站定時，保留原本的腳底座標。控制器座標會由模擬步直接複製，位移限制由 Server 在寫入前執行。
+- 每次分派開火或其他需要瞄準的命令前，依該玩家最近一次接受的姿勢填入共用的 `session.context.aim.origin` 和 `direction`。瞄準可以立即使用已接受的姿勢。射線從 `(x, y + PLAYER_BODY.eyeHeight, z)` 出發，`y` 是腳底高度。`yaw`、`pitch` 用弧度，`yaw = 0` 朝 −Z，正 `yaw` 向左轉，正 `pitch` 向上。瀏覽器的 `PlayerCombat` 直接讀取相機，射線起點包含跳躍偏移。
 
 ## 設計模式對照
 

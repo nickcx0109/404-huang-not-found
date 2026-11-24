@@ -56,8 +56,8 @@ export function createGameplayRun(app) {
   });
   const ctx = app.game.context;
   const [player] = ctx.players;
-  const [pickups, crates] = app.game.pickups.parts;
-  const pickupViews = new WeaponPickupViews(app.scene, pickups, ctx.events);
+  const { weaponPickups, ammoCrates } = app.game.pickups;
+  const pickupViews = new WeaponPickupViews(app.scene, weaponPickups, ctx.events);
   // Degrees of upward kick per shot and the most it swings sideways.
   const recoil = new RecoilKick(ctx.events, player.id, { rng: ctx.rng })
     .register('pistol', { pitch: 1.6, yaw: 0.4 })
@@ -68,7 +68,7 @@ export function createGameplayRun(app) {
     .register('revolver', { pitch: 4, yaw: 0.6 });
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, recoil);
   app.effectViews = EffectViews.standard(app.scene, ctx, ctx.events);
-  app.crateViews = new AmmoCrateViews(app.scene, crates, () => ctx.time);
+  app.crateViews = new AmmoCrateViews(app.scene, ammoCrates, () => ctx.time);
   app.audio = installAudio({ events: ctx.events, player: app.player, enemies: () => ctx.enemies, playerId: player.id });
   app.gameViews = [app.effectViews, app.crateViews, new MovementLock(app.player, app.game, player.id), app.audio];
   app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);

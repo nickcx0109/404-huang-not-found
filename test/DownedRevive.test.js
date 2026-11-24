@@ -54,6 +54,22 @@ test('release E or leave range cancels rescue and a fresh hold starts from zero'
   assert.equal(b.downed, true);
 });
 
+test('disposing a session mid-revive clears held input and releases the target', () => {
+  const { ctx, a, b, session, revive } = fixture();
+  down(b);
+  revive.hold(a.id, true);
+  session.update(0.05);
+  assert.ok(revive.progressFor(a).fraction > 0);
+  assert.equal(revive.tasks.get(a.id).target, b);
+
+  session.dispose();
+  assert.equal(revive.held.size, 0);
+  assert.equal(revive.tasks.size, 0);
+  assert.equal(revive.progressFor(a), null);
+  assert.equal(ctx.players.length, 0);
+  assert.equal(b.downed, true);
+});
+
 test('one downed player does not end a run; full wipe ends playing and wave break', () => {
   for (const phase of ['playing', 'waveBreak']) {
     const { a, b, session } = fixture();

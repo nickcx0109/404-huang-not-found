@@ -84,25 +84,30 @@ for (const [distance, expectedHits] of [[119, 1], [121, 0]]) {
   });
 }
 
-test('Production catalog deals a sniper at weapon spots and pickup equips primary', t => {
+test('Production catalog deals a sniper that can be picked up after the controller move is synchronized', t => {
   const level = JSON.parse(readFileSync(new URL('../web/levels/ch2.json', import.meta.url), 'utf8'));
   const controller = { ...level.spawns.players[0] };
   const session = createSession(level, { players: [{ id: 'player', controller }], rng: () => 0 });
   t.after(() => session.dispose());
-  const [field] = session.pickups.parts;
+  const field = session.pickups.weaponPickups;
   const pickup = field.pickups.find(pickup => pickup.weapon instanceof Sniper);
   assert.ok(pickup);
   assert.ok(level.markers.some(marker => marker.id === pickup.id && marker.type === 'weapon'));
   assert.ok(!field.catalog.idsIn('healing').includes('sniper'));
-  controller.x = pickup.position.x;
-  controller.z = pickup.position.z;
+  const player = session.playerById('player');
+  const request = { ownerId: player.id };
+  const { events } = session.context;
   session.start();
   session.update(0);
-  session.update(1 / 30);
+  controller.x = pickup.position.x;
+  controller.z = pickup.position.z;
+  events.emit(EVENTS.PICKUP_REQUESTED, request);
+  assert.equal(player.weapons.inSlot('primary'), null);
+  assert.equal(pickup.empty, false);
 
-  const player = session.playerById('player');
+  session.update(1 / 30);
   assert.equal(field.offerFor(player).name, 'SNIPER');
-  assert.equal(session.pickUp(player.id), true);
+  events.emit(EVENTS.PICKUP_REQUESTED, request);
   assert.equal(player.weapons.inSlot('primary').id, 'sniper');
   assert.equal(player.weapons.current.ammo, 5);
   assert.equal(pickup.empty, true);

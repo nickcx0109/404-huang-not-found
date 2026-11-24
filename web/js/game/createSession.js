@@ -9,7 +9,7 @@ import { CrowdSeparation } from './CrowdSeparation.js';
 import { SURVIVAL_WAVES } from './waves/survival.js';
 import { Difficulty } from './Difficulty.js';
 import { PathFinder } from '../PathFinder.js';
-import { EnemyFactory } from '../enemies/EnemyFactory.js';
+import { EnemyFactory, ENEMY_ID_PREFIX } from '../enemies/EnemyFactory.js';
 import { Walker } from '../enemies/Walker.js';
 import { Runner } from '../enemies/Runner.js';
 import { Tank } from '../enemies/Tank.js';
@@ -27,7 +27,7 @@ import { Molotov } from '../weapons/Molotov.js';
 import { Katana } from '../weapons/Katana.js';
 import { Chainsaw } from '../weapons/Chainsaw.js';
 import { AmmoCrateField } from '../pickups/AmmoCrateField.js';
-import { InteractionList } from '../pickups/InteractionList.js';
+import { PickupInteraction } from '../pickups/PickupInteraction.js';
 import { LoadoutHolder } from '../weapons/LoadoutHolder.js';
 import { WeaponCatalog } from '../pickups/WeaponCatalog.js';
 import { PickupField } from '../pickups/PickupField.js';
@@ -39,6 +39,7 @@ import { ItemDeck } from '../pickups/ItemDeck.js';
  * @param {object|LevelData} levelRaw
  * @param {object} options
  * @param {{id: string, name?: string, controller: {x: number, z: number, y?: number, speedMultiplier?: number}}[]} options.players
+ *   IDs must be unique, non-blank strings outside the enemy ID namespace.
  *   Each host supplies an already positioned controller. CombatPlayer writes speedMultiplier.
  * @param {Difficulty} [options.difficulty]
  * @param {CollisionWorld} [options.collision] World to share with the browser's movement and level flow.
@@ -51,6 +52,15 @@ export function createSession(levelRaw, {
   players, difficulty = new Difficulty({ count: 10, speed: 2 }), collision,
   events = new EventBus(), rng = Math.random, createEnemyView = () => null,
 }) {
+  const playerIds = new Set();
+  for (const player of players) {
+    const id = player?.id;
+    if (typeof id !== 'string' || !id.trim()) throw new TypeError('Player ID must be a non-empty string');
+    if (id.startsWith(ENEMY_ID_PREFIX)) throw new RangeError('Reserved player ID: ' + id);
+    if (playerIds.has(id)) throw new RangeError('Duplicate player ID: ' + id);
+    playerIds.add(id);
+  }
+
   const level = levelRaw instanceof LevelData ? levelRaw : new LevelData(levelRaw);
   const world = collision ?? CollisionWorld.fromLevel(level);
   const ctx = new GameContext({
@@ -99,6 +109,6 @@ export function createSession(levelRaw, {
 
   return new GameSession(ctx, {
     factory, director, separation: new CrowdSeparation(),
-    pickups: new InteractionList([pickups, crates]), objective,
+    pickups: new PickupInteraction({ weaponPickups: pickups, ammoCrates: crates }), objective,
   });
 }
