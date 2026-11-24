@@ -64,7 +64,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 
 ## 手感
 
-1. **自己的移動零延遲。** 瀏覽器照舊用 `PlayerController` 算移動，送 `input` 給 server。server 用 `RemoteController` 收下位置，檢查兩次 input 之間的移動距離不超過「速度 × 經過時間 × 1.5 + 0.5 m」，也檢查碰撞；不合理就夾回去，並在快照裡給正確位置，client 看到差距超過 1 m 才拉回。
+1. **自己的移動零延遲。** 瀏覽器照舊用 `PlayerController` 算移動，送 `input` 給 server。server 用 `RemoteController` 收下位置，檢查移動距離不超過一個跟著時間累積的額度（`MoveBudget`）：每過一秒多「速度 × 1.5」公尺（最多存 1 秒份），另有 0.5 m 寬限，用掉後約 1 秒補滿；額度只隨 server 時間增加，所以送再多則 input 也跑不快。也檢查碰撞；不合理就夾回去，並在快照裡給正確位置，client 看到差距超過 1 m 才拉回。
 2. **別人和殭屍用補間。** `SnapshotBuffer` 存最近約 1 秒的快照，畫面時間 = 估計的 server 時間 − 100 ms，在前後兩張快照之間線性補間（角度走最短的方向）。缺快照時最多往前外插 250 ms，之後停在原地。
 3. **開槍倒回時間。** server 每一步把殭屍位置存進歷史（約 1 秒）。收到 `fire` 時，把殭屍暫時放回 `at − 100 ms`（client 看到的時間）的位置做命中判定，再放回去。倒回最多 250 ms，超過就用 250 ms。
 4. **本地先播回饋。** 槍聲、火光、後座、彈殼在本地按下去就播；傷害數字、殭屍死亡、子彈數以 server 為準。
@@ -75,7 +75,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 `server/game/` 裡的類別，房間開始後才建立；server 不 import three.js。
 
 - `SessionRoomGame extends RoomGame`：`server/main.mjs` 的 `createGame` 每個房間建一個。開始時讀 `web/levels/<level>.json`，`p1`～`p3` 站在關卡的 `spawns.players[0..2]`（不夠就用最後一個），呼叫 `createSession()` 再 `start()`；讀檔失敗或沒有出生點就丟錯，房間收到 `start-failed` 留在 lobby。`tick(dt)` 把真實經過的時間累積成固定的 1/30 秒步，快照每 50 ms 一張（每秒 20 張；一步是 33 ms，所以三步裡送兩張，落在第 2、3、5、6… 步）。計時器晚了最多一次補 5 步，其餘丟掉。
-- `RemoteController`：每個玩家一個，`input` 收進來就處理，不等下一步。`seq` 不比上一個大就整則忽略；`ack` 是最後處理的 `seq`。允許的距離是 `PLAYER_SPEED.sprint × speedMultiplier × 經過時間 × 1.5 + 0.5 m`，經過時間是兩則 input 抵達 server 的間隔，最多算 1 秒。超過就沿原方向縮短，再用 `CollisionWorld.move` 走一次，所以穿不過牆。`session.canMove` 是 false 或 `session.isRooted(id)` 時只改視角不移動。`y` 夾在 0～1 m（只有跳躍會離地），`pitch` 夾在 ±85°。
+- `RemoteController`：每個玩家一個，`input` 收進來就處理，不等下一步。`seq` 不比上一個大就整則忽略；`ack` 是最後處理的 `seq`。允許的距離來自 `MoveBudget`（token bucket，單位公尺）：每則 input 抵達時，依和上一則抵達的間隔（最多算 1 秒）補進 `PLAYER_SPEED.sprint × speedMultiplier × 間隔 × 1.5`，這部分最多存 1 秒份（網路卡住後一次到的一串 input 不會被夾）；另外的 0.5 m 寬限池用掉後每秒補 0.5 m、最多 0.5 m。移動先扣累積的距離、再扣寬限，扣的是碰撞之後實際走的距離。所以任何一段時間 T 內最多走「速度 × 1.5 × T + 1 秒份 + 0.5 m + 0.5 m/s × T」，和送多少則 input 無關（以前每則都給 0.5 m，每秒 300 則就能多跑 150 m/s）。超過就沿原方向縮短，再用 `CollisionWorld.move` 走一次，所以穿不過牆。`session.canMove` 是 false 或 `session.isRooted(id)` 時只改視角不移動。`y` 夾在 0～1 m（只有跳躍會離地），`pitch` 夾在 ±85°。
 - `fire` 是扣一次扳機：server 發一次 `FIRE_REQUESTED`，武器自己的冷卻決定有沒有射出去。自動武器按住時，client 每次本地扳機會發射就送一則 `fire`（最多和 input 一樣每秒 30 次）。
 - 動作：`ActionRegistry` 依 `kind` 找處理類別。`fire`、`secondary` 先用這個玩家最後接受的姿勢填 `ctx.aim`；`fire` 在 `ShotRewind` 裡判定：殭屍暫時放到 `EnemyHistory` 在 `at − 100 ms` 的位置（最多倒回 250 ms，不會超過現在），判定完放回去。`pickup`、`secondary` 先把玩家位置同步成最後接受的座標。`revive` 呼叫 `session.revives.hold(id, holding)`。
 - 有人離開：那個玩家從 `ctx.players` 拿掉並 dispose，放開救援，其他人繼續玩；最後一個人離開時 Session dispose。
