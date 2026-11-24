@@ -119,6 +119,7 @@ export class LevelData {
      * (the visuals are drawn from it).
      */
     this.collisionBoxes = LevelData._collisionBoxes(this.colliders, this.props);
+    this._collisionBoxById = new Map(this.collisionBoxes.map((c) => [c.id, c]));
     this.spawns = LevelData._readSpawns(raw, v);
     this.bookmarks = LevelData._readBookmarks(raw, v);
     this._bookmarkByName = new Map(this.bookmarks.map((b) => [b.name, b]));
@@ -164,6 +165,11 @@ export class LevelData {
 
   collider(id) {
     return this._colliderById.get(id) || null;
+  }
+
+  /** The collision box of a collider id (the collider grown to cover its props), or null. */
+  collisionBox(id) {
+    return this._collisionBoxById.get(id) || null;
   }
 
   bookmark(name) {
@@ -233,26 +239,54 @@ export class LevelData {
         z: v.number(p, 'z', path, collider ? { fallback: anchor.z } : undefined),
         rotY: v.number(p, 'rotY', path, { fallback: 0 }),
         scale: v.number(p, 'scale', path, { fallback: 1, positive: true }),
-        size: LevelData._readSize(p, v, path, 'size'),
-        footprint: LevelData._readSize(p, v, path, 'footprint'),
+        size: LevelData._readSize(p, v, path),
+        footprint: LevelData._readFootprint(p, v, path),
         collider: collider ? collider.id : null,
       });
     }).filter(Boolean);
   }
 
-  /**
-   * Optional [w, h, d] of a prop; null when the level does not give one.
-   * "size": what a stand-in is built at. "footprint": the box the prop is drawn in before rotY
-   * and scale, when that is not its size (a stand-in that tips its size over); collision only.
-   */
-  static _readSize(p, v, path, key) {
-    const size = v.vec3(p, key, path, false);
+  /** Optional visual size [w, h, d] of a prop; null when the level does not give one. */
+  static _readSize(p, v, path) {
+    const size = v.vec3(p, 'size', path, false);
     if (!size) return null;
     if (size.some((n) => n <= 0)) {
-      v.error(path + '.' + key, 'must be [w, h, d], all > 0');
+      v.error(path + '.size', 'must be [w, h, d], all > 0');
       return null;
     }
     return Object.freeze({ w: size[0], h: size[1], d: size[2] });
+  }
+
+  /**
+   * Optional box a prop is really drawn in, in its own space (around its origin, before rotY and
+   * scale), for collision only: [w, h, d] (centred, standing on the origin) or
+   * { "min": [x, y, z], "max": [x, y, z] } for a stand-in that is not centred on its origin,
+   * e.g. one tipped over about an edge. Normalised to { minX, minY, minZ, maxX, maxY, maxZ };
+   * null when the level does not give one.
+   */
+  static _readFootprint(p, v, path) {
+    const value = p.footprint;
+    if (value === undefined) return null;
+    const key = path + '.footprint';
+    if (Array.isArray(value)) {
+      const size = v.vec3(p, 'footprint', path, false);
+      if (!size) return null;
+      if (size.some((n) => n <= 0)) {
+        v.error(key, 'must be [w, h, d], all > 0');
+        return null;
+      }
+      const [w, h, d] = size;
+      return Object.freeze({ minX: -w / 2, minY: 0, minZ: -d / 2, maxX: w / 2, maxY: h, maxZ: d / 2 });
+    }
+    if (!v.object(value, key)) return null;
+    const min = v.vec3(value, 'min', key, true);
+    const max = v.vec3(value, 'max', key, true);
+    if (!min || !max) return null;
+    if (max.some((n, i) => n <= min[i])) {
+      v.error(key, 'max must be greater than min on every axis');
+      return null;
+    }
+    return Object.freeze({ minX: min[0], minY: min[1], minZ: min[2], maxX: max[0], maxY: max[1], maxZ: max[2] });
   }
 
   static _readSpawns(raw, v) {
@@ -377,7 +411,8 @@ export class LevelData {
     }).filter(Boolean);
   }
 
-  /** Playable rectangle. If the level does not give one, it is the extent of everything + 2 m. */
+  /** Playable rectangle. If the level does not give one, it is the extent of everything (with the
+   * collision boxes, not the colliders as written) + 2 m. */
   static _readBounds(raw, v, level) {
     if (raw.bounds !== undefined) {
       if (v.object(raw.bounds, 'bounds')) {
@@ -399,7 +434,7 @@ export class LevelData {
       minZ = Math.min(minZ, z - hd);
       maxZ = Math.max(maxZ, z + hd);
     };
-    level.colliders.forEach((c) => grow(c.x, c.z, c.w / 2, c.d / 2));
+    level.collisionBoxes.forEach((c) => grow(c.x, c.z, c.w / 2, c.d / 2));
     level.spawns.players.forEach((s) => grow(s.x, s.z, 0, 0));
     level.spawns.zombies.forEach((s) => grow(s.x, s.z, s.r, s.r));
     if (!Number.isFinite(minX)) grow(0, 0, 10, 10);
