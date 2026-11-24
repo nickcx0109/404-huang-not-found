@@ -19,8 +19,11 @@ export class ActionForwarder {
    * @param {FireCadence} options.cadence
    * @param {NetworkedSession} options.view
    * @param {() => number} options.now  client seconds
+   * @param {(kind: string) => void} [options.beforeAction]  called just before an action is sent; the
+   *   server aims shots and pickups from the last pose it received, so OnlineMode sends the pose here
    */
-  constructor({ events, client, ownerId, loadout, cadence, view, now }) {
+  constructor({ events, client, ownerId, loadout, cadence, view, now, beforeAction = () => {} }) {
+    this.beforeAction = beforeAction;
     this.events = events;
     this.client = client;
     this.ownerId = ownerId;
@@ -49,6 +52,7 @@ export class ActionForwarder {
     if (!weapon || !this.view.canAct) return false;
     const now = this.now();
     if (!this.cadence.tryFire(now, weapon, { ammo: this.view.ammo, reloading: weapon.reloading })) return false;
+    this.beforeAction('fire');
     if (!this.client.action('fire')) {
       this.cadence.pending.pop();
       return false;
@@ -73,6 +77,7 @@ export class ActionForwarder {
 
   _send(kind, extra) {
     if (kind !== 'revive' && !this.view.canAct) return false;
+    this.beforeAction(kind);
     return this.client.action(kind, extra);
   }
 

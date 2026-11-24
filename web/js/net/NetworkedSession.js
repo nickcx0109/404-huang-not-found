@@ -19,8 +19,11 @@ export class NetworkedSession {
   constructor({ you, room = null }) {
     this.you = you;
     this.room = room;
+    /** 'open', 'reconnecting' (NetClient is retrying) or 'lost' (the team cannot be rejoined). */
     this.connection = 'open';
     this.starting = false;
+    /** The last error code to show in the team room (e.g. 'start-failed'), or null. */
+    this.notice = null;
     /** The newest snapshot received (message order). */
     this.latest = null;
     /** The interpolated world at render time (SnapshotBuffer.sample), or null. */

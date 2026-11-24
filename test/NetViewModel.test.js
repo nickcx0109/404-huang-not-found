@@ -202,3 +202,18 @@ test('ActionForwarder turns requests into actions and plays predicted shots at o
   events.emit(EVENTS.RELOAD_REQUESTED, { ownerId: 'p2' });
   assert.equal(sent.length, 0);
 });
+
+test('ActionForwarder lets the mode send the pose just before an action goes out', () => {
+  const events = new EventBus();
+  const order = [];
+  const client = { action: kind => (order.push('action:' + kind), true) };
+  const view = new NetworkedSession({ you: 'p2', room });
+  view.applySnapshot(snapshot(100));
+  const loadout = new RemoteLoadout(WeaponSpecs.standard());
+  loadout.apply(view.local, 0);
+  new ActionForwarder({ events, client, ownerId: 'p2', loadout, cadence: new FireCadence(), view, now: () => 0,
+    beforeAction: kind => order.push('pose:' + kind) });
+  events.emit(EVENTS.FIRE_REQUESTED, { ownerId: 'p2' });
+  events.emit(EVENTS.PICKUP_REQUESTED, { ownerId: 'p2' });
+  assert.deepEqual(order, ['pose:fire', 'action:fire', 'pose:pickup', 'action:pickup']);
+});
