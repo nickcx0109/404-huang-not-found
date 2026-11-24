@@ -116,7 +116,8 @@ export class OnlineMode extends GameMode {
     this.effectViews = EffectViews.standard(app.scene, { effects: [] }, events);
     this.enemyViews = new RemoteEnemyViews(app.scene, app.style);
     this.playerViews = new RemotePlayerViews(app.scene, events, id, playerId => this.view.nameOf(playerId));
-    this.audio = installAudio({ events, player, enemies: () => this.standIns.living, playerId: id });
+    this.audio = installAudio({ events, player, enemies: () => this.standIns.living, playerId: id,
+      teammatePosition: ownerId => this.standIns.players.get(ownerId)?.position ?? null });
     app.gameViews = [];
 
     // HUD.
