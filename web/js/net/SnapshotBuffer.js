@@ -13,6 +13,8 @@ export function lerpAngle(a, b, alpha) {
 const POSITION_KEYS = Object.freeze(['x', 'y', 'z']);
 const ANGLE_KEYS = Object.freeze(['yaw', 'pitch']);
 const ENTITY_LISTS = Object.freeze(['players', 'enemies']);
+/** Lists a snapshot may leave out; a missing one counts as empty. */
+const OPTIONAL_LISTS = Object.freeze(['effects']);
 
 /**
  * Keeps about one second of server snapshots ordered by server time and answers
@@ -86,7 +88,7 @@ export class SnapshotBuffer {
 
   /**
    * Returns the interpolated world at `renderTime`, or null when empty:
-   * `{ time, tick, state, wave, kills, ack, players, enemies, alpha, extrapolated, snapshot }`.
+   * `{ time, tick, state, wave, kills, ack, players, enemies, effects, alpha, extrapolated, snapshot }`.
    * `snapshot` is the newer of the two bracketing snapshots (the source of non-motion fields).
    */
   sample(renderTime) {
@@ -129,6 +131,9 @@ export class SnapshotBuffer {
       snapshot: newer,
     };
     for (const key of ENTITY_LISTS) result[key] = SnapshotBuffer._blendList(older?.[key], newer[key], alpha);
+    for (const key of OPTIONAL_LISTS) {
+      result[key] = SnapshotBuffer._blendList(older?.[key], Array.isArray(newer[key]) ? newer[key] : [], alpha);
+    }
     return result;
   }
 

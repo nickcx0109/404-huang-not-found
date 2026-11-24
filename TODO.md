@@ -21,7 +21,6 @@
 
 - **G8 線上多人連線**：設計和協定都在 [docs/tech/NETWORK.md](docs/tech/NETWORK.md)，每一項開工前先讀。雲端 Node server 跑 `GameSession`，瀏覽器用隊伍編號加入。相依：G8a、G8b、G8c 可以同時做；G8d 等 G8a、G8b；G8e 等 G8c、G8d；G8f 部署準備之後，G8m 最後。
   - [ ] **G8m 實際部署和實測**（最後）：照 README「線上多人」部署到東京（Fly.io，`fly.toml`）或新加坡（Render，`render.yaml`），確認只有一台機器在跑；兩台電腦在不同網路用隊伍編號一起打完第二章，用 `node tools/net-latency.mjs wss://<網址> 50` 記錄延遲（min／median／p95），把延遲和遇到的問題寫進 NETWORK.md「部署」或新的 TODO 項目。
-  - [ ] **G8h 快照補上彈藥箱和飛行中的效果**：協定還沒有彈藥箱能不能拿（線上的箱子永遠顯示可以拿），也沒有 `effects` 清單（飛行中的手榴彈、汽油彈、燃燒的地面），瀏覽器只畫得出爆炸閃光。在 snapshot 加欄位（記得更新 NETWORK.md 和 `protocol.js` 的檢查），瀏覽器用 `AmmoCrateViews`、`EffectViews` 畫出來；加測試。
   - [ ] **G8i 遊戲中斷線可以回來**：遊戲開始後重新連線，server 會回 `started`，瀏覽器只能顯示「連線中斷」。讓斷線的玩家在同一個位置（同一個編號、血量和武器）回到進行中的遊戲；加測試。
   - [ ] **G8k 線上的關卡出口和障礙物**：`installLevelFlow` 線上整個關掉（`OnlineMode.blocksLevelFlow`）。改成由 server 決定：有人在出口按 E 時送 action，server 處理後用事件通知所有人。
 - [~] **G9 槍的第一人稱模型和動畫**（進行中：@nickcx0109，分支 feat/weapons-art，暫停）
@@ -69,6 +68,7 @@
 ## 已完成
 
 - B15 換樓層保留血量、子彈和道具欄，點一下繼續（PR #60）
+- G8h 快照補上彈藥箱和飛行中的效果：`crates`、`effects` 欄位，瀏覽器用 `AmmoCrateMirror`、`EffectMirror` 畫冷卻中的箱子、飛行中的手榴彈和汽油彈、燃燒的地面（PR #59）
 - G8g 連線防作弊收緊：移動額度跟著時間累積（`MoveBudget`）（PR #58）
 - G8l 只有房主能按開始（PR #58）
 
