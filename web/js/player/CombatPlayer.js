@@ -32,6 +32,7 @@ export class CombatPlayer extends Entity {
 
   update(dt, ctx) {
     this.position.x = this.controller.x;
+    this.position.y = this.controller.y ?? 0;
     this.position.z = this.controller.z;
     this.weapons.update(dt, ctx);
     this.effects.prune(ctx.time);

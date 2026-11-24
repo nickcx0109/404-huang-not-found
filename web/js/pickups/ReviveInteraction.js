@@ -55,4 +55,9 @@ export class ReviveInteraction {
     const task = this.tasks.get(player?.id);
     return task ? { text: 'REVIVING ' + (task.target.name ?? task.target.id), fraction: Math.min(1, task.elapsed / this.seconds) } : null;
   }
+
+  dispose() {
+    this.held.clear();
+    this.tasks.clear();
+  }
 }
