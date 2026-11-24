@@ -50,7 +50,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 | `room` | `code`, `you`（玩家 id）, `players:[{id,name}]`, `level`, `state` | 進房間或名單變動時送 |
 | `error` | `code`：`no-room`、`full`、`started`、`bad-message`、`bad-level`、`start-failed`、`server-error` | 被拒絕的原因；`start-failed` 是遊戲沒能開始（例如關卡載入失敗），房間裡每個人都會收到，房間留在 `lobby`，可以再按一次開始；`bad-level` 是 `create` 的 `level` 不在 server 啟動時讀到的 `web/levels/*.json` 裡；`server-error` 是 server 處理這則訊息時出錯，狀態維持原樣（例如建房失敗時人還在原本的房間） |
 | `pong` | `c`, `s`（server 時間 ms） | 對時 |
-| `snapshot` | `tick`, `time`（server ms）, `ack`（這個玩家最後處理的 input `seq`）, `state`, `wave`, `kills`, `players:[…]`, `enemies:[…]`, `pickups?` | 每秒 20 次 |
+| `snapshot` | `tick`, `time`（server ms）, `ack`（這個玩家最後處理的 input `seq`）, `state`, `wave`, `kills`, `players:[…]`, `enemies:[…]`, `pickups?`，以及 HUD 用的 `goal`, `objective`, `breakSeconds` | 每秒 20 次 |
 | `event` | `name`（`game/events.js` 的事件名）, `detail` | 需要立刻反應的事件：開槍、命中、死亡、倒地、波次開始、撿到東西。只送畫面和音效需要的欄位 |
 
 快照裡的玩家：`{id, x, y, z, yaw, pitch, health, downed, alive, weapon, ammo, reserve}`；殭屍：`{id, type, x, z, yaw, health, state}`。
@@ -58,6 +58,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 - 快照：`tick` 是 server 的模擬步數，`time` 是那一步的 server 時間（和 `pong.s` 同一個時鐘）。`health` 也四捨五入到小數點後 2 位。
 - 玩家的 `ammo`、`reserve`：`ammo` 是 `null` 表示這把武器沒有子彈（近戰、道具）；`ammo` 是數字而 `reserve` 是 `null` 表示備彈無限（開局手槍；JSON 沒有 Infinity）。`event` 裡武器事件的 `ammo`、`reserve` 也一樣。
 - 殭屍的 `type` 是註冊名稱（`walker`、`runner`、`tank`、`exploder`）；`state` 是 `chase`（有追的對象）、`idle`、`dead`（這一步剛死，下一步就不在快照裡）；`yaw` 是面向它追的玩家，沒有對象時維持上一次的方向。
+- HUD 欄位（瀏覽器的 `SnapshotStatus` 讀，`protocol.js` 不檢查，舊 client 會忽略）：每個玩家多了 `maxHealth`、`magazine`（彈匣容量，沒有子彈的武器是 `null`）、`reloading`、`slots`（`[{id, count, charge}]`，空格 `id` 是 `null`，和單機 `PlayerStatus.slots` 同格式）、`slot`（手上那格的 index）、`healing`（身上有治療道具）、`offer`（腳下能撿的東西 `{name, swap, full, verb, note}` 或 `null`）、`action`（正在治療／被治療／救人 `{text, fraction}` 或 `null`）；最上層多了 `goal`（開始畫面的目標文字）、`objective`（關卡倒數 `{label, seconds}` 或 `null`）、`breakSeconds`（波次間休息剩幾秒）。
 - `pickups` 是 `[{id, item}]`：關卡上每個武器點和上面現在放的東西（`WeaponCatalog` 的 id），被拿走沒留東西時 `item` 是 `null`。
 - `event` 轉送的事件和 `detail`（都是純資料，不送 entity）：`weapon.fired` `{ownerId, weaponId, ammo, reserve, count?, hit: {targetId, hitPart}|null}`、`weapon.reload-started`（多 `duration`）、`weapon.reloaded`、`weapon.changed`、`entity.damaged` `{targetId, sourceId, amount, health, hitPart, kind, downed}`（玩家被打到 0 血就是 `downed: true`，玩家沒有 `entity.died`）、`entity.died` `{targetId, sourceId}`、`entity.healed` `{targetId, sourceId, amount, health}`（救起來也是這個）、`enemy.spawned` `{id, type, x, z, wave}`、`weapon.picked-up` `{ownerId, pickupId, weaponId, droppedId}`、`ammo.refilled` `{ownerId, crateId}`、`item.thrown` `{ownerId, itemId}`、`effect.exploded` `{kind, x, y, z, radius, ownerId}`、`wave.started` `{wave, count}`、`wave.cleared` `{wave, kills}`、`game.state-changed` `{state, wave}`、`game.over`、`game.victory` `{wave, kills}`。
 

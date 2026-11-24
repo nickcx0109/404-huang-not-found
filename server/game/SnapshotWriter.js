@@ -1,4 +1,6 @@
 import { angle, coord, wireRounds } from './wire.js';
+import { PlayerStatus } from '../../web/js/ui/hud/PlayerStatus.js';
+import { TeamPresentation } from '../../web/js/ui/hud/logic/TeamPresentation.js';
 
 /** Zombies further than this from every player are left out of snapshots (docs/tech/NETWORK.md, 手感 5). */
 export const SNAPSHOT_RANGE = 60;
@@ -13,12 +15,14 @@ export class SnapshotWriter {
     this.range = range;
     /** Last facing sent per enemy id, kept while an enemy has nobody to face. */
     this._yaw = new Map();
+    /** Reads each player's pickup offer and timed action exactly as the single-player HUD would. */
+    this._status = new PlayerStatus();
   }
 
   /** The part every member shares. */
   frame(session, { tick, time }) {
     const ctx = session.context;
-    const players = ctx.players.map(player => this.player(player));
+    const players = ctx.players.map(player => this.player(player, session));
     const enemies = [];
     const seen = new Set();
     for (const enemy of ctx.enemies) {
@@ -30,6 +34,9 @@ export class SnapshotWriter {
     const message = {
       t: 'snapshot', tick, time: Math.round(time), ack: -1,
       state: session.state ?? 'lobby', wave: session.wave, kills: session.kills, players, enemies,
+      goal: session.objective?.goal ?? 'SURVIVE THE WAVES',
+      objective: this.objective(session),
+      breakSeconds: session.state === 'wave-break' ? Math.max(0, Math.ceil(session.breakEndsAt - ctx.time)) : 0,
     };
     const pickups = this.pickups(session);
     if (pickups) message.pickups = pickups;
@@ -41,11 +48,11 @@ export class SnapshotWriter {
     return { ...frame, ack };
   }
 
-  player(player) {
+  player(player, session) {
     const controller = player.controller;
     const weapon = player.weapons.current;
     const { ammo, reserve } = wireRounds(weapon?.ammoSnapshot());
-    return {
+    const record = {
       id: player.id,
       x: coord(controller.x), y: coord(controller.y ?? 0), z: coord(controller.z),
       yaw: angle(controller.yaw ?? 0), pitch: angle(controller.pitch ?? 0),
@@ -53,6 +60,34 @@ export class SnapshotWriter {
       downed: player.downed === true, alive: player.damageable.alive,
       weapon: weapon?.id ?? '', ammo, reserve,
     };
+    return session ? Object.assign(record, this.hud(player, session)) : record;
+  }
+
+  /**
+   * What the player's own HUD needs beyond the protocol core (docs/tech/NETWORK.md, HUD fields):
+   * the loadout, the magazine size, reloading, whether they carry healing, and the pickup offer
+   * and timed action text the single-player HUD would show.
+   */
+  hud(player, session) {
+    const weapon = player.weapons.current;
+    const status = this._status.read(session, player.id);
+    return {
+      maxHealth: coord(player.damageable.maxHealth),
+      magazine: weapon && weapon.usesAmmo !== false && Number.isFinite(weapon.magazine) ? weapon.magazine : null,
+      reloading: Boolean(weapon?.reloading),
+      slots: status.slots.map(slot => ({ id: slot.id, count: slot.count, charge: slot.charge })),
+      slot: status.selected,
+      healing: TeamPresentation.carriesHealing(player.weapons.weapons),
+      offer: status.pickup === null ? null : { name: status.pickup, swap: status.pickupSwap,
+        full: status.pickupFull, verb: status.pickupVerb, note: status.pickupNote },
+      action: status.action === null ? null : { text: status.action, fraction: angle(status.actionProgress) },
+    };
+  }
+
+  /** The level's countdown { label, seconds } while it shows one, otherwise null. */
+  objective(session) {
+    const status = session.objective?.status;
+    return status ? { label: status.label, seconds: status.seconds } : null;
   }
 
   enemy(enemy) {
