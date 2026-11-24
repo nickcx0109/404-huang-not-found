@@ -39,14 +39,22 @@ export function roundAngle(value) {
 const isFiniteNumber = (value) => typeof value === 'number' && Number.isFinite(value);
 const isString = (value) => typeof value === 'string';
 const isArray = (value) => Array.isArray(value);
+const isObject = (value) => value !== null && typeof value === 'object' && !isArray(value);
 
-/** Minimal shape checks per server message type; anything failing these is ignored. */
+/**
+ * Required fields per server message type (NETWORK.md, Server → Client); anything failing
+ * these is ignored. Error codes are any string so new server codes need no client change.
+ * `pickups` is the only optional snapshot field.
+ */
 const SERVER_SHAPES = Object.freeze({
-  [SERVER_MESSAGES.ROOM]: (m) => isString(m.code) && isArray(m.players),
+  [SERVER_MESSAGES.ROOM]: (m) => isString(m.code) && isString(m.you) && isArray(m.players)
+    && isString(m.level) && isString(m.state),
   [SERVER_MESSAGES.ERROR]: (m) => isString(m.code),
   [SERVER_MESSAGES.PONG]: (m) => isFiniteNumber(m.c) && isFiniteNumber(m.s),
-  [SERVER_MESSAGES.SNAPSHOT]: (m) => isFiniteNumber(m.time) && isArray(m.players) && isArray(m.enemies),
-  [SERVER_MESSAGES.EVENT]: (m) => isString(m.name),
+  [SERVER_MESSAGES.SNAPSHOT]: (m) => isFiniteNumber(m.tick) && isFiniteNumber(m.time) && isFiniteNumber(m.ack)
+    && isString(m.state) && isFiniteNumber(m.wave) && isFiniteNumber(m.kills)
+    && isArray(m.players) && isArray(m.enemies) && (m.pickups === undefined || isArray(m.pickups)),
+  [SERVER_MESSAGES.EVENT]: (m) => isString(m.name) && isObject(m.detail),
 });
 
 /**
@@ -61,7 +69,7 @@ export function parseServerMessage(data) {
   } catch {
     return null;
   }
-  if (message === null || typeof message !== 'object' || isArray(message)) return null;
+  if (!isObject(message) || !isString(message.t)) return null;
   const check = Object.hasOwn(SERVER_SHAPES, message.t) ? SERVER_SHAPES[message.t] : null;
   return check && check(message) ? message : null;
 }
