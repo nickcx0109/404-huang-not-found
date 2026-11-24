@@ -60,7 +60,7 @@
 
 ## 其他
 
-- [ ] **G8o 隊友的電鋸、換彈聲**：G8j 只在隊友的位置播 `weapon.fired` 的 `fire`／`hit`（槍聲、揮刀）。隊友拿電鋸沒有循環聲（`SoundBoard.hold`／`loop` 沒有位置），隊友換彈也沒聲音。要讓循環聲帶位置、跟著隊友移動；加測試。
+- [~] **G8o 隊友的電鋸、換彈聲**：G8j 只在隊友的位置播 `weapon.fired` 的 `fire`／`hit`（槍聲、揮刀）。隊友拿電鋸沒有循環聲（`SoundBoard.hold`／`loop` 沒有位置），隊友換彈也沒聲音。要讓循環聲帶位置、跟著隊友移動；加測試。（進行中：@nickcx0109，分支 feat/net-teammate-loops）
 
 
 ---
