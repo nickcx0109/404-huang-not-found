@@ -164,9 +164,33 @@ export class Weapon {
     return false;
   }
 
+  /**
+   * What the player keeps of this weapon when they move to another level, as plain finite numbers
+   * (an endless reserve is left out). Subclasses with other state (stacks, batteries) add to it.
+   */
+  carryState() {
+    return finiteFields({ ammo: this.ammo, reserve: this.reserve });
+  }
+
+  /** Takes back what carryState saved. Missing or out-of-range numbers keep the fresh value. */
+  restoreCarry(state) {
+    this.ammo = wholeIn(state?.ammo, 0, this.magazine, this.ammo);
+    this.reserve = wholeIn(state?.reserve, 0, this.maxReserve, this.reserve);
+  }
+
   /** Called when the weapon leaves a player's hands (dropped on the ground): an unfinished reload is lost. */
   drop() {
     this.ownerId = null;
     this.reloadEndsAt = null;
   }
+}
+
+/** The entries of `fields` whose values are finite numbers. */
+export function finiteFields(fields) {
+  return Object.fromEntries(Object.entries(fields).filter(([, value]) => Number.isFinite(value)));
+}
+
+/** `value` when it is an integer in [min, max], otherwise `fallback`. */
+export function wholeIn(value, min, max, fallback) {
+  return Number.isInteger(value) && value >= min && value <= max ? value : fallback;
 }

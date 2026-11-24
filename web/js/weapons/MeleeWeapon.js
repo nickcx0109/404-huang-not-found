@@ -28,4 +28,11 @@ export class MeleeWeapon extends Weapon {
   createShot() {
     return this.shot;
   }
+
+  /** Nothing runs down, so nothing needs carrying to the next level (the chainsaw adds its battery). */
+  carryState() {
+    return {};
+  }
+
+  restoreCarry() {}
 }
