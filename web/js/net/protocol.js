@@ -63,12 +63,13 @@ const isSnapshotEnemy = (e) => (isString(e.id) || isFiniteNumber(e.id)) && isStr
 /**
  * Required fields per server message type (NETWORK.md, Server → Client); anything failing
  * these is ignored. Error codes are any string so new server codes need no client change.
- * `pickups` is the only optional snapshot field; `room.host` is optional for older servers.
+ * `pickups` is the only optional snapshot field; `room.host` and `room.token` are optional for older servers.
  */
 const SERVER_SHAPES = Object.freeze({
   [SERVER_MESSAGES.ROOM]: (m) => isString(m.code) && isString(m.you) && isList(m.players, isRosterEntry)
     && m.players.some((player) => player.id === m.you) && isString(m.level) && isString(m.state)
-    && (m.host === undefined || m.host === null || isString(m.host)),
+    && (m.host === undefined || m.host === null || isString(m.host))
+    && (m.token === undefined || m.token === null || isString(m.token)),
   [SERVER_MESSAGES.ERROR]: (m) => isString(m.code),
   [SERVER_MESSAGES.PONG]: (m) => isFiniteNumber(m.c) && isFiniteNumber(m.s),
   [SERVER_MESSAGES.SNAPSHOT]: (m) => isFiniteNumber(m.tick) && isFiniteNumber(m.time) && isFiniteNumber(m.ack)

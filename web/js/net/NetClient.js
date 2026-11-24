@@ -43,7 +43,8 @@ const defaultSocketFactory = (url) => new globalThis.WebSocket(url);
  * pings to keep a ServerClock in sync, and hands validated server messages to typed listeners.
  *
  * An unexpected close is retried with exponential backoff; after a reconnect the client
- * rejoins the last room the server confirmed, under the name the server confirmed.
+ * rejoins the last room the server confirmed, under the name the server confirmed and with the
+ * rejoin token from that `room` message, so a game in progress takes the same seat back.
  * `leave()` and `disconnect()` end the online session, so a close after either is final.
  *
  * Every state change is announced only after the sockets and timers for that state are in
@@ -162,9 +163,12 @@ export class NetClient {
     return this._send({ t: CLIENT_MESSAGES.CREATE, name, level });
   }
 
-  /** Joins a room by its 4-character code. */
-  join(name, code) {
-    return this._send({ t: CLIENT_MESSAGES.JOIN, name, code });
+  /**
+   * Joins a room by its 4-character code. With the `token` of a seat in that room (from an
+   * earlier `room` message) the server gives that seat back, also during a game.
+   */
+  join(name, code, token = null) {
+    return this._send(NetClient._joinMessage(name, code, token));
   }
 
   /** Leaves the room and ends the online session; no reconnect follows. */
@@ -246,8 +250,8 @@ export class NetClient {
     this._pingTimer = this._timers.setInterval(() => this.ping(), this._pingInterval);
     this.ping();
     if (reconnected && this._rejoin && this._rejoinTarget) {
-      const { name, code } = this._rejoinTarget;
-      this._rejoinPending = this._send({ t: CLIENT_MESSAGES.JOIN, name, code });
+      const { name, code, token } = this._rejoinTarget;
+      this._rejoinPending = this._send(NetClient._joinMessage(name, code, token));
     }
     this._setState(CONNECTION_STATES.OPEN);
   }
@@ -273,7 +277,14 @@ export class NetClient {
     this._rejoinPending = false;
     // parseServerMessage guarantees a roster entry for `you` with a string name.
     const me = message.players.find((player) => player.id === message.you);
-    this._rejoinTarget = { code: message.code, name: me.name };
+    this._rejoinTarget = { code: message.code, name: me.name, token: message.token ?? null };
+  }
+
+  /** The `join` message; `token` only when there is one, so older servers see the same shape. */
+  static _joinMessage(name, code, token) {
+    const message = { t: CLIENT_MESSAGES.JOIN, name, code };
+    if (typeof token === 'string' && token.length > 0) message.token = token;
+    return message;
   }
 
   _handleClose() {

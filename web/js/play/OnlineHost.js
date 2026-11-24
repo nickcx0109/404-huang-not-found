@@ -2,6 +2,7 @@ import { NetClient } from '../net/NetClient.js';
 import { TeamConnector } from '../net/TeamConnector.js';
 import { TeamCode } from '../net/TeamCode.js';
 import { PlayerName } from '../net/PlayerName.js';
+import { RejoinTickets } from '../net/RejoinTickets.js';
 import { teamErrorText } from '../net/teamErrors.js';
 import { OnlineLobbyScreen } from '../ui/hud/OnlineLobbyScreen.js';
 import { OnlineMode } from './OnlineMode.js';
@@ -12,7 +13,8 @@ import { OnlineMode } from './OnlineMode.js';
  * the page from LocalMode to OnlineMode; leaving the team switches back.
  *
  * A link with `&join=CODE` joins that team on load. When the team plays another level than the
- * page shows, the page reloads on that level and joins again.
+ * page shows, the page reloads on that level and joins again. A reloaded tab that was in a team
+ * joins it again with the rejoin token kept in sessionStorage, taking its seat back mid-game.
  */
 export class OnlineHost {
   /** @param {App} app  @param {ModeSwitch} modes */
@@ -21,6 +23,7 @@ export class OnlineHost {
     this.modes = modes;
     this.url = app.options.server;
     this.names = new PlayerName(OnlineHost.storage());
+    this.tickets = new RejoinTickets(OnlineHost.tabStorage());
     this.lobby = null;
     this.busy = false;
     this._return = () => {};
@@ -31,6 +34,15 @@ export class OnlineHost {
   static storage() {
     try {
       return globalThis.localStorage ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** sessionStorage (this tab only), or null where the browser refuses it. */
+  static tabStorage() {
+    try {
+      return globalThis.sessionStorage ?? null;
     } catch {
       return null;
     }
@@ -56,7 +68,8 @@ export class OnlineHost {
   }
 
   autoJoin() {
-    const code = TeamCode.normalize(new URLSearchParams(globalThis.location?.search ?? '').get('join'));
+    const linked = TeamCode.normalize(new URLSearchParams(globalThis.location?.search ?? '').get('join'));
+    const code = TeamCode.isValid(linked) ? linked : this.tickets.load()?.code;
     if (TeamCode.isValid(code)) this.join(this.names.use(this.names.load()), code);
   }
 
@@ -65,7 +78,7 @@ export class OnlineHost {
   }
 
   join(name, code) {
-    return this._connect(team => team.join(name, code), '加入隊伍 ' + code + ' 中…');
+    return this._connect(team => team.join(name, code, this.tickets.tokenFor(code)), '加入隊伍 ' + code + ' 中…');
   }
 
   async _connect(request, text) {
@@ -75,9 +88,11 @@ export class OnlineHost {
     const client = new NetClient({ url: this.url });
     try {
       const room = await request(new TeamConnector(client));
+      this.tickets.save(room);
       if (room.level && room.level !== this.app.options.level) {
         this._reloadOn(room);
-        client.leave();
+        // Not leave(): during a game the server holds the seat for the reloaded page's token.
+        client.disconnect();
         return false;
       }
       this.busy = false;
@@ -85,6 +100,7 @@ export class OnlineHost {
       return true;
     } catch (error) {
       client.disconnect();
+      this.tickets.clear();
       this.busy = false;
       const code = error?.code ?? 'connection-failed';
       if (!error?.code) console.warn('[net] ' + (error?.message ?? error));
@@ -103,6 +119,7 @@ export class OnlineHost {
   }
 
   _leave(notice) {
+    this.tickets.clear();
     this._notice = notice;
     this._return();
   }
