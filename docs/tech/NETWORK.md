@@ -81,6 +81,22 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 - 有人離開：那個玩家從 `ctx.players` 拿掉並 dispose，放開救援，其他人繼續玩；最後一個人離開時 Session dispose。
 - 測試：`test/SessionRoomGame.test.js` 用真的 `RoomServer` 加假連線跑完整流程，並用 `web/js/net/protocol.js` 的 `parseServerMessage` 檢查每一則送出的訊息。
 
+## 瀏覽器端（G8e）
+
+- **開關。** `?play=1&server=ws://host:port` 才有連線功能；`web/js/net/ServerConfig.js` 的 `DEFAULT_SERVER_URL` 是空字串，部署後可以填上預設 server（網址參數優先）。只收 `ws:`／`wss:`。沒設定 server 時連線程式完全不載入，單機和以前一樣。
+- **開始畫面。** 有 server 時單機的開始按鈕不變，下面多一區：名字（存在 localStorage `net:player-name`，讀不到就不記）、「建立隊伍」、4 碼編號和「輸入編號加入」（只收 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`，小寫自動轉大寫）。錯誤碼都有中文說明（`teamErrors.js`）。網址加 `&join=CODE` 會自動加入；隊伍玩的關卡和網頁不同時，網頁換到那個關卡再加入一次。
+- **隊伍房間。** 大字顯示編號（可複製）、名單（p1～p3 的顏色和遠端玩家膠囊一樣）、開始和離開。任何人按開始都行；`start-failed` 顯示在房間裡，可以再按。斷線時 `ConnectionScreen` 顯示「正在重新連線」；重連後 server 拒絕重新加入（遊戲已開始、房間不見）就顯示原因，按鈕回開始畫面。
+- **模式。** `installGameplay` 用 `ModeSwitch` 在 `LocalMode`（瀏覽器裡跑 `GameSession`）和 `OnlineMode` 之間切換（Strategy，`GameMode`）。`OnlineMode` 不建 `GameSession`：
+  - `PlayerController` 照舊每格算移動，`InputSender` 每秒送 30 次姿勢；`PoseReconciler` 拿 snapshot 的位置和同一個 `ack` 送出的姿勢比，差超過 1 m 才直接拉回（第一張 snapshot 把玩家放到 server 的出生點）。動作送出前先補送一次姿勢，因為 server 用最後收到的姿勢瞄準。
+  - `PlayerCombat` 照舊發 `*_REQUESTED`，`ActionForwarder` 轉成 `action`。開火用 `FireCadence` 控制：每按一下送一次，自動武器按住時每「冷卻 + 8 ms」（最多每秒 30 次）再送一次。槍和近戰在本機立刻播槍聲、槍口火光、後座力和第一人稱動畫（本機 `weapon.fired`，`hit: null`）；server 回來的同一槍改成 `net.shot-confirmed`，只用來顯示命中標記，傷害數字、擊殺都等 server。投擲物和治療物不預測。
+  - 畫別人用 `SnapshotBuffer` 在 `clock.now() − 100 ms` 取樣：殭屍用和單機一樣的 `createEnemyBox`，隊友是依編號上色的膠囊加名字。server 的 `event` 由 `NetEventTranslator` 用同樣的事件名稱發到網頁的 bus，需要 entity 的地方放 `EntityStandIns`（從各殭屍類別的 prototype 建，`instanceof` 和聲音的類別對照照常可用），所以單機的音效、HUD 元件、爆炸效果不用改。
+  - HUD 讀 `SnapshotStatus`（`PlayerStatus` 的子類別）：血量、彈藥（`reserve: null` 有彈匣時是無限備彈）、波次、擊殺、道具欄、隊友、倒地／救人、腳下的東西，自己的彈數會先扣掉還沒被 server 確認的子彈。
+  - 地上的槍位置來自關卡 marker，上面放什麼只看 snapshot 的 `pickups`（`PickupMirror`）。
+- **重開。** 線上沒有「同一隊再來一局」：GameOver／Victory 的按鈕或 Enter 會離開隊伍、回到開始畫面，要再玩就重新建立或加入隊伍。
+- **燈光預算。** 能連線的網頁（`play=1` 且有 server）建場景前用 `LightBudget` 把 `alarm.light.count` 降到 1（第二章原本 3 盞），線上每格還要多畫遠端玩家和插值。
+- **關卡出口與障礙物**（`installLevelFlow`）線上一律不反應 E，由 server 的遊戲決定。
+- 除錯：`&debug=1` 時 `window.__netDebug` 有 `state()`、`start()`、`aimAt(x, z, y)`、`fire()`、`leave()`。
+
 ## 部署
 
 - 網頁照舊是靜態檔；server 另外跑，`node server/main.mjs`，port 用環境變數 `PORT`（預設 8787），本機開發時網址加 `?server=ws://localhost:8787`。
