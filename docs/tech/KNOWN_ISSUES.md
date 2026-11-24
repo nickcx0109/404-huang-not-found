@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|
 | 1 | ✅ 已修復 | `web/js/CollisionWorld.js` | 起始重疊先按最小穿透深度解開，再分軸移動 | 四個方向、原地重疊與滑牆皆有回歸測試 | `fix(collision): depenetrate overlapping bodies before movement` |
 | 2 | ✅ 已修復 | `web/js/LevelData.js`、`player/PlayerBody.js` | 出生點以玩家圓柱檢查（含角落、上下高度） | `PlayerController` 與驗證器共用 `PLAYER_BODY` | `fix(level): validate spawns against shared player dimensions` |
-| 3 | 🟠 | `web/levels/mood.json:81`、`web/js/PropFactory.js:52-54` | 綁了 collider 的道具，旋轉或縮放後，外觀會超出碰撞盒 | mood 的 `car_wreck` 轉 28°，玩家可以走進車角約 0.18 m | LevelData 驗證時發出警告；或讓碰撞盒依旋轉後的外框計算 |
+| 3 | ✅ 已修復 | `web/js/level/ColliderFootprint.js`、`LevelData.collisionBoxes` | 綁了 collider 的道具，碰撞盒自動放大到包住道具轉 `rotY`、乘 `scale` 後的外框（只會變大，不會比寫的 collider 小） | mood 的 `car_wreck`（28°）、ch2 的四台廢車、ch3 的斜桌都不能再走進車角／桌角；畫面不變 | `fix(collision): grow collider boxes to cover rotated and scaled props` |
 | 4 | ✅ 已修復 | `tools/serve.mjs` `isServable` | 除了檢查請求路徑，讀檔前再用 `realpath.native` 取得真實路徑（8.3 短檔名會還原成 `.git`，連結會跟到目的地），必須在 repo 裡且沒有隱藏的部分；路徑含 `:`（ADS、磁碟代號）也直接 403 | `test/Serve.test.js`：`/GIT~1/config`、`/git~1/HEAD`、`/%2egit/config`、`::$DATA` 都是 403，遊戲檔照常 200 | `fix(tools): stop the dev server from serving hidden files by short name` |
 | 5 | ✅ 已修復 | `web/js/PostFX.js`、`core/bloomLevels.js` | 明確的 levels: 0 關閉 bloom，不建立 targets 或執行 bloom pass；缺省為 3，非零層數限制為 1～4 | 純函式測試涵蓋 0、缺省、邊界與無效值 | `fix(postfx): treat bloom.levels 0 as a valid value` |
 | 6 | ✅ 已修復 | `tools/art/shots.mjs` `takeShot` | 每張各自 try/catch，逾時或頁面錯誤只算那一張失敗，其他照拍，最後仍以失敗數結束（exit 1）；`--timeout <秒>` 可調等待時間（預設 120） | 用 `--timeout 0.01` 驗證過：8 張都記為 FAIL、迴圈沒有中斷 | `fix(tools): keep taking screenshots after one shot times out`；`--gpu` 的 d3d11 參數只適用於 Windows 仍未處理 |
@@ -19,7 +19,6 @@
 
 - 沒有抗鋸齒（MSAA 關閉，也沒做 FXAA）。
 - 1.5 倍解析度在 Intel 內顯上約 39 fps，要做 PERFORMANCE_PLAN 3.3 的品質分級／自動降解析度。
-- AABB 碰撞不會跟著道具的 rotY 轉（和第 3 項有關）。
 - 尾燈超過約 45 m（相機遠平面）會消失，第一章 300 m 的山路要處理。
 - 第二章的動態燈已經用滿 4 盞，沒有算其他玩家的手電筒；接多人連線時要把 `alarm.light.count` 降到 1 或 0。
 - 第二章 20 m 外的殭屍只剩很淡的剪影。
