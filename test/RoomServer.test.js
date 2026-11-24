@@ -100,6 +100,15 @@ test('unknown codes and start outside a room get no-room', () => {
   assert.deepEqual(lost.sent, [{ t: 'error', code: 'no-room' }, { t: 'error', code: 'no-room' }]);
 });
 
+test('a malformed join code is bad-message, a well-formed absent one is no-room', () => {
+  const server = makeServer();
+  const lost = connect(server, 'Ann');
+  send(server, lost, { t: 'join', name: 'Ann', code: 'O0IL' });
+  send(server, lost, { t: 'join', name: 'Ann', code: 'toolong' });
+  send(server, lost, { t: 'join', name: 'Ann', code: 'zzzz' });
+  assert.deepEqual(lost.sent.map(message => message.code), ['bad-message', 'bad-message', 'no-room']);
+});
+
 test('leaving updates the others and the last one out deletes the room', () => {
   const server = makeServer();
   const { host, code } = createRoom(server);

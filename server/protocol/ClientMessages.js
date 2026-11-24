@@ -1,7 +1,10 @@
 import { MessageSchema } from './MessageSchema.js';
 import { VariantSchema } from './VariantSchema.js';
 import { TextField, NumberField, IntegerField, BooleanField, ChoiceField } from './Fields.js';
-import { RoomCodes } from '../rooms/RoomCodes.js';
+import { RoomCodes, CODE_ALPHABET, CODE_LENGTH } from '../rooms/RoomCodes.js';
+
+/** A well-formed team code after trimming and upper-casing; anything else is bad-message, not no-room. */
+const CODE_PATTERN = new RegExp(`^[${CODE_ALPHABET}]{${CODE_LENGTH}}$`);
 
 /** Largest accepted client message, in UTF-8 bytes. Inputs are well under 200. */
 export const MAX_MESSAGE_BYTES = 4096;
@@ -13,7 +16,10 @@ const seq = () => new IntegerField({ min: 0 });
 export function clientSchemas() {
   return [
     new MessageSchema('create', { name: name(), level: new TextField({ max: 32, pattern: /^[A-Za-z0-9_-]+$/ }) }),
-    new MessageSchema('join', { name: name(), code: new TextField({ max: 16, transform: RoomCodes.normalize }) }),
+    new MessageSchema('join', {
+      name: name(),
+      code: new TextField({ min: CODE_LENGTH, max: CODE_LENGTH, pattern: CODE_PATTERN, transform: RoomCodes.normalize }),
+    }),
     new MessageSchema('leave'),
     new MessageSchema('start'),
     new MessageSchema('ping', { c: new NumberField() }),

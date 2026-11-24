@@ -43,6 +43,13 @@ test('MessageParser rejects malformed text, wrong shapes and oversize messages',
   assert.equal(new MessageParser().schemas.get('ping').parse({ c: Infinity }), null);
 });
 
+test('join codes must have the room-code length and alphabet', () => {
+  assert.equal(parse({ t: 'join', name: 'Bo', code: ' zz99 ' }).code, 'ZZ99');
+  for (const code of ['', 'ABC', 'ABCDE', 'AB0D', 'ABOD', 'AB1D', 'ABID', 'ABLD', 'AB D', 'AB-D', 'ÄBCD']) {
+    assert.equal(parse({ t: 'join', name: 'Bo', code }), null, code);
+  }
+});
+
 test('action fields are chosen by kind', () => {
   const base = { t: 'action', seq: 1, at: 900 };
   for (const kind of ['fire', 'reload', 'secondary', 'pickup']) {
