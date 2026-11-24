@@ -29,6 +29,18 @@ export class ServerClock {
     this._offset = 0;
     this._rtt = null;
     this._synced = false;
+    this._fresh = false;
+  }
+
+  /**
+   * Starts a new connection: drops the sample window (an old low-RTT sample may belong to a
+   * server process that has since restarted) but keeps the current offset, so now() stays
+   * usable until the first new sample arrives and replaces it outright.
+   */
+  beginSession() {
+    this._samples = [];
+    this._rtt = null;
+    this._fresh = true;
   }
 
   /** True once at least one valid sample has arrived. */
@@ -74,12 +86,13 @@ export class ServerClock {
     if (this._samples.length > this._window) this._samples.shift();
     this._rtt = this._rtt === null ? rtt : this._rtt + (rtt - this._rtt) * this._smoothing;
     const target = this._best().offset;
-    if (!this._synced || Math.abs(target - this._offset) > this._snapThreshold) {
+    if (!this._synced || this._fresh || Math.abs(target - this._offset) > this._snapThreshold) {
       this._offset = target;
     } else {
       this._offset += (target - this._offset) * this._smoothing;
     }
     this._synced = true;
+    this._fresh = false;
     return true;
   }
 

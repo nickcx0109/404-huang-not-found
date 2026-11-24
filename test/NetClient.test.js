@@ -424,6 +424,27 @@ test('NetClient: a pinging clock with its own time origin stays consistent', () 
   assert.equal(nonPing(factory.last)[0].at, 77_030);
 });
 
+test('NetClient resyncs the clock to a restarted server instead of keeping old samples', () => {
+  const { client, factory, time } = connected({ reconnect: { initialDelay: 100 } });
+  // First server: a very good rtt-10 sample, server clock 100 000 ms ahead.
+  time.advance(10);
+  factory.last.receive({ t: 'pong', c: 10_000, s: 110_005 });
+  assert.equal(client.clock.now(), 110_010);
+  // The server restarts with its clock near zero.
+  factory.last.drop();
+  time.advance(100);
+  factory.last.open();
+  const ping = factory.last.messages[0];
+  assert.equal(ping.t, 'ping');
+  time.advance(60);
+  factory.last.receive({ t: 'pong', c: ping.c, s: 20 });
+  // rtt 60, server stamped 20 halfway: now = 20 + 30 = 50.
+  assert.equal(client.clock.now(), 50);
+  assert.equal(client.clock.bestRtt, 60);
+  client.action('fire');
+  assert.equal(nonPing(factory.last)[0].at, 50);
+});
+
 test('NetClient clears room membership when the socket is lost', () => {
   const { client, factory, time } = connected({ reconnect: { initialDelay: 100 } });
   factory.last.receive(room('QR7T'));

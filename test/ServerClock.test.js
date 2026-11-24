@@ -81,6 +81,23 @@ test('ServerClock rejects impossible samples and can be reset', () => {
   assert.equal(clock.rtt, null);
 });
 
+test('ServerClock beginSession keeps the offset until a new sample, which then replaces it', () => {
+  const clock = new ServerClock({ now: () => 0, smoothing: 0.25 });
+  clock.addSample(0, 100_005, 10); // rtt 10, offset 100 000
+  clock.beginSession();
+  assert.equal(clock.offset, 100_000, 'still usable before the first new pong');
+  assert.equal(clock.synced, true);
+  assert.equal(clock.rtt, null);
+  assert.equal(clock.bestRtt, null);
+  // The restarted server's clock is only 500 ms off: under snapThreshold, but it must not be smoothed
+  // against or lose to the old rtt-10 sample.
+  clock.addSample(1000, 100_525, 1050); // rtt 50, offset 99 500
+  assert.equal(clock.offset, 99_500);
+  assert.equal(clock.bestRtt, 50);
+  clock.addSample(2000, 101_530, 2060); // rtt 60, offset 99 500; normal smoothing resumes
+  assert.equal(clock.offset, 99_500);
+});
+
 test('ServerClock validates its options', () => {
   assert.throws(() => new ServerClock({ window: 0 }), RangeError);
   assert.throws(() => new ServerClock({ smoothing: 0 }), RangeError);

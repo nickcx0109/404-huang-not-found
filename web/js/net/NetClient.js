@@ -242,6 +242,7 @@ export class NetClient {
     const reconnected = this._attempts > 0;
     this._attempts = 0;
     this._socketOpen = true;
+    this.clock.beginSession(); // The server may have restarted with a different clock.
     this._pingTimer = this._timers.setInterval(() => this.ping(), this._pingInterval);
     this.ping();
     if (reconnected && this._rejoin && this._rejoinTarget) {
