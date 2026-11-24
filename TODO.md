@@ -23,7 +23,6 @@
   - [ ] **G8m 實際部署和實測**（最後）：照 README「線上多人」部署到東京（Fly.io，`fly.toml`）或新加坡（Render，`render.yaml`），確認只有一台機器在跑；兩台電腦在不同網路用隊伍編號一起打完第二章，用 `node tools/net-latency.mjs wss://<網址> 50` 記錄延遲（min／median／p95），把延遲和遇到的問題寫進 NETWORK.md「部署」或新的 TODO 項目。
   - [ ] **G8h 快照補上彈藥箱和飛行中的效果**：協定還沒有彈藥箱能不能拿（線上的箱子永遠顯示可以拿），也沒有 `effects` 清單（飛行中的手榴彈、汽油彈、燃燒的地面），瀏覽器只畫得出爆炸閃光。在 snapshot 加欄位（記得更新 NETWORK.md 和 `protocol.js` 的檢查），瀏覽器用 `AmmoCrateViews`、`EffectViews` 畫出來；加測試。
   - [ ] **G8i 遊戲中斷線可以回來**：遊戲開始後重新連線，server 會回 `started`，瀏覽器只能顯示「連線中斷」。讓斷線的玩家在同一個位置（同一個編號、血量和武器）回到進行中的遊戲；加測試。
-  - [ ] **G8j 聽得到隊友的槍聲**：線上只播自己的槍聲，`WeaponSounds` 只處理自己開的槍。隊友的 `weapon.fired` 依他的位置播 3D 槍聲。
   - [ ] **G8k 線上的關卡出口和障礙物**：`installLevelFlow` 線上整個關掉（`OnlineMode.blocksLevelFlow`）。改成由 server 決定：有人在出口按 E 時送 action，server 處理後用事件通知所有人。
   - [ ] **G8l 只有房主能按開始**：現在隊伍裡任何人都能按開始。改成只有建立隊伍的人（或 p1）能按，其他人看到「等房主開始」；server 也要檢查。
 - [~] **G9 槍的第一人稱模型和動畫**（進行中：@nickcx0109，分支 feat/weapons-art，暫停）
@@ -63,6 +62,7 @@
 
 ## 其他
 
+- [ ] **G8n 隊友的電鋸、換彈聲**：G8j 只在隊友的位置播 `weapon.fired` 的 `fire`／`hit`（槍聲、揮刀）。隊友拿電鋸沒有循環聲（`SoundBoard.hold`／`loop` 沒有位置），隊友換彈也沒聲音。要讓循環聲帶位置、跟著隊友移動；加測試。
 - [ ] **G8g 連線防作弊收緊**：`RemoteController` 每則 input 都給 0.5 m 寬限，client 一秒送很多則 input 就能跑得比規定快（每秒 30 則時大約多 15 m/s）。改成寬限跟著時間累積、有上限，或限制 input 頻率；記得加測試。
 
 
@@ -122,3 +122,4 @@
 - G8d server 跑遊戲：`SessionRoomGame`、`RemoteController`、開槍倒回時間、快照和事件轉送（PR #52）
 - G8e 瀏覽器接上連線：隊伍開始畫面和房間、`OnlineMode`（本地預測、快照插值、殭屍方塊和隊友膠囊、事件轉成單機事件）、連線時第二章警示燈降到 1（PR #54）
 - G8f 部署準備：一個 port 送網頁、`/health` 和 WebSocket（`server/http/`），game server 送出的網頁自動連自己、`Dockerfile`、`fly.toml`（東京）、`render.yaml`（新加坡）、`npm start`、`tools/net-latency.mjs`（PR #55）
+- G8j 聽得到隊友的槍聲：`TeammateWeaponSounds` 在隊友的位置播他那把武器的槍聲（左右聲道、60 m 衰減），自己的槍不會播兩次（PR #56）
