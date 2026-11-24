@@ -47,6 +47,29 @@ class TestSocket {
   }
 }
 
+test('WsTransport reports server errors after binding instead of crashing', async t => {
+  const errors = [];
+  const transport = new WsTransport(new RoomServer(), { onError: error => errors.push(error.message) });
+  const port = await transport.listen(0, '127.0.0.1');
+  t.after(() => transport.close());
+  transport.wss.emit('error', new Error('later failure'));
+  assert.deepEqual(errors, ['later failure']);
+  const socket = await TestSocket.open(`ws://127.0.0.1:${port}`);
+  socket.send({ t: 'ping', c: 1 });
+  assert.equal((await socket.next()).t, 'pong', 'still serving after the error');
+  await socket.close();
+});
+
+test('WsTransport.listen rejects when the port is taken', async t => {
+  const first = new WsTransport(new RoomServer());
+  const port = await first.listen(0, '127.0.0.1');
+  t.after(() => first.close());
+  const errors = [];
+  const second = new WsTransport(new RoomServer(), { onError: error => errors.push(error) });
+  await assert.rejects(second.listen(port, '127.0.0.1'), { code: 'EADDRINUSE' });
+  assert.deepEqual(errors, [], 'bind failures go to the promise, not onError');
+});
+
 test('real ws sockets can create, join, start, ping and leave', async t => {
   const rooms = new RoomServer();
   const transport = new WsTransport(rooms);

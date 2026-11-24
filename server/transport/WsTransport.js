@@ -20,19 +20,27 @@ export class WsConnection {
 
 /** Real network transport: feeds WebSocket traffic into a RoomServer. */
 export class WsTransport {
-  constructor(roomServer, { maxPayload = MAX_FRAME_BYTES } = {}) {
+  /**
+   * @param {import('../RoomServer.js').RoomServer} roomServer
+   * @param {{ maxPayload?: number, onError?: (error: Error) => void }} [options]
+   *   `onError` receives server errors after a successful bind; without one they are logged.
+   */
+  constructor(roomServer, { maxPayload = MAX_FRAME_BYTES, onError = error => console.error('[ws] server error:', error) } = {}) {
     this.roomServer = roomServer;
     this.maxPayload = maxPayload;
+    this.onError = onError;
     this.wss = null;
   }
 
-  /** Starts listening; resolves with the bound port (pass 0 for an ephemeral one). */
+  /** Starts listening; resolves with the bound port (pass 0 for an ephemeral one), rejects if binding fails. */
   listen(port, host) {
     return new Promise((resolve, reject) => {
       const wss = new WebSocketServer({ port, host, maxPayload: this.maxPayload });
       wss.once('error', reject);
       wss.once('listening', () => {
         wss.off('error', reject);
+        // Keep a listener so a later error is reported instead of crashing the process.
+        wss.on('error', error => this.onError(error));
         resolve(wss.address().port);
       });
       wss.on('connection', socket => this.accept(socket));
