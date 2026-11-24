@@ -44,14 +44,15 @@ export class SoundBoard {
 
   /**
    * @param {string} cue
-   * @param {{position?: {x: number, z: number}, volume?: number}} [options]  no position = in your head
+   * @param {{position?: {x: number, z: number}, volume?: number, range?: number}} [options]  no position =
+   *   in your head; `range` overrides the board's earshot for this one sound (a teammate's gunshot)
    * @returns {boolean} whether it was sent to the output
    */
-  play(cue, { position = null, volume = 1 } = {}) {
+  play(cue, { position = null, volume = 1, range = this.range } = {}) {
     const wait = this.cooldowns.get(cue);
     const last = this.lastPlayed.get(cue);
     if (wait !== undefined && last !== undefined && this.time - last < wait - 1e-9) return false;
-    const mix = SpatialMix.of(position ? this.listener() : null, position, this.range);
+    const mix = SpatialMix.of(position ? this.listener() : null, position, range);
     if (mix.gain <= 0) return false;
     this.lastPlayed.set(cue, this.time);
     this.output.play(cue, { pan: mix.pan, gain: mix.gain * volume });
