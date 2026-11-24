@@ -88,6 +88,8 @@ export class NetClient {
     this._socket = null;
     this._socketOpen = false;
     this._state = CONNECTION_STATES.IDLE;
+    this._stateQueue = [];
+    this._notifying = false;
     this._wanted = false;
     this._attempts = 0;
     this._reconnectTimer = null;
@@ -107,7 +109,8 @@ export class NetClient {
 
   /** True while the socket is open and messages can be sent. */
   get isOpen() {
-    return this._socketOpen;
+    const socket = this._socket;
+    return this._socketOpen && socket !== null && (socket.readyState === undefined || socket.readyState === SOCKET_OPEN);
   }
 
   /** Last `seq` used for `input`. */
@@ -329,17 +332,31 @@ export class NetClient {
   }
 
   _send(message) {
-    const socket = this._socket;
-    if (!this._socketOpen || !socket || (socket.readyState !== undefined && socket.readyState !== SOCKET_OPEN)) return false;
-    socket.send(JSON.stringify(message));
+    if (!this.isOpen) return false;
+    this._socket.send(JSON.stringify(message));
     return true;
   }
 
+  /**
+   * Records a transition and notifies listeners one transition at a time: a change made by a
+   * listener is queued until every listener has seen the current one, so all of them observe
+   * the same ordered sequence and the last delivery always matches `state`.
+   */
   _setState(next) {
     if (next === this._state) return;
-    const previous = this._state;
+    this._stateQueue.push([next, this._state]);
     this._state = next;
-    this._bus.emit(CLIENT_EVENTS.STATE, next, previous);
+    if (this._notifying) return;
+    this._notifying = true;
+    try {
+      while (this._stateQueue.length > 0) {
+        const [state, previous] = this._stateQueue.shift();
+        this._bus.emit(CLIENT_EVENTS.STATE, state, previous);
+      }
+    } finally {
+      this._notifying = false;
+      this._stateQueue.length = 0;
+    }
   }
 
   static _detach(socket) {

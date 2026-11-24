@@ -368,6 +368,47 @@ test('NetClient: disconnect() from a `reconnecting` listener cancels the retry',
   assert.equal(client.state, 'closed');
 });
 
+function twoListeners(client, disconnectOn) {
+  const second = [];
+  client.on('state', (state) => state === disconnectOn && client.disconnect());
+  client.on('state', (state, previous) => second.push([previous, state]));
+  return second;
+}
+
+test('NetClient: every listener sees ordered transitions when one disconnects on `connecting`', () => {
+  const { client } = setup();
+  const second = twoListeners(client, 'connecting');
+  client.connect();
+  assert.deepEqual(second, [['idle', 'connecting'], ['connecting', 'closed']]);
+  assert.equal(second.at(-1)[1], client.state);
+});
+
+test('NetClient: every listener sees ordered transitions when one disconnects on `open`', () => {
+  const { client, factory } = setup();
+  const second = twoListeners(client, 'open');
+  client.connect();
+  factory.last.open();
+  assert.deepEqual(second, [['idle', 'connecting'], ['connecting', 'open'], ['open', 'closed']]);
+  assert.equal(client.state, 'closed');
+});
+
+test('NetClient: every listener sees ordered transitions when one disconnects on `reconnecting`', () => {
+  const { client, factory, time } = connected({ reconnect: { initialDelay: 100 } });
+  const second = twoListeners(client, 'reconnecting');
+  factory.last.drop();
+  assert.deepEqual(second, [['open', 'reconnecting'], ['reconnecting', 'closed']]);
+  assert.equal(client.state, 'closed');
+  assert.equal(time.pending, 0);
+});
+
+test('NetClient: isOpen is false while the socket is closing', () => {
+  const { client, factory } = connected();
+  assert.equal(client.isOpen, true);
+  factory.last.readyState = 2;
+  assert.equal(client.isOpen, false);
+  assert.equal(client.start(), false);
+});
+
 test('NetClient: a pinging clock with its own time origin stays consistent', () => {
   // The clock's client time is 1 000 000 ms ahead of the time NetClient was given.
   const { client, factory, time } = setup({ makeClock: (t) => new ServerClock({ now: () => t.time + 1_000_000 }) });
