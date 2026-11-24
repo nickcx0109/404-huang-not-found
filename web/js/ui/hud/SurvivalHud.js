@@ -28,12 +28,13 @@ export class SurvivalHud extends Hud {
    * @param {EventBus} events    the game's event bus
    * @param {string} playerId    the player this screen belongs to
    */
-  constructor(root, events, playerId) {
+  constructor(root, events, playerId, status = new PlayerStatus()) {
     super(root);
     const doc = root.ownerDocument;
+    this.doc = doc;
     this.events = events;
     this.playerId = playerId;
-    this.status = new PlayerStatus();
+    this.status = status;
     this.widgets = [];
     this.layer = doc.createElement('div');
     this.layer.className = 'hud';
@@ -43,25 +44,40 @@ export class SurvivalHud extends Hud {
     if (instructions) instructions.textContent = '滑鼠：視角／左鍵開火、使用　右鍵：治療隊友　WASD：移動　空白鍵：跳　R：換彈　E：撿起　1–7、滾輪：換武器';
   }
 
-  /** The HUD with every finished widget. */
-  static standard(root, events, playerId) {
-    const doc = root.ownerDocument;
+  /**
+   * The HUD with every finished widget.
+   * @param {{lobby?: LobbyScreen|null}} [options]  start screen to use instead of the plain one
+   */
+  static standard(root, events, playerId, { lobby = null } = {}) {
+    return SurvivalHud.compose(new SurvivalHud(root, events, playerId), {
+      lobby: lobby ?? new LobbyScreen(root.ownerDocument),
+    });
+  }
+
+  /**
+   * Adds the standard widget set to `hud`; online play passes its own crosshair and screens.
+   * @param {SurvivalHud} hud
+   * @param {{lobby: LobbyScreen, crosshair?: HudWidget, extra?: HudWidget[]}} parts
+   */
+  static compose(hud, { lobby, crosshair = null, extra = [] }) {
+    const doc = hud.doc;
     // The overlay goes first so every other widget is drawn on top of it.
-    return new SurvivalHud(root, events, playerId)
-      .add(new DamageOverlay(doc))
+    hud.add(new DamageOverlay(doc))
       .add(new HealthWidget(doc))
       .add(new AmmoWidget(doc))
       .add(new StatusLine(doc))
-      .add(new CrosshairWidget(doc))
+      .add(crosshair ?? new CrosshairWidget(doc))
       .add(new PromptWidget(doc))
       .add(new EventCard(doc))
       .add(new TeamWidget(doc))
       .add(new InventoryWidget(doc))
       .add(new SlashWidget(doc))
       .add(new ObjectiveWidget(doc))
-      .add(new LobbyScreen(doc))
+      .add(lobby)
       .add(new GameOverScreen(doc))
       .add(new VictoryScreen(doc));
+    for (const widget of extra) hud.add(widget);
+    return hud;
   }
 
   onStartClick(handler) {

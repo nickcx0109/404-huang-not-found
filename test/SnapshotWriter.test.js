@@ -8,8 +8,10 @@ import { parseServerMessage } from '../web/js/net/protocol.js';
 import { SnapshotWriter, SNAPSHOT_RANGE } from '../server/game/SnapshotWriter.js';
 import { EventRelay, standardRelayedEvents } from '../server/game/EventRelay.js';
 import { RemoteController } from '../server/game/RemoteController.js';
+import { Bandage } from '../web/js/weapons/Bandage.js';
 
-const PLAYER_KEYS = ['id', 'x', 'y', 'z', 'yaw', 'pitch', 'health', 'downed', 'alive', 'weapon', 'ammo', 'reserve'];
+const PLAYER_KEYS = ['id', 'x', 'y', 'z', 'yaw', 'pitch', 'health', 'downed', 'alive', 'weapon', 'ammo', 'reserve',
+  'maxHealth', 'magazine', 'reloading', 'slots', 'slot', 'healing', 'offer', 'action', 'rooted', 'speed'];
 const ENEMY_KEYS = ['id', 'type', 'x', 'z', 'yaw', 'health', 'state'];
 const decimals = value => (String(value).split('.')[1] ?? '').length;
 
@@ -38,7 +40,8 @@ test('a snapshot has exactly the protocol fields, rounded, and passes the client
   const frame = writer.frame(session, { tick: 12, time: 123456.7 });
   const message = writer.forViewer(frame, 41);
   assert.deepEqual(Object.keys(message).sort(),
-    ['ack', 'enemies', 'kills', 'pickups', 'players', 'state', 't', 'tick', 'time', 'wave'].sort());
+    ['ack', 'breakSeconds', 'enemies', 'goal', 'kills', 'objective', 'pickups', 'players', 'state', 't', 'tick',
+      'time', 'wave'].sort());
   assert.deepEqual([message.t, message.tick, message.time, message.ack, message.state, message.wave, message.kills],
     ['snapshot', 12, 123457, 41, 'playing', 1, 0]);
   assert.equal(frame.ack, -1, 'the shared frame is not changed per viewer');
@@ -48,7 +51,13 @@ test('a snapshot has exactly the protocol fields, rounded, and passes the client
   assert.deepEqual(ann, {
     id: 'p1', x: 0.12, y: 0, z: 0.99, yaw: 1.235, pitch: 0, health: 100, downed: false, alive: true,
     weapon: 'pistol', ammo: 12, reserve: null,
+    maxHealth: 100, magazine: 12, reloading: false, slots: ann.slots, slot: ann.slot, healing: false,
+    offer: null, action: null, rooted: false, speed: 1,
   });
+  assert.equal(ann.slots[ann.slot].id, 'pistol', 'the selected slot holds the weapon in hand');
+  assert.ok(ann.slots.some(slot => slot.id === 'bat'));
+  assert.ok(ann.slots.every(slot => Object.keys(slot).join() === 'id,count,charge'));
+  assert.deepEqual([message.goal, message.objective, message.breakSeconds], ['SURVIVE THE WAVES', null, 0]);
   assert.equal(session.playerById('p1').weapons.current.reserve, Infinity, 'the endless reserve travels as null');
   assert.equal(bo.id, 'p2');
 
@@ -72,6 +81,40 @@ test('weapons without rounds send null ammo; a downed player is downed and not a
   assert.deepEqual(message.players[0], { ...message.players[0], weapon: 'bat', ammo: null, reserve: null,
     health: 0, downed: true, alive: false });
   assert.ok(parseServerMessage(JSON.stringify(message)));
+});
+
+test('the HUD fields carry the pickup offer, a reload, healing items and the objective countdown', t => {
+  const { session, a } = arena(t);
+  const ann = session.playerById('p1');
+  const writer = new SnapshotWriter();
+  a.x = 3; a.z = 3; // stands on the rifle spot
+  session.update(1 / 30);
+  let [record] = writer.frame(session, { tick: 1, time: 0 }).players;
+  assert.equal(record.offer?.name, 'RIFLE');
+  assert.equal(typeof record.offer.swap, 'boolean');
+  ann.weapons.current.ammo = 3;
+  session.context.events.emit(EVENTS.RELOAD_REQUESTED, { ownerId: 'p1' });
+  session.update(1 / 30);
+  [record] = writer.frame(session, { tick: 2, time: 0 }).players;
+  assert.equal(record.reloading, true);
+  assert.equal(record.healing, false);
+  session.objective = { goal: 'HOLD', status: { label: 'GATE', seconds: 42 } };
+  assert.deepEqual(writer.frame(session, { tick: 3, time: 0 }).objective, { label: 'GATE', seconds: 42 });
+});
+
+test('rooted follows GameSession.isRooted (bandaging too) and speed carries the speed multiplier', t => {
+  const { session, a } = arena(t);
+  const ann = session.playerById('p1');
+  const writer = new SnapshotWriter();
+  const read = () => writer.frame(session, { tick: 1, time: 0 }).players[0];
+  assert.deepEqual([read().rooted, read().speed], [false, 1]);
+  ann.weapons.equip(new Bandage());
+  ann.damageable.health = 50;
+  assert.equal(ann.weapons.current.fire(session.context), true);
+  assert.equal(session.isRooted('p1'), true);
+  assert.equal(read().rooted, true, 'a bandaging player is held still, not only a downed one');
+  a.speedMultiplier = 1.3;
+  assert.equal(read().speed, 1.3);
 });
 
 test('only zombies within 60 m of some player are sent', t => {

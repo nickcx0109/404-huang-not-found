@@ -12,6 +12,7 @@ import { PathFinder } from './PathFinder.js';
 import { Hud } from './Hud.js';
 import { EventBus } from './core/EventBus.js';
 import { clampFrameTime } from './core/frameTime.js';
+import { resolveServerUrl } from './net/ServerConfig.js';
 
 // App: wires the modules together.
 //   LevelData -> SceneBuilder (-> PropFactory) -> scene + collision
@@ -47,6 +48,8 @@ export class AppOptions {
     this.flashlight = params.get('flashlight') !== '0';
     this.dummies = flag('dummies');
     this.play = params.get('play') === '1';
+    // ?server=ws://host:port (or DEFAULT_SERVER_URL) offers team play on the start screen; null hides it.
+    this.server = this.play && !this.shot ? resolveServerUrl(params.get('server')) : null;
     // ?models=0 shows the greybox stand-ins even where a model exists.
     this.models = params.get('models') !== '0';
     // Seconds on the animation clock for ?shot= (flicker and beacons are functions of time).
@@ -93,6 +96,11 @@ export class App {
     this.level = level;
     await palette.ensure(options.palette || level.palette);
     this.style = palette.resolve(options.palette || level.palette, options.preset);
+    if (options.server) {
+      // Pages that can go online keep fewer dynamic lights (see LightBudget).
+      const { LightBudget } = await import('./net/LightBudget.js');
+      new LightBudget().apply(this.style);
+    }
 
     this._createRenderer();
     this.scene = new THREE.Scene();
@@ -134,7 +142,7 @@ export class App {
 
     if (options.play && !options.shot) {
       const { installGameplay } = await import('./game/installGameplay.js');
-      installGameplay(this);
+      await installGameplay(this);
     }
     if (!options.shot) {
       // Ways out to other levels and the blocks in front of them; null when the level has none.
@@ -150,6 +158,11 @@ export class App {
     } else {
       this._startWalk();
     }
+  }
+
+  /** The GameMode being played (?play=1 only), or null in the plain viewer. */
+  get mode() {
+    return this.modes?.current ?? null;
   }
 
   // ---- setup ---------------------------------------------------------------
@@ -222,8 +235,9 @@ export class App {
     this.hud.onStartClick(() => this.player.requestLock());
     canvas.addEventListener('click', () => this.player.requestLock());
     this.player.onLockChange = (locked) => {
-      this.hud.setStartVisible(!locked && !this.game?.canRestart);
-      if (locked && this.game) this.game.start();
+      const mode = this.mode;
+      this.hud.setStartVisible(!locked && !mode?.canRestart);
+      if (locked && mode) mode.start();
     };
 
     window.addEventListener('keydown', (e) => {
@@ -278,15 +292,11 @@ export class App {
     this._lastTime = now;
     const dt = clampFrameTime(elapsed, CONFIG.maxFrameTime);
 
-    if (!this.game || this.game.canMove) this.player.update(dt);
+    const mode = this.mode;
+    if (!mode || mode.canMove) this.player.update(dt);
     if (this.flow) this.flow.update(dt);
-    if (this.game && this.player.locked) {
-      this.combat.update(dt);
-      this.game.update(dt);
-      this.hud.updateGame(dt, this.game);
-      // Views that move every frame (thrown objects, fire, ammo boxes); set up by installGameplay.
-      for (const view of this.gameViews ?? []) view.update(dt);
-    }
+    // The game mode (single player or online, ?play=1 only) runs its frame; see installGameplay.
+    if (mode) mode.frame(dt, this.player.locked);
     this.atmosphere.update(dt, now / 1000);
     this.built.update(now / 1000);
     // The weapon in the player's hands (only with ?play=1; set up by installGameplay).
