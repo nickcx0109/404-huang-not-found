@@ -35,11 +35,17 @@ export class NetworkedSession {
     if (room) this.applyRoom(room);
   }
 
+  /**
+   * Takes a `room` message. Returns true when it gives this client another player id: after a
+   * rejoin the server may hand out a free slot (p2 drops, p1 leaves, p2 comes back as p1).
+   */
   applyRoom(room) {
+    const before = this.you;
     this.room = room;
     this.you = room.you ?? this.you;
     this.names.clear();
     for (const player of room.players ?? []) this.names.set(player.id, player.name);
+    return before !== undefined && before !== null && this.you !== before;
   }
 
   applySnapshot(snapshot) {

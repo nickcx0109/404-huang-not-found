@@ -85,7 +85,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 
 - **開關。** `?play=1&server=ws://host:port` 才有連線功能；`web/js/net/ServerConfig.js` 的 `DEFAULT_SERVER_URL` 是空字串，部署後可以填上預設 server（網址參數優先）。只收 `ws:`／`wss:`。沒設定 server 時連線程式完全不載入，單機和以前一樣。
 - **開始畫面。** 有 server 時單機的開始按鈕不變，下面多一區：名字（存在 localStorage `net:player-name`，讀不到就不記）、「建立隊伍」、4 碼編號和「輸入編號加入」（只收 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`，小寫自動轉大寫）。錯誤碼都有中文說明（`teamErrors.js`）。網址加 `&join=CODE` 會自動加入；隊伍玩的關卡和網頁不同時，網頁換到那個關卡再加入一次。
-- **隊伍房間。** 大字顯示編號（可複製）、名單（p1～p3 的顏色和遠端玩家膠囊一樣）、開始和離開。任何人按開始都行；`start-failed` 顯示在房間裡，可以再按。斷線時 `ConnectionScreen` 顯示「正在重新連線」；重連後 server 拒絕重新加入（遊戲已開始、房間不見）就顯示原因，按鈕回開始畫面。
+- **隊伍房間。** 大字顯示編號（可複製）、名單（p1～p3 的顏色和遠端玩家膠囊一樣）、開始和離開。任何人按開始都行；`start-failed` 顯示在房間裡，可以再按。斷線時 `ConnectionScreen` 顯示「正在重新連線」；重連後 server 拒絕重新加入（遊戲已開始、房間不見）就顯示原因，按鈕回開始畫面。重新加入後 `room.you` 可能換了編號（例如 p2 斷線、p1 離開，p2 回來變成 p1），這時 `OnlineHost` 用同一條連線重建 `OnlineMode`，HUD、音效和開火都換成新編號。
 - **模式。** `installGameplay` 用 `ModeSwitch` 在 `LocalMode`（瀏覽器裡跑 `GameSession`）和 `OnlineMode` 之間切換（Strategy，`GameMode`）。`OnlineMode` 不建 `GameSession`：
   - `PlayerController` 照舊每格算移動，`InputSender` 每秒送 30 次姿勢；`PoseReconciler` 拿 snapshot 的位置和同一個 `ack` 送出的姿勢比，差超過 1 m 才直接拉回（第一張 snapshot 把玩家放到 server 的出生點）。動作送出前先補送一次姿勢，因為 server 用最後收到的姿勢瞄準。自己的 `rooted`（倒地、死亡、正在包紮）和 `speed`（腎上腺素等速度倍率）照 snapshot 套到 `PlayerController`，所以本機走法和 server 的檢查一致，包紮時不會一直被拉回。
   - `PlayerCombat` 照舊發 `*_REQUESTED`，`ActionForwarder` 轉成 `action`。開火用 `FireCadence` 控制：每按一下送一次，自動武器按住時每「冷卻 + 8 ms」（最多每秒 30 次）再送一次。槍和近戰在本機立刻播槍聲、槍口火光、後座力和第一人稱動畫（本機 `weapon.fired`，`hit: null`）；server 回來的同一槍改成 `net.shot-confirmed`，只用來顯示命中標記，傷害數字、擊殺都等 server。投擲物和治療物不預測。

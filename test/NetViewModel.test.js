@@ -57,6 +57,18 @@ test('NetworkedSession: team lobby, starting, then the snapshot state decides mo
   assert.equal(NetworkedSession.slotOf('p3'), 2);
 });
 
+test('NetworkedSession reports when a room message gives this page another player id', () => {
+  const view = new NetworkedSession({ you: 'p2', room });
+  assert.equal(view.applyRoom({ ...room, players: [...room.players, { id: 'p3', name: 'Cy' }] }), false,
+    'a teammate joining keeps our id');
+  assert.equal(view.nameOf('p3'), 'Cy');
+  // p2 dropped, p1 left meanwhile, and the rejoin landed in the free first slot.
+  assert.equal(view.applyRoom({ ...room, you: 'p1', players: [{ id: 'p1', name: 'Bo' }] }), true);
+  assert.equal(view.you, 'p1');
+  assert.equal(view.nameOf('p1'), 'Bo');
+  assert.equal(view.applyRoom({ ...room, you: 'p1', players: [{ id: 'p1', name: 'Bo' }] }), false);
+});
+
 test('NetworkedSession roots and speeds the local player as the server says', () => {
   const view = new NetworkedSession({ you: 'p2', room });
   assert.equal(view.rooted, true, 'no snapshot yet: stay put');

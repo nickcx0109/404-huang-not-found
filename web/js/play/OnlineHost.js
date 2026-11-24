@@ -81,7 +81,7 @@ export class OnlineHost {
         return false;
       }
       this.busy = false;
-      this.modes.use(() => new OnlineMode(this.app, { client, room, onLeave: notice => this._leave(notice) }));
+      this._play(client, room);
       return true;
     } catch (error) {
       client.disconnect();
@@ -91,6 +91,15 @@ export class OnlineHost {
       this.lobby?.setStatus(teamErrorText(code), { error: true });
       return false;
     }
+  }
+
+  /** Plays online with this client; a new player id after a rejoin builds the mode again. */
+  _play(client, room) {
+    this.modes.use(() => new OnlineMode(this.app, {
+      client, room,
+      onLeave: notice => this._leave(notice),
+      onRenamed: next => this._play(client, next),
+    }));
   }
 
   _leave(notice) {

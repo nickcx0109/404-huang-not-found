@@ -46,15 +46,20 @@ import { RemotePlayerViews } from './RemotePlayerViews.js';
 export class OnlineMode extends GameMode {
   /**
    * @param {App} app
-   * @param {{client: NetClient, room: object, onLeave: (notice?: string) => void}} options
+   * @param {{client: NetClient, room: object, onLeave: (notice?: string) => void,
+   *   onRenamed?: (room: object) => void}} options  `onRenamed` builds a new OnlineMode on the same
+   *   client when the server gives this page another player id (a rejoin into a different slot)
    */
-  constructor(app, { client, room, onLeave }) {
+  constructor(app, { client, room, onLeave, onRenamed = null }) {
     super();
     this.app = app;
     this.client = client;
     this.onLeave = onLeave;
+    this.onRenamed = onRenamed;
     this.disposed = false;
     this.left = false;
+    /** True once the client was passed on to a new OnlineMode: disposing must not leave the team. */
+    this.handedOff = false;
     const id = room.you;
     this.playerId = id;
     const events = app.events;
@@ -254,8 +259,14 @@ export class OnlineMode extends GameMode {
   }
 
   _room(room) {
-    this.view.applyRoom(room);
+    const renamed = this.view.applyRoom(room);
     if (this.view.connection === 'reconnecting') this.view.connection = 'open';
+    if (renamed && this.onRenamed) {
+      // Everything here was built for the old id (HUD, sounds, recoil, combat): hand the client,
+      // still in the team, to a fresh mode instead of patching each part.
+      this.handedOff = true;
+      this.onRenamed(room);
+    }
   }
 
   _error(code) {
@@ -324,7 +335,7 @@ export class OnlineMode extends GameMode {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
-    if (!this.left) {
+    if (!this.left && !this.handedOff) {
       this.left = true;
       this.client.leave();
     }
