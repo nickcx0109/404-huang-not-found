@@ -20,7 +20,6 @@
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker` 這兩個範例。
 
 - **G8 線上多人連線**：設計和協定都在 [docs/tech/NETWORK.md](docs/tech/NETWORK.md)，每一項開工前先讀。雲端 Node server 跑 `GameSession`，瀏覽器用隊伍編號加入。相依：G8a、G8b、G8c 可以同時做；G8d 等 G8a、G8b；G8e 等 G8c、G8d；G8f 最後。
-  - [~] **G8d server 跑遊戲**（進行中：@nickcx0109，分支 feat/net-game）：`Room` 開始後用 `createSession()` 建 session，每秒 30 步、20 次快照；`RemoteController` 收 `input` 並檢查速度；`action` 轉成 session 的事件；開槍倒回時間（`EnemyHistory`）；`ChaseBrain` 改追最近的活著的玩家。
   - [ ] **G8e 瀏覽器接上連線**（等 G8c、G8d）：開始畫面加「建立隊伍／輸入編號加入」；連線時不在本地跑 session，改畫快照；其他玩家的模型（先用膠囊）；本地先播開槍回饋；連線時第二章 `alarm.light.count` 降到 1。
   - [ ] **G8f 部署和實測**（最後）：部署到亞洲機房，README 寫怎麼開房和加入；兩台電腦在不同網路實際打完第二章，記錄延遲和問題。
 - [~] **G9 槍的第一人稱模型和動畫**（進行中：@nickcx0109，分支 feat/weapons-art，暫停）
@@ -59,6 +58,8 @@
 - [ ] **B15** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、道具欄會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
 
 ## 其他
+
+- [ ] **G8g 連線防作弊收緊**：`RemoteController` 每則 input 都給 0.5 m 寬限，client 一秒送很多則 input 就能跑得比規定快（每秒 30 則時大約多 15 m/s）。改成寬限跟著時間累積、有上限，或限制 input 頻率；記得加測試。
 
 
 ---
@@ -114,3 +115,4 @@
 - G8c 瀏覽器端連線類別：`NetClient`、`ServerClock`、`SnapshotBuffer`、`InputSender`（PR #48）
 - G8b 單機和 server 共用的 `createSession()`；遠端 controller 的規則寫在 GAMEPLAY.md（PR #50）
 - B1 旋轉、縮放的道具碰撞盒跟著變大；`footprint` 欄位（PR #51）
+- G8d server 跑遊戲：`SessionRoomGame`、`RemoteController`、開槍倒回時間、快照和事件轉送（PR #52）
