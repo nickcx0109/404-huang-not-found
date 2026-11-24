@@ -6,9 +6,10 @@ import { FakeTime, socketFactory } from './helpers/netFakes.js';
 
 const URL = 'ws://localhost:8787';
 
-function setup(options = {}) {
+function setup({ makeClock, ...options } = {}) {
   const time = new FakeTime(10_000);
   const factory = socketFactory();
+  if (makeClock) options.clock = makeClock(time);
   const client = new NetClient({ url: URL, createSocket: factory.create, now: time.now, timers: time.timers, ...options });
   const states = [];
   client.on('state', (state, previous) => states.push([previous, state]));
@@ -23,7 +24,8 @@ function connected(options) {
   return env;
 }
 
-const room = (code = 'AB2C') => ({ t: 'room', code, you: 'p1', players: [{ id: 'p1', name: 'Nick' }], level: 'ch2', state: 'lobby' });
+const room = (code = 'AB2C', name = 'Nick') => ({ t: 'room', code, you: 'p1', players: [{ id: 'p2', name: 'Amy' }, { id: 'p1', name }], level: 'ch2', state: 'lobby' });
+const nonPing = (socket) => socket.messages.filter((m) => m.t !== 'ping');
 
 test('NetClient connects through the injected socket factory and reports states', () => {
   const { client, factory, states } = setup();
@@ -82,11 +84,12 @@ test('NetClient numbers input with an incrementing seq and rounds per protocol',
 });
 
 test('NetClient stamps actions with the estimated server time', () => {
-  const clock = new ServerClock({ now: () => 0 });
-  const { client, factory, time } = connected({ clock });
-  // Re-point the clock at fake time with a known +5000 ms offset.
-  clock._now = time.now;
-  clock.addSample(time.time - 40, time.time + 5000 - 20, time.time);
+  const { client, factory, time } = setup();
+  client.connect();
+  factory.last.open();
+  // The open ping went out at 10 000; its pong comes back 40 ms later: offset +5000.
+  time.advance(40);
+  factory.last.receive({ t: 'pong', c: 10_000, s: 15_020 });
   client.action('fire');
   client.action('switch', { index: 2 });
   client.action('cycle', { step: -1 });
@@ -95,11 +98,11 @@ test('NetClient stamps actions with the estimated server time', () => {
   client.action('reload', { t: 'hack', seq: 99, kind: 'fire', at: 0 });
   const sent = factory.last.messages.filter((m) => m.t === 'action');
   assert.deepEqual(sent, [
-    { t: 'action', seq: 1, kind: 'fire', at: 15_000 },
-    { t: 'action', seq: 2, kind: 'switch', at: 15_000, index: 2 },
-    { t: 'action', seq: 3, kind: 'cycle', at: 15_000, step: -1 },
-    { t: 'action', seq: 4, kind: 'revive', at: 15_000, holding: true },
-    { t: 'action', seq: 5, kind: 'reload', at: 15_016 },
+    { t: 'action', seq: 1, kind: 'fire', at: 15_040 },
+    { t: 'action', seq: 2, kind: 'switch', at: 15_040, index: 2 },
+    { t: 'action', seq: 3, kind: 'cycle', at: 15_040, step: -1 },
+    { t: 'action', seq: 4, kind: 'revive', at: 15_040, holding: true },
+    { t: 'action', seq: 5, kind: 'reload', at: 15_056 },
   ]);
   assert.equal(client.actionSeq, 5);
   assert.throws(() => client.action('dance'), RangeError);
@@ -322,4 +325,139 @@ test('NetClient treats an error followed by close like any unexpected close', ()
   assert.equal(client.isOpen, true, 'error alone changes nothing');
   factory.last.drop();
   assert.equal(client.state, 'reconnecting');
+});
+
+test('NetClient: disconnect() from a `connecting` listener closes for good', () => {
+  const { client, factory, time } = setup();
+  client.on('state', (state) => state === 'connecting' && client.disconnect());
+  client.connect();
+  const socket = factory.last;
+  assert.equal(client.state, 'closed');
+  assert.equal(socket.closed, true);
+  assert.equal(time.pending, 0);
+  socket.open();
+  time.advance(60_000);
+  assert.equal(client.state, 'closed');
+  assert.equal(client.isOpen, false);
+  assert.equal(factory.sockets.length, 1);
+  assert.equal(time.pending, 0);
+});
+
+test('NetClient: disconnect() from an `open` listener leaves no ping running', () => {
+  const { client, factory, time } = setup({ pingInterval: 1000 });
+  client.on('state', (state) => state === 'open' && client.disconnect());
+  client.connect();
+  const socket = factory.last;
+  socket.open();
+  assert.equal(client.state, 'closed');
+  assert.equal(time.pending, 0);
+  const sent = socket.sent.length;
+  time.advance(10_000);
+  assert.equal(socket.sent.length, sent, 'no pings after disconnect');
+  assert.equal(factory.sockets.length, 1);
+});
+
+test('NetClient: disconnect() from a `reconnecting` listener cancels the retry', () => {
+  const { client, factory, time } = connected({ reconnect: { initialDelay: 100 } });
+  client.on('state', (state) => state === 'reconnecting' && client.disconnect());
+  factory.last.drop();
+  assert.equal(client.state, 'closed');
+  assert.equal(time.pending, 0);
+  time.advance(60_000);
+  assert.equal(factory.sockets.length, 1);
+  assert.equal(client.state, 'closed');
+});
+
+test('NetClient: a pinging clock with its own time origin stays consistent', () => {
+  // The clock's client time is 1 000 000 ms ahead of the time NetClient was given.
+  const { client, factory, time } = setup({ makeClock: (t) => new ServerClock({ now: () => t.time + 1_000_000 }) });
+  client.connect();
+  factory.last.open();
+  const [ping] = factory.last.messages;
+  assert.deepEqual(ping, { t: 'ping', c: 1_010_000 });
+  time.advance(30);
+  factory.last.receive({ t: 'pong', c: ping.c, s: 77_015 });
+  assert.equal(client.clock.rtt, 30);
+  assert.equal(client.clock.now(), 77_030);
+  client.action('fire');
+  assert.equal(nonPing(factory.last)[0].at, 77_030);
+});
+
+test('NetClient clears room membership when the socket is lost', () => {
+  const { client, factory, time } = connected({ reconnect: { initialDelay: 100 } });
+  factory.last.receive(room('QR7T'));
+  assert.equal(client.room.code, 'QR7T');
+  factory.last.drop();
+  assert.equal(client.room, null);
+  time.advance(100);
+  factory.last.open();
+  assert.equal(client.room, null, 'not a member again until the server says so');
+  factory.last.receive(room('QR7T'));
+  assert.equal(client.room.code, 'QR7T');
+});
+
+test('NetClient stops retrying a rejoin the server refused', () => {
+  const { client, factory, time } = connected({ reconnect: { initialDelay: 100 } });
+  const errors = [];
+  client.on('error', (message) => errors.push(message.code));
+  factory.last.receive(room('QR7T'));
+  factory.last.drop();
+  time.advance(100);
+  factory.last.open();
+  assert.deepEqual(nonPing(factory.last), [{ t: 'join', name: 'Nick', code: 'QR7T' }]);
+  factory.last.receive({ t: 'error', code: 'started' });
+  assert.deepEqual(errors, ['started']);
+  assert.equal(client.room, null);
+  factory.last.drop();
+  time.advance(100);
+  factory.last.open();
+  assert.deepEqual(nonPing(factory.last), [], 'refused room is forgotten');
+});
+
+test('NetClient with rejoin:false never sends a join on reconnect and drops membership', () => {
+  const { client, factory, time } = connected({ rejoin: false, reconnect: { initialDelay: 100 } });
+  factory.last.receive(room('QR7T'));
+  factory.last.drop();
+  assert.equal(client.room, null);
+  time.advance(100);
+  factory.last.open();
+  assert.deepEqual(nonPing(factory.last), []);
+  assert.equal(client.room, null);
+});
+
+test('NetClient rejoins under the name the server confirmed, not a refused request', () => {
+  const { client, factory, time } = connected({ reconnect: { initialDelay: 100 } });
+  client.create('Nick', 'ch2');
+  factory.last.receive(room('QR7T', 'Nicky'));
+  // A later join attempt with another name is refused: it must not change the rejoin name.
+  client.join('Someone', 'ZZ9Z');
+  factory.last.receive({ t: 'error', code: 'no-room' });
+  factory.last.drop();
+  time.advance(100);
+  factory.last.open();
+  assert.deepEqual(nonPing(factory.last), [{ t: 'join', name: 'Nicky', code: 'QR7T' }]);
+});
+
+test('NetClient does not rejoin a room it only asked for', () => {
+  const { client, factory, time } = connected({ reconnect: { initialDelay: 100 } });
+  client.join('Nick', 'QR7T');
+  factory.last.drop();
+  time.advance(100);
+  factory.last.open();
+  assert.deepEqual(nonPing(factory.last), []);
+});
+
+test('NetClient keeps seq unchanged when the socket is closing', () => {
+  const { client, factory } = connected();
+  client.sendInput({ x: 0, y: 0, z: 0, yaw: 0, pitch: 0 });
+  client.action('fire');
+  factory.last.readyState = 2; // CLOSING
+  assert.equal(client.sendInput({ x: 1, y: 0, z: 0, yaw: 0, pitch: 0 }), false);
+  assert.equal(client.action('reload'), false);
+  assert.equal(client.inputSeq, 1);
+  assert.equal(client.actionSeq, 1);
+  factory.last.readyState = 1;
+  client.sendInput({ x: 2, y: 0, z: 0, yaw: 0, pitch: 0 });
+  client.action('reload');
+  assert.deepEqual(nonPing(factory.last).map((m) => [m.t, m.seq]), [['input', 1], ['action', 1], ['input', 2], ['action', 2]]);
 });

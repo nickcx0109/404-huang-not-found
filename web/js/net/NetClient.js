@@ -43,16 +43,19 @@ const defaultSocketFactory = (url) => new globalThis.WebSocket(url);
  * pings to keep a ServerClock in sync, and hands validated server messages to typed listeners.
  *
  * An unexpected close is retried with exponential backoff; after a reconnect the client
- * rejoins the room it was in. `leave()` and `disconnect()` end the online session, so a
- * close after either is final.
+ * rejoins the last room the server confirmed, under the name the server confirmed.
+ * `leave()` and `disconnect()` end the online session, so a close after either is final.
+ *
+ * Every state change is announced only after the sockets and timers for that state are in
+ * place, so a `state` listener may call disconnect() and nothing keeps running afterwards.
  */
 export class NetClient {
   /**
    * @param {object} options
    * @param {string} options.url WebSocket URL, e.g. ws://localhost:8787
    * @param {(url: string) => object} [options.createSocket] WebSocket factory (tests pass a fake)
-   * @param {() => number} [options.now] client time source in ms
-   * @param {ServerClock} [options.clock] server time estimate fed by pongs
+   * @param {() => number} [options.now] client time source for the default clock, in ms
+   * @param {ServerClock} [options.clock] server time estimate; its own client time stamps pings
    * @param {object} [options.timers] { setTimeout, clearTimeout, setInterval, clearInterval }
    * @param {number} [options.pingInterval] ms between pings while open
    * @param {object} [options.reconnect] { initialDelay, maxDelay, factor, maxAttempts }
@@ -72,7 +75,6 @@ export class NetClient {
     this.url = url;
     this.clock = clock;
     this._createSocket = createSocket;
-    this._now = now;
     this._timers = timers;
     this._pingInterval = pingInterval;
     this._backoff = {
@@ -84,6 +86,7 @@ export class NetClient {
     this._rejoin = rejoin;
     this._bus = new EventBus();
     this._socket = null;
+    this._socketOpen = false;
     this._state = CONNECTION_STATES.IDLE;
     this._wanted = false;
     this._attempts = 0;
@@ -91,7 +94,9 @@ export class NetClient {
     this._pingTimer = null;
     this._inputSeq = 0;
     this._actionSeq = 0;
-    this._name = null;
+    this._rejoinTarget = null;
+    this._rejoinPending = false;
+    /** Last `room` message for the current connection, or null when not in a room. */
     this.room = null;
   }
 
@@ -102,7 +107,7 @@ export class NetClient {
 
   /** True while the socket is open and messages can be sent. */
   get isOpen() {
-    return this._state === CONNECTION_STATES.OPEN;
+    return this._socketOpen;
   }
 
   /** Last `seq` used for `input`. */
@@ -131,9 +136,9 @@ export class NetClient {
     return this._bus.off(type, listener);
   }
 
-  /** Opens the connection. Does nothing while already connecting or open. */
+  /** Opens the connection. Does nothing while already connecting, reconnecting or open. */
   connect() {
-    if (this._wanted && this._state !== CONNECTION_STATES.CLOSED && this._state !== CONNECTION_STATES.IDLE) return;
+    if (this._wanted) return;
     this._wanted = true;
     this._attempts = 0;
     this._open(CONNECTION_STATES.CONNECTING);
@@ -142,31 +147,20 @@ export class NetClient {
   /** Closes for good without telling the server anything (it notices the close). */
   disconnect() {
     this._wanted = false;
-    this.room = null;
+    this._rejoinTarget = null;
+    this._rejoinPending = false;
     this._cancelReconnect();
-    this._stopPing();
-    const socket = this._socket;
-    this._socket = null;
-    if (socket) {
-      NetClient._detach(socket);
-      try {
-        socket.close(1000, 'client disconnect');
-      } catch {
-        // Closing an already closing socket is harmless.
-      }
-    }
+    this._dropSocket(true);
     this._setState(CONNECTION_STATES.CLOSED);
   }
 
   /** Creates a room. */
   create(name, level) {
-    this._name = name;
     return this._send({ t: CLIENT_MESSAGES.CREATE, name, level });
   }
 
   /** Joins a room by its 4-character code. */
   join(name, code) {
-    this._name = name;
     return this._send({ t: CLIENT_MESSAGES.JOIN, name, code });
   }
 
@@ -182,19 +176,22 @@ export class NetClient {
     return this._send({ t: CLIENT_MESSAGES.START });
   }
 
-  /** Sends the locally simulated pose with the next input `seq`; returns false when not open. */
+  /** Sends the locally simulated pose with the next input `seq`; returns false when not sent. */
   sendInput({ x, y, z, yaw, pitch }) {
     if (!this.isOpen) return false;
     if (![x, y, z, yaw, pitch].every(Number.isFinite)) throw new TypeError('NetClient input needs finite x, y, z, yaw, pitch');
-    return this._send({
+    const seq = this._inputSeq + 1;
+    const sent = this._send({
       t: CLIENT_MESSAGES.INPUT,
-      seq: ++this._inputSeq,
+      seq,
       x: roundCoord(x),
       z: roundCoord(z),
       y: roundCoord(y),
       yaw: roundAngle(yaw),
       pitch: roundAngle(pitch),
     });
+    if (sent) this._inputSeq = seq;
+    return sent;
   }
 
   /**
@@ -204,22 +201,24 @@ export class NetClient {
   action(kind, extra = {}) {
     if (!ACTION_KINDS.includes(kind)) throw new RangeError(`Unknown action kind: ${kind}`);
     if (!this.isOpen) return false;
-    return this._send({
+    const seq = this._actionSeq + 1;
+    const sent = this._send({
       ...extra,
       t: CLIENT_MESSAGES.ACTION,
-      seq: ++this._actionSeq,
+      seq,
       kind,
       at: Math.round(this.clock.now()),
     });
+    if (sent) this._actionSeq = seq;
+    return sent;
   }
 
-  /** Sends one ping now; pongs feed the clock. */
+  /** Sends one ping now, stamped with the clock's own client time; pongs feed the clock. */
   ping() {
-    return this._send({ t: CLIENT_MESSAGES.PING, c: this._now() });
+    return this._send({ t: CLIENT_MESSAGES.PING, c: this.clock.clientNow() });
   }
 
   _open(state) {
-    this._setState(state);
     let socket;
     try {
       socket = this._createSocket(this.url);
@@ -233,34 +232,48 @@ export class NetClient {
     socket.onmessage = (event) => this._socket === socket && this._handleMessage(event?.data);
     socket.onclose = () => this._socket === socket && this._handleClose();
     socket.onerror = () => {}; // A close event always follows an error.
+    this._setState(state);
   }
 
   _handleOpen() {
     const reconnected = this._attempts > 0;
     this._attempts = 0;
-    this._setState(CONNECTION_STATES.OPEN);
-    this.ping();
+    this._socketOpen = true;
     this._pingTimer = this._timers.setInterval(() => this.ping(), this._pingInterval);
-    if (reconnected && this._rejoin && this.room && this._name !== null) {
-      this._send({ t: CLIENT_MESSAGES.JOIN, name: this._name, code: this.room.code });
+    this.ping();
+    if (reconnected && this._rejoin && this._rejoinTarget) {
+      const { name, code } = this._rejoinTarget;
+      this._rejoinPending = this._send({ t: CLIENT_MESSAGES.JOIN, name, code });
     }
+    this._setState(CONNECTION_STATES.OPEN);
   }
 
   _handleMessage(data) {
     const message = parseServerMessage(data);
     if (!message) return;
     if (message.t === SERVER_MESSAGES.PONG) {
-      this.clock.addSample(message.c, message.s, this._now());
+      this.clock.addSample(message.c, message.s);
       return;
     }
-    if (message.t === SERVER_MESSAGES.ROOM) this.room = message;
+    if (message.t === SERVER_MESSAGES.ROOM) this._confirmRoom(message);
+    if (message.t === SERVER_MESSAGES.ERROR && this._rejoinPending) {
+      // The server refused the automatic rejoin (room gone, full or started): stop retrying it.
+      this._rejoinPending = false;
+      this._rejoinTarget = null;
+    }
     this._bus.emit(message.t, message);
   }
 
+  _confirmRoom(message) {
+    this.room = message;
+    this._rejoinPending = false;
+    const me = message.players.find((player) => player?.id === message.you);
+    if (me && typeof me.name === 'string') this._rejoinTarget = { code: message.code, name: me.name };
+    else if (this._rejoinTarget) this._rejoinTarget = { ...this._rejoinTarget, code: message.code };
+  }
+
   _handleClose() {
-    this._stopPing();
-    NetClient._detach(this._socket);
-    this._socket = null;
+    this._dropSocket(false);
     if (!this._wanted) {
       this._setState(CONNECTION_STATES.CLOSED);
       return;
@@ -268,20 +281,39 @@ export class NetClient {
     this._scheduleReconnect();
   }
 
+  /** Forgets the current socket and everything tied to it: pings, membership, a pending rejoin. */
+  _dropSocket(close) {
+    this._stopPing();
+    this._socketOpen = false;
+    this._rejoinPending = false;
+    this.room = null;
+    const socket = this._socket;
+    this._socket = null;
+    if (!socket) return;
+    NetClient._detach(socket);
+    if (!close) return;
+    try {
+      socket.close(1000, 'client disconnect');
+    } catch {
+      // Closing an already closing socket is harmless.
+    }
+  }
+
   _scheduleReconnect() {
     if (this._attempts >= this._backoff.maxAttempts) {
       this._wanted = false;
+      this._rejoinTarget = null;
       this._setState(CONNECTION_STATES.CLOSED);
       return;
     }
     const { initialDelay, maxDelay, factor } = this._backoff;
     const delay = Math.min(maxDelay, initialDelay * factor ** this._attempts);
     this._attempts++;
-    this._setState(CONNECTION_STATES.RECONNECTING);
     this._reconnectTimer = this._timers.setTimeout(() => {
       this._reconnectTimer = null;
       if (this._wanted) this._open(CONNECTION_STATES.RECONNECTING);
     }, delay);
+    this._setState(CONNECTION_STATES.RECONNECTING);
   }
 
   _cancelReconnect() {
@@ -298,7 +330,7 @@ export class NetClient {
 
   _send(message) {
     const socket = this._socket;
-    if (!this.isOpen || !socket || (socket.readyState !== undefined && socket.readyState !== SOCKET_OPEN)) return false;
+    if (!this._socketOpen || !socket || (socket.readyState !== undefined && socket.readyState !== SOCKET_OPEN)) return false;
     socket.send(JSON.stringify(message));
     return true;
   }
@@ -311,7 +343,6 @@ export class NetClient {
   }
 
   static _detach(socket) {
-    if (!socket) return;
     socket.onopen = null;
     socket.onmessage = null;
     socket.onclose = null;
