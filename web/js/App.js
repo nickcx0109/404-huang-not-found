@@ -12,7 +12,7 @@ import { PathFinder } from './PathFinder.js';
 import { Hud } from './Hud.js';
 import { EventBus } from './core/EventBus.js';
 import { clampFrameTime } from './core/frameTime.js';
-import { resolveServerUrl } from './net/ServerConfig.js';
+import { DEFAULT_SERVER_URL, pageServerUrl, resolveServerUrl } from './net/ServerConfig.js';
 
 // App: wires the modules together.
 //   LevelData -> SceneBuilder (-> PropFactory) -> scene + collision
@@ -37,7 +37,11 @@ const CONFIG = Object.freeze({
 
 /** Options read from the page URL. */
 export class AppOptions {
-  constructor(params) {
+  /**
+   * @param {URLSearchParams} params
+   * @param {{ server?: string }} [page]  `server`: the page's own default (pageServerUrl)
+   */
+  constructor(params, { server: pageServer = DEFAULT_SERVER_URL } = {}) {
     const flag = (key) => params.has(key) && params.get(key) !== '0';
     this.level = params.get('level') || CONFIG.defaultLevel;
     this.shot = params.get('shot') || null;
@@ -48,8 +52,9 @@ export class AppOptions {
     this.flashlight = params.get('flashlight') !== '0';
     this.dummies = flag('dummies');
     this.play = params.get('play') === '1';
-    // ?server=ws://host:port (or DEFAULT_SERVER_URL) offers team play on the start screen; null hides it.
-    this.server = this.play && !this.shot ? resolveServerUrl(params.get('server')) : null;
+    // ?server=ws://host:port (or the page's own server, or DEFAULT_SERVER_URL) offers team play on
+    // the start screen; null hides it.
+    this.server = this.play && !this.shot ? resolveServerUrl(params.get('server'), pageServer) : null;
     // ?models=0 shows the greybox stand-ins even where a model exists.
     this.models = params.get('models') !== '0';
     // Seconds on the animation clock for ?shot= (flicker and beacons are functions of time).
@@ -59,8 +64,8 @@ export class AppOptions {
     this.scale = Number.isFinite(scale) ? scale : null;
   }
 
-  static fromUrl(search) {
-    return new AppOptions(new URLSearchParams(search));
+  static fromUrl(search, page) {
+    return new AppOptions(new URLSearchParams(search), page);
   }
 }
 
@@ -381,7 +386,8 @@ export class App {
     window.__error = null;
     const hud = new Hud(document.body);
     try {
-        const app = new App(AppOptions.fromUrl(window.location.search), document.getElementById('view'), hud);
+        const options = AppOptions.fromUrl(window.location.search, { server: pageServerUrl(document, window.location) });
+        const app = new App(options, document.getElementById('view'), hud);
       window.__app = app;
       await app.start();
     } catch (err) {
