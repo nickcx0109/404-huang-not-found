@@ -1,4 +1,5 @@
-// CollisionWorld: axis-aligned boxes built from LevelData.colliders.
+// CollisionWorld: axis-aligned boxes built from LevelData.collisionBoxes (the colliders, grown
+// to cover the turned and scaled props bound to them).
 // Knows nothing about meshes, so visuals can change without touching collision.
 const SKIN = 0.001; // keeps a resolved body from touching the face it was pushed out of
 const RAY_AXES = [['x', 'minX', 'maxX'], ['y', 'minY', 'maxY'], ['z', 'minZ', 'maxZ']];
@@ -87,7 +88,7 @@ export class CollisionWorld {
 
   static fromLevel(level) {
     const world = new CollisionWorld();
-    level.colliders.forEach((c) => world.add(Aabb.fromCollider(c)));
+    (level.collisionBoxes || level.colliders).forEach((c) => world.add(Aabb.fromCollider(c)));
     const b = level.bounds;
     world.bounds = {
       minX: b.x - b.w / 2,

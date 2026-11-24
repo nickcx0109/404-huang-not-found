@@ -2,6 +2,7 @@
 // read-only description of a level. Gameplay data only: no meshes, no colours.
 // Format reference: web/levels/README.md
 import { PLAYER_BODY } from './player/PlayerBody.js';
+import { ColliderFootprint } from './level/ColliderFootprint.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_-]+$/;
 const RAD2DEG = 180 / Math.PI;
@@ -112,6 +113,12 @@ export class LevelData {
     this.colliders = LevelData._readColliders(raw, v);
     this._colliderById = new Map(this.colliders.map((c) => [c.id, c]));
     this.props = LevelData._readProps(raw, v, this._colliderById);
+    /**
+     * What collision uses: one box per collider, in the same order and with the same ids,
+     * grown to cover the turned and scaled props bound to it. `colliders` stays as written
+     * (the visuals are drawn from it).
+     */
+    this.collisionBoxes = LevelData._collisionBoxes(this.colliders, this.props);
     this.spawns = LevelData._readSpawns(raw, v);
     this.bookmarks = LevelData._readBookmarks(raw, v);
     this._bookmarkByName = new Map(this.bookmarks.map((b) => [b.name, b]));
@@ -195,6 +202,16 @@ export class LevelData {
     }).filter(Boolean);
   }
 
+  static _collisionBoxes(colliders, props) {
+    const bound = new Map();
+    props.forEach((p) => {
+      if (!p.collider) return;
+      if (!bound.has(p.collider)) bound.set(p.collider, []);
+      bound.get(p.collider).push(p);
+    });
+    return Object.freeze(colliders.map((c) => ColliderFootprint.cover(c, bound.get(c.id) || [])));
+  }
+
   static _readProps(raw, v, colliderById) {
     return v.array(raw, 'props', 'level', true).map((p, i) => {
       const path = 'props[' + i + ']';
@@ -216,18 +233,23 @@ export class LevelData {
         z: v.number(p, 'z', path, collider ? { fallback: anchor.z } : undefined),
         rotY: v.number(p, 'rotY', path, { fallback: 0 }),
         scale: v.number(p, 'scale', path, { fallback: 1, positive: true }),
-        size: LevelData._readSize(p, v, path),
+        size: LevelData._readSize(p, v, path, 'size'),
+        footprint: LevelData._readSize(p, v, path, 'footprint'),
         collider: collider ? collider.id : null,
       });
     }).filter(Boolean);
   }
 
-  /** Optional visual size [w, h, d] of a prop; null when the level does not give one. */
-  static _readSize(p, v, path) {
-    const size = v.vec3(p, 'size', path, false);
+  /**
+   * Optional [w, h, d] of a prop; null when the level does not give one.
+   * "size": what a stand-in is built at. "footprint": the box the prop is drawn in before rotY
+   * and scale, when that is not its size (a stand-in that tips its size over); collision only.
+   */
+  static _readSize(p, v, path, key) {
+    const size = v.vec3(p, key, path, false);
     if (!size) return null;
     if (size.some((n) => n <= 0)) {
-      v.error(path + '.size', 'must be [w, h, d], all > 0');
+      v.error(path + '.' + key, 'must be [w, h, d], all > 0');
       return null;
     }
     return Object.freeze({ w: size[0], h: size[1], d: size[2] });
@@ -399,7 +421,7 @@ export class LevelData {
     };
     const check = (list, path) =>
       list.forEach((s, i) => {
-        const hit = this.colliders.find((c) => inside(s, c));
+        const hit = this.collisionBoxes.find((c) => inside(s, c));
         if (hit) v.warn(path + '[' + i + ']', 'is inside collider "' + hit.id + '"');
       });
     check(this.spawns.players, 'spawns.players');
