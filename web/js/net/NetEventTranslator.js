@@ -83,9 +83,10 @@ export class NetEventTranslator {
     return result[0];
   }
 
+  /** A killing blow leaves the stand-in dead before entity.damaged goes out, as in single player. */
   _health(entity, health) {
     if (!Number.isFinite(health)) return;
     entity.damageable.health = health;
-    if (health > 0) entity.damageable.alive = true;
+    entity.damageable.alive = health > 0;
   }
 }

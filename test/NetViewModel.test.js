@@ -170,6 +170,12 @@ test('the real sound rules react to translated events', () => {
   translator.translate(EVENTS.ENTITY_DIED, { targetId: 'enemy-1', sourceId: 'p2', kind: 'bullet' });
   assert.deepEqual(played.map(([cue]) => cue), ['zombie_scream', 'headshot', 'kill', 'zombie_death']);
   assert.deepEqual(played[0][1], { x: 2, y: 0, z: 3 });
+  played.length = 0;
+  translator.translate(EVENTS.ENEMY_SPAWNED, { id: 'enemy-2', type: 'runner', x: 4, z: 4, wave: 1 });
+  played.length = 0;
+  translator.translate(EVENTS.ENTITY_DAMAGED, { targetId: 'enemy-2', sourceId: 'p2', amount: 50, health: 0, hitPart: 'body', kind: 'bullet', downed: false });
+  translator.translate(EVENTS.ENTITY_DIED, { targetId: 'enemy-2', sourceId: 'p2', kind: 'bullet' });
+  assert.deepEqual(played.map(([cue]) => cue), ['kill', 'zombie_death'], 'a killing shot plays the kill, not a hit first');
 });
 
 test('ActionForwarder turns requests into actions and plays predicted shots at once', () => {
