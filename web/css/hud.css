@@ -833,10 +833,16 @@
 
 /* ---- short windows ----------------------------------------------------------
    Below about 480px of height the root font stops shrinking (10px floor), so the seven inventory
-   rows reach down into the ammunition. Tighter rows and a smaller icon keep the column above it. */
+   rows reach down into the ammunition. In this mode the column is pinned between the top edge and
+   the space the ammunition takes (bottom: 17em), and its type scales with the height so that
+   seven rows always fit in what is left. */
 @media (max-height: 480px) {
   .hud-inventory {
-    font-size: 1.15em;
+    top: 1em;
+    bottom: 17em;
+    transform: none;
+    justify-content: center;
+    font-size: min(1.15em, 2.8vh);
     gap: 0.1em;
   }
 
