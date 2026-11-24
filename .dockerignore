@@ -1,0 +1,25 @@
+# Only package files, server/, web/ and art/ go into the image (see Dockerfile).
+**/node_modules
+.git
+.github
+.claude
+.shots
+shots-tmp
+test-results
+playwright-report
+docs
+reference
+test
+tools
+art/blender
+**/*.blend
+**/*.blend1
+**/__pycache__
+**/*.log
+**/.DS_Store
+**/Thumbs.db
+*.md
+fly.toml
+render.yaml
+Dockerfile
+.dockerignore

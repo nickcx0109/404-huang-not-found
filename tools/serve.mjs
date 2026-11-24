@@ -6,174 +6,44 @@
 //   HOST=0.0.0.0 node tools/serve.mjs   -> reachable from other machines on the LAN
 //
 // The server root is the repository root, because the page (web/) reads
-// art/style/palette.json, which lives outside web/.
+// art/style/palette.json, which lives outside web/. The file serving itself lives in
+// server/http/ (StaticFiles, HttpApp), shared with the game server (server/main.mjs).
 //
 // Other tools can import it:  const { url, close } = await startServer({ port: 0, quiet: true });
 
-import { createServer } from 'node:http';
-import { createReadStream, realpath } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import { dirname, extname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { promisify } from 'node:util';
+import { pathToFileURL } from 'node:url';
+import { HttpApp } from '../server/http/HttpApp.js';
+import { RedirectRoute, StaticRoute } from '../server/http/routes.js';
+import { hasHiddenPart, REPO_ROOT, StaticFiles } from '../server/http/StaticFiles.js';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+export { hasHiddenPart };
+
+const ROOT = REPO_ROOT;
 const DEFAULT_PORT = 8080;
 const DEFAULT_HOST = '127.0.0.1';
 const START_PAGE = '/web/index.html';
-
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.md': 'text/markdown; charset=utf-8',
-  '.txt': 'text/plain; charset=utf-8',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-  '.glb': 'model/gltf-binary',
-  '.gltf': 'model/gltf+json',
-  '.bin': 'application/octet-stream',
-  '.ktx2': 'image/ktx2',
-  '.wasm': 'application/wasm',
-  '.mp3': 'audio/mpeg',
-  '.ogg': 'audio/ogg',
-  '.wav': 'audio/wav',
-};
-
-// The operating system's own name for a path: on Windows this turns 8.3 short names (GIT~1) back
-// into the real ones (.git) and follows links, so the hidden-file check sees what is really read.
-const realPathOf = promisify(realpath.native);
-let realRoot = null;
-
-/** True when any part of a path (split on / or a backslash) is hidden, e.g. `.git`, `.env`, `web/.cache`. */
-export function hasHiddenPart(path) {
-  return path.split(/[\\/]/).some((part) => part.startsWith('.') && part !== '.' && part !== '..');
-}
-
-/**
- * Checks the file that will really be read (KNOWN_ISSUES #4). The request path is checked first,
- * but `GIT~1/config` or a link can name a hidden file without a dot, so the real path is checked
- * again: it must stay inside ROOT and have no hidden part.
- */
-async function isServable(filePath) {
-  realRoot ??= await realPathOf(ROOT);
-  const rel = relative(realRoot, await realPathOf(filePath));
-  if (rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel)) return false;
-  return !hasHiddenPart(rel);
-}
-
-function send(res, status, body, headers = {}) {
-  res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8', ...headers });
-  res.end(body);
-}
-
-/** Maps a request path to a file inside ROOT, or null if it must not be served. */
-function resolveRequestPath(urlPath) {
-  let decoded;
-  try {
-    decoded = decodeURIComponent(urlPath);
-  } catch {
-    return null;
-  }
-  if (decoded.includes('\0')) return null;
-  // Hidden files and folders (.git, .claude, .env ...) are never served.
-  if (decoded.split(/[\\/]/).some((part) => part.startsWith('.') && part !== '.')) return null;
-  // Windows path tricks: alternate data streams (file::$DATA) and drive letters.
-  if (decoded.includes(':')) return null;
-  const filePath = normalize(join(ROOT, decoded));
-  if (filePath !== ROOT && !filePath.startsWith(ROOT + sep)) return null;
-  return filePath;
-}
-
-async function handle(req, res, quiet) {
-  const started = Date.now();
-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const log = (status) => {
-    if (!quiet) {
-      console.log(`${status} ${req.method} ${url.pathname}${url.search} ${Date.now() - started}ms`);
-    }
-  };
-
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    send(res, 405, 'Method Not Allowed', { Allow: 'GET, HEAD' });
-    return log(405);
-  }
-  if (url.pathname === '/') {
-    send(res, 302, '', { Location: START_PAGE + url.search });
-    return log(302);
-  }
-
-  let filePath = resolveRequestPath(url.pathname);
-  if (!filePath) {
-    send(res, 403, 'Forbidden');
-    return log(403);
-  }
-
-  try {
-    let info = await stat(filePath);
-    if (info.isDirectory()) {
-      if (!url.pathname.endsWith('/')) {
-        send(res, 302, '', { Location: url.pathname + '/' + url.search });
-        return log(302);
-      }
-      filePath = join(filePath, 'index.html');
-      info = await stat(filePath);
-    }
-    if (!(await isServable(filePath))) {
-      send(res, 403, 'Forbidden');
-      return log(403);
-    }
-    res.writeHead(200, {
-      'Content-Type': MIME[extname(filePath).toLowerCase()] || 'application/octet-stream',
-      'Content-Length': info.size,
-      // Development server: always pick up edited files.
-      'Cache-Control': 'no-store',
-    });
-    if (req.method === 'HEAD') {
-      res.end();
-    } else {
-      createReadStream(filePath).on('error', () => res.destroy()).pipe(res);
-    }
-    log(200);
-  } catch {
-    send(res, 404, `Not Found: ${url.pathname}`);
-    log(404);
-  }
-}
 
 /**
  * Starts the server. Port 0 picks any free port.
  * @param {{port?: number, host?: string, quiet?: boolean}} [options]
  * @returns {Promise<{server: import('node:http').Server, port: number, url: string, close: () => Promise<void>}>}
  */
-export function startServer(options = {}) {
+export async function startServer(options = {}) {
   const port = options.port ?? DEFAULT_PORT;
   const host = options.host ?? DEFAULT_HOST;
-  const quiet = Boolean(options.quiet);
-  return new Promise((resolvePromise, reject) => {
-    const server = createServer((req, res) => handle(req, res, quiet));
-    server.once('error', reject);
-    server.listen(port, host, () => {
-      const actualPort = server.address().port;
-      const shownHost = host === '0.0.0.0' || host === '127.0.0.1' ? 'localhost' : host;
-      resolvePromise({
-        server,
-        port: actualPort,
-        url: `http://${shownHost}:${actualPort}`,
-        close: () =>
-          new Promise((done) => {
-            server.close(() => done());
-            server.closeAllConnections();
-          }),
-      });
-    });
-  });
+  // Development server: the whole repository, always re-read (no-store) so edits show up.
+  const app = new HttpApp(
+    [new RedirectRoute('/', START_PAGE), new StaticRoute(new StaticFiles({ root: ROOT }))],
+    { log: options.quiet ? null : (line) => console.log(line) },
+  );
+  const actualPort = await app.listen(port, host);
+  const shownHost = host === '0.0.0.0' || host === '127.0.0.1' ? 'localhost' : host;
+  return {
+    server: app.server,
+    port: actualPort,
+    url: `http://${shownHost}:${actualPort}`,
+    close: () => app.close(),
+  };
 }
 
 // Command line: node tools/serve.mjs [port]

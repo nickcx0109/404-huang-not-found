@@ -1,0 +1,19 @@
+# Render Blueprint for the co-op game server (README "線上多人").
+# Render dashboard → New → Blueprint → pick this repository.
+#
+# NOTE: the free plan sleeps after about 15 minutes without traffic, which drops every room,
+# and the first visit after that waits for a cold start (tens of seconds). For a demo, open the
+# page once a few minutes before, or switch `plan` to a paid one (starter) that never sleeps.
+services:
+  - type: web
+    name: huang-not-found
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      # Render sets PORT itself (10000 by default); the server reads it.

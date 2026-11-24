@@ -83,7 +83,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 
 ## 瀏覽器端（G8e）
 
-- **開關。** `?play=1&server=ws://host:port` 才有連線功能；`web/js/net/ServerConfig.js` 的 `DEFAULT_SERVER_URL` 是空字串，部署後可以填上預設 server（網址參數優先）。只收 `ws:`／`wss:`。沒設定 server 時連線程式完全不載入，單機和以前一樣。
+- **開關。** `?play=1&server=ws://host:port` 才有連線功能；`web/js/net/ServerConfig.js` 的 `DEFAULT_SERVER_URL` 是空字串，部署後可以填上預設 server（網址參數優先）；由 game server 自己送出的網頁不用參數（見「部署」）。只收 `ws:`／`wss:`。沒設定 server 時連線程式完全不載入，單機和以前一樣。
 - **開始畫面。** 有 server 時單機的開始按鈕不變，下面多一區：名字（存在 localStorage `net:player-name`，讀不到就不記）、「建立隊伍」、4 碼編號和「輸入編號加入」（只收 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`，小寫自動轉大寫）。錯誤碼都有中文說明（`teamErrors.js`）。網址加 `&join=CODE` 會自動加入；隊伍玩的關卡和網頁不同時，網頁換到那個關卡再加入一次。
 - **隊伍房間。** 大字顯示編號（可複製）、名單（p1～p3 的顏色和遠端玩家膠囊一樣）、開始和離開。任何人按開始都行；`start-failed` 顯示在房間裡，可以再按。斷線時 `ConnectionScreen` 顯示「正在重新連線」；重連後 server 拒絕重新加入（遊戲已開始、房間不見）就顯示原因，按鈕回開始畫面。重新加入後 `room.you` 可能換了編號（例如 p2 斷線、p1 離開，p2 回來變成 p1），這時 `OnlineHost` 用同一條連線重建 `OnlineMode`，HUD、音效和開火都換成新編號。
 - **模式。** `installGameplay` 用 `ModeSwitch` 在 `LocalMode`（瀏覽器裡跑 `GameSession`）和 `OnlineMode` 之間切換（Strategy，`GameMode`）。`OnlineMode` 不建 `GameSession`：
@@ -99,10 +99,13 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 
 ## 部署
 
-- 網頁照舊是靜態檔；server 另外跑，`node server/main.mjs`，port 用環境變數 `PORT`（預設 8787），本機開發時網址加 `?server=ws://localhost:8787`。
-- 雲端選亞洲機房（東京或新加坡），避開閒置會休眠的方案，或示範前先連一次。
-- 網頁是 https 時必須用 `wss://`。
+- **一個 port 包辦。** `npm start`（`node server/main.mjs`）同一個 port 給網頁、`GET /health` 和 WebSocket，雲端只要分享一個 https 網址，網頁連同一個 origin 的 `wss://`。環境變數 `PORT`（預設 8787）、`HOST`（預設 `0.0.0.0`，雲端要聽所有介面）。
+- **HTTP。** `server/http/`：`StaticFiles`（只讀、只服務 `web/` 和 `art/`，和 `tools/serve.mjs` 一樣的路徑，因為網頁讀 `../art/`；擋 `..`、隱藏檔、`:`、`\0`，連結和 8.3 短檔名會再用真實路徑檢查一次；`Content-Type` 照副檔名；`Cache-Control: no-cache`）、`HttpApp`（只收 GET／HEAD，依序找第一個符合的 `Route`）、`Route` 的子類別 `HealthRoute`（`/health` → 200 `ok`）、`RedirectRoute`（`/` → `/web/index.html?play=1`，請求的參數接在後面，例如 `/?join=ABCD`）、`StaticRoute`、`ServerTaggedPage`。`createGameHttp()` 把它們組起來；`WsTransport.attach(httpServer)` 讓 `ws` 共用那個 http server（任何路徑的 upgrade 都收）。`WsTransport.listen(port)` 仍然可以單獨開一個 port（測試用）。`tools/serve.mjs` 用同一組 `StaticFiles`／`HttpApp`，但服務整個 repo、`no-store`、不加標記。
+- **網頁怎麼知道 server 在哪。** game server 送出的 `web/index.html` 由 `ServerTaggedPage` 在 `</head>` 前加 `<meta name="coop-server" content="same-origin">`；`ServerConfig.pageServerUrl(document, location)` 看到這個標記就用網頁自己的 host：https 頁面用 `wss://host/`，http 用 `ws://host/`（雲端 TLS 在 proxy 結束，server 看到的是 http，所以由瀏覽器依 `location` 決定）。普通靜態主機沒有這個標記，`pageServerUrl` 回 `DEFAULT_SERVER_URL`，不發任何請求去探測。優先順序：`?server=` > 頁面標記 > `DEFAULT_SERVER_URL`。沒有 `play=1` 時這些都不看，畫面不變。
+- **雲端。** `Dockerfile`（node:22-slim，`npm ci --omit=dev`，只複製 `server/`、`web/`、`art/` 和 package 檔）。`fly.toml`：東京 `nrt`，`auto_stop_machines = "off"`、`min_machines_running = 1`（房間在記憶體裡，機器停了隊伍就沒了），`/health` 檢查。`render.yaml`：新加坡，`healthCheckPath: /health`；免費方案閒置約 15 分鐘會休眠，示範前先開一次。步驟見 README「線上多人」。
+- **量延遲。** `node tools/net-latency.mjs <ws-url> [count]` 用協定的 `ping`／`pong` 連續量 `count` 次（預設 20），印出 RTT 的 min、median、p95、max，和用最快那次估的時鐘差（server − 本機，算法同 `ServerClock`）。統計在 `tools/net/LatencyStats.js`。
+- 本機開發也可以照舊：`npm run serve` 開靜態網頁、另外 `npm start`，網址加 `?play=1&server=ws://localhost:8787`。
 
 ## 拆分
 
-見 `TODO.md` 的 G8a～G8f。相依：G8a、G8b、G8c 可以同時做；G8d 要等 G8a、G8b；G8e 要等 G8c、G8d；G8f 最後。
+見 `TODO.md` 的 G8a～G8m。相依：G8a、G8b、G8c 可以同時做；G8d 要等 G8a、G8b；G8e 要等 G8c、G8d；G8f 部署準備之後，G8m 實際部署和實測最後。
