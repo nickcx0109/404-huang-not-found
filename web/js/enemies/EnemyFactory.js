@@ -23,6 +23,8 @@ export class EnemyFactory {
     if (!(EnemyType?.prototype instanceof Enemy)) throw new TypeError('Register an Enemy subclass');
     const pool = new ObjectPool(() => {
       const enemy = new EnemyType({ events: this.ctx.events, pathFinder: this.ctx.pathFinder, view: this.createView(type) });
+      /** The registered type name, e.g. 'walker'; network snapshots send it so clients pick the right model. */
+      enemy.type = type;
       this.prepare?.(enemy);
       this.created.add(enemy);
       return enemy;
