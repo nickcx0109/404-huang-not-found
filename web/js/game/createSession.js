@@ -35,6 +35,33 @@ import { registerHealingItems } from '../pickups/healingItems.js';
 import { ItemDeck } from '../pickups/ItemDeck.js';
 
 /**
+ * Every item that can lie on the ground, with its screen name and greybox size. createSession deals
+ * from it; an online client builds the same catalog to name and draw what the server says lies on
+ * each weapon spot.
+ * @returns {WeaponCatalog}
+ */
+export function createWeaponCatalog() {
+  const catalog = new WeaponCatalog()
+    .register('rifle', { create: () => new Rifle(), name: 'RIFLE', look: { length: 0.95, height: 0.14, width: 0.12 } })
+    .register('sniper', { create: () => new Sniper(), name: 'SNIPER', look: { length: 1.2, height: 0.14, width: 0.1 } })
+    .register('shotgun', { create: () => new Shotgun(), name: 'SHOTGUN', look: { length: 0.85, height: 0.12, width: 0.14 } })
+    .register('smg', { create: () => new SubmachineGun(), name: 'SMG', look: { length: 0.55, height: 0.16, width: 0.1 } })
+    .register('revolver', { create: () => new Revolver(), name: 'REVOLVER', look: { length: 0.34, height: 0.14, width: 0.07 } })
+    // Melee weapons lie at any weapon spot and also at the spots kept for them (at least two per scene).
+    .register('katana', { create: () => new Katana(), name: 'KATANA', pool: ['weapon', 'melee'],
+      look: { length: 1.0, height: 0.05, width: 0.07 } })
+    .register('chainsaw', { create: () => new Chainsaw(), name: 'CHAINSAW', pool: ['weapon', 'melee'],
+      look: { length: 0.85, height: 0.26, width: 0.22 } })
+    // Healing and throwable spots draw from their own pools, never from the guns.
+    .register('grenade', { create: () => new Grenade(), name: 'GRENADE', pool: 'throwable',
+      look: { length: 0.12, height: 0.12, width: 0.1 } })
+    .register('molotov', { create: () => new Molotov(), name: 'MOLOTOV', pool: 'throwable',
+      look: { length: 0.28, height: 0.1, width: 0.1 } });
+  registerHealingItems(catalog);
+  return catalog;
+}
+
+/**
  * Assembles one run from parsed level JSON or a LevelData already loaded by the host.
  * @param {object|LevelData} levelRaw
  * @param {object} options
@@ -69,23 +96,7 @@ export function createSession(levelRaw, {
   const director = new TimedWaveDirector(difficulty.waves(SURVIVAL_WAVES));
   const objective = Objectives.standard().create(level.objective);
 
-  const catalog = new WeaponCatalog()
-    .register('rifle', { create: () => new Rifle(), name: 'RIFLE', look: { length: 0.95, height: 0.14, width: 0.12 } })
-    .register('sniper', { create: () => new Sniper(), name: 'SNIPER', look: { length: 1.2, height: 0.14, width: 0.1 } })
-    .register('shotgun', { create: () => new Shotgun(), name: 'SHOTGUN', look: { length: 0.85, height: 0.12, width: 0.14 } })
-    .register('smg', { create: () => new SubmachineGun(), name: 'SMG', look: { length: 0.55, height: 0.16, width: 0.1 } })
-    .register('revolver', { create: () => new Revolver(), name: 'REVOLVER', look: { length: 0.34, height: 0.14, width: 0.07 } })
-    // Melee weapons lie at any weapon spot and also at the spots kept for them (at least two per scene).
-    .register('katana', { create: () => new Katana(), name: 'KATANA', pool: ['weapon', 'melee'],
-      look: { length: 1.0, height: 0.05, width: 0.07 } })
-    .register('chainsaw', { create: () => new Chainsaw(), name: 'CHAINSAW', pool: ['weapon', 'melee'],
-      look: { length: 0.85, height: 0.26, width: 0.22 } })
-    // Healing and throwable spots draw from their own pools, never from the guns.
-    .register('grenade', { create: () => new Grenade(), name: 'GRENADE', pool: 'throwable',
-      look: { length: 0.12, height: 0.12, width: 0.1 } })
-    .register('molotov', { create: () => new Molotov(), name: 'MOLOTOV', pool: 'throwable',
-      look: { length: 0.28, height: 0.1, width: 0.1 } });
-  registerHealingItems(catalog);
+  const catalog = createWeaponCatalog();
   // Dealt like cards, so every weapon lies somewhere before any lies twice.
   const deck = new ItemDeck(catalog, ctx.rng);
   const pickups = PickupField.fromLevel(level, catalog, ctx.rng, pool => deck.next(pool));

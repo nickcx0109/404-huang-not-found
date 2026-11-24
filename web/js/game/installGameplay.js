@@ -1,6 +1,7 @@
-import * as THREE from 'three';
 import { createSession } from './createSession.js';
-import { GameplayLifecycle } from './GameplayLifecycle.js';
+import { ModeSwitch } from './modes/ModeSwitch.js';
+import { LocalMode } from '../play/LocalMode.js';
+import { createEnemyBox } from '../play/enemyBox.js';
 import { DamageInfo } from '../entities/DamageInfo.js';
 import { EVENTS } from './events.js';
 import { CombatPlayer } from '../player/CombatPlayer.js';
@@ -17,10 +18,26 @@ import { SurvivalHud } from '../ui/hud/SurvivalHud.js';
 import { FirstPersonWeapon } from '../weapons/FirstPersonWeapon.js';
 import { installAudio } from '../audio/installAudio.js';
 
-export function installGameplay(app) {
-  const lifecycle = new GameplayLifecycle(app.events, () => createGameplayRun(app));
+/**
+ * Turns gameplay on (`?play=1`). The page plays in one GameMode at a time (app.modes): LocalMode,
+ * the single-player run, unless a server is configured and the player creates or joins a team, in
+ * which case OnlineHost switches to OnlineMode and back again when the team is left.
+ * Without a server the online code is never loaded.
+ */
+export async function installGameplay(app) {
+  const modes = new ModeSwitch();
+  app.modes = modes;
+  let host = null;
+  if (app.options.server) {
+    const { OnlineHost } = await import('../play/OnlineHost.js');
+    host = new OnlineHost(app, modes);
+  }
+  const playAlone = () => modes.use(() => new LocalMode(app, host ? host.localRunOptions() : {}));
+  host?.onReturn(playAlone);
+  playAlone();
+  host?.autoJoin();
   const onRestartKey = event => {
-    if (!event.repeat && event.code === 'Enter' && app.game.canRestart) {
+    if (!event.repeat && event.code === 'Enter' && app.mode?.canRestart) {
       event.preventDefault();
       app.events.emit(EVENTS.RESTART_REQUESTED);
     }
@@ -28,13 +45,19 @@ export function installGameplay(app) {
   window.addEventListener('keydown', onRestartKey);
   window.addEventListener('pagehide', () => {
     window.removeEventListener('keydown', onRestartKey);
-    lifecycle.dispose();
+    modes.dispose();
     app.player.dispose();
   }, { once: true });
-  if (app.options.debug) installDebug(app, lifecycle);
+  if (app.options.debug) installDebug(app, modes);
 }
 
-export function createGameplayRun(app) {
+/**
+ * Builds one single-player run.
+ * @param {App} app
+ * @param {{lobbyScreen?: (doc: Document) => LobbyScreen}} [options]  start screen to use instead of
+ *   the plain one (OnlineHost adds the team buttons this way)
+ */
+export function createGameplayRun(app, { lobbyScreen = null } = {}) {
   if (document.pointerLockElement) document.exitPointerLock();
   app.player._releaseKeys();
   app.player.enabled = false;
@@ -44,12 +67,7 @@ export function createGameplayRun(app) {
     collision: app.built.collision,
     events: app.events,
     createEnemyView: (type, { pathFinder }) => {
-      const geometry = new THREE.BoxGeometry(pathFinder.radius * 2, pathFinder.height, pathFinder.radius * 2);
-      const material = new THREE.MeshStandardMaterial({ color: app.style.greybox.dummy,
-        roughness: app.style.greybox.roughness ?? 0.9 });
-      const view = new THREE.Mesh(geometry, material);
-      view.name = 'enemy:' + type;
-      view.visible = false;
+      const view = createEnemyBox(app.style, type, pathFinder);
       app.scene.add(view);
       return view;
     },
@@ -58,20 +76,13 @@ export function createGameplayRun(app) {
   const [player] = ctx.players;
   const { weaponPickups, ammoCrates } = app.game.pickups;
   const pickupViews = new WeaponPickupViews(app.scene, weaponPickups, ctx.events);
-  // Degrees of upward kick per shot and the most it swings sideways.
-  const recoil = new RecoilKick(ctx.events, player.id, { rng: ctx.rng })
-    .register('pistol', { pitch: 1.6, yaw: 0.4 })
-    .register('rifle', { pitch: 0.9, yaw: 0.35 })
-    .register('smg', { pitch: 0.6, yaw: 0.45 })
-    .register('shotgun', { pitch: 4.5, yaw: 0.8 })
-    .register('sniper', { pitch: 5, yaw: 0.6 })
-    .register('revolver', { pitch: 4, yaw: 0.6 });
+  const recoil = RecoilKick.standard(ctx.events, player.id, { rng: ctx.rng });
   app.combat = new PlayerCombat(app.player, app.camera, ctx, player.id, recoil);
   app.effectViews = EffectViews.standard(app.scene, ctx, ctx.events);
   app.crateViews = new AmmoCrateViews(app.scene, ammoCrates, () => ctx.time);
   app.audio = installAudio({ events: ctx.events, player: app.player, enemies: () => ctx.enemies, playerId: player.id });
   app.gameViews = [app.effectViews, app.crateViews, new MovementLock(app.player, app.game, player.id), app.audio];
-  app.hud = SurvivalHud.standard(document.body, ctx.events, player.id);
+  app.hud = SurvivalHud.standard(document.body, ctx.events, player.id, { lobby: lobbyScreen?.(document) ?? null });
   app.hud.onStartClick(() => app.player.requestLock());
   app.hud.updateGame(0, app.game, true);
   app.hud.setStartVisible(true);
@@ -115,7 +126,7 @@ export function createGameplayRun(app) {
   return { session, dispose };
 }
 
-function installDebug(app, lifecycle) {
+function installDebug(app, modes) {
   const refresh = () => {
     app.hud.updateGame(0, app.game);
     app._render(0);
@@ -123,7 +134,7 @@ function installDebug(app, lifecycle) {
   window.__gameDebug = Object.freeze({
     ready: () => app.gameplayReady,
     start: () => { app.game.start(); app.game.update(0); refresh(); },
-    restart: () => { lifecycle.restart(); refresh(); },
+    restart: () => { modes.current.restart(); refresh(); },
     spawnTeammate: () => {
       const ctx = app.game.context;
       const local = ctx.players[0];

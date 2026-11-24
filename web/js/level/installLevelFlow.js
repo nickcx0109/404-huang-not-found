@@ -108,12 +108,12 @@ export function installLevelFlow(app) {
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('blur', onBlur);
 
-  const prompt = app.game ? createHudPrompt(app.events) : createPrompt();
+  const prompt = app.mode ? createHudPrompt(app.events) : createPrompt();
   return {
     flow,
     update(dt) {
-      const local = app.game?.context.players[0];
-      const blocked = app.game && (!app.game.canMove || !local?.damageable.alive || app.game.revives.targetFor(local));
+      // The game mode decides (dead, downed, reviving, not started; online play always blocks).
+      const blocked = app.mode?.blocksLevelFlow() ?? false;
       if (blocked) {
         flow.cancelInteraction();
         prompt.show(null);

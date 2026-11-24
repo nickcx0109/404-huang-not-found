@@ -25,6 +25,17 @@ export class RecoilKick {
     });
   }
 
+  /** Every gun's kick (degrees up per shot, most it swings sideways); single player and online share it. */
+  static standard(events, ownerId, options) {
+    return new RecoilKick(events, ownerId, options)
+      .register('pistol', { pitch: 1.6, yaw: 0.4 })
+      .register('rifle', { pitch: 0.9, yaw: 0.35 })
+      .register('smg', { pitch: 0.6, yaw: 0.45 })
+      .register('shotgun', { pitch: 4.5, yaw: 0.8 })
+      .register('sniper', { pitch: 5, yaw: 0.6 })
+      .register('revolver', { pitch: 4, yaw: 0.6 });
+  }
+
   /** @param {{pitch: number, yaw?: number}} degrees  upward kick and the most it can swing sideways */
   register(weaponId, { pitch, yaw = 0 }) {
     if (!(pitch >= 0) || !(yaw >= 0)) throw new RangeError('Invalid recoil for ' + weaponId);
