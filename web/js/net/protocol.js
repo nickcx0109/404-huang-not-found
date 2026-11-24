@@ -60,10 +60,20 @@ const isSnapshotPlayer = (p) => isString(p.id) && allFinite(p, ['x', 'y', 'z', '
 const isSnapshotEnemy = (e) => (isString(e.id) || isFiniteNumber(e.id)) && isString(e.type)
   && allFinite(e, ['x', 'z', 'yaw', 'health']) && isString(e.state);
 
+/** Snapshot ammo crate: `{ id, ready }`. */
+const isSnapshotCrate = (c) => isString(c.id) && isBoolean(c.ready);
+
+/** Snapshot effect: `{ id, kind, x, y, z, radius? }`. */
+const isSnapshotEffect = (e) => (isString(e.id) || isFiniteNumber(e.id)) && isString(e.kind)
+  && allFinite(e, ['x', 'y', 'z']) && (e.radius === undefined || isFiniteNumber(e.radius));
+
+/** An optional snapshot list: absent, or every entry passes. */
+const isOptionalList = (value, isItem) => value === undefined || isList(value, isItem);
+
 /**
  * Required fields per server message type (NETWORK.md, Server → Client); anything failing
  * these is ignored. Error codes are any string so new server codes need no client change.
- * `pickups` is the only optional snapshot field; `room.host` and `room.token` are optional for older servers.
+ * `pickups`, `crates` and `effects` are the optional snapshot fields; `room.host` and `room.token` are optional for older servers.
  */
 const SERVER_SHAPES = Object.freeze({
   [SERVER_MESSAGES.ROOM]: (m) => isString(m.code) && isString(m.you) && isList(m.players, isRosterEntry)
@@ -75,7 +85,8 @@ const SERVER_SHAPES = Object.freeze({
   [SERVER_MESSAGES.SNAPSHOT]: (m) => isFiniteNumber(m.tick) && isFiniteNumber(m.time) && isFiniteNumber(m.ack)
     && isString(m.state) && isFiniteNumber(m.wave) && isFiniteNumber(m.kills)
     && isList(m.players, isSnapshotPlayer) && isList(m.enemies, isSnapshotEnemy)
-    && (m.pickups === undefined || isArray(m.pickups)),
+    && (m.pickups === undefined || isArray(m.pickups))
+    && isOptionalList(m.crates, isSnapshotCrate) && isOptionalList(m.effects, isSnapshotEffect),
   [SERVER_MESSAGES.EVENT]: (m) => isString(m.name) && isObject(m.detail),
 });
 

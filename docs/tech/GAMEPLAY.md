@@ -359,6 +359,13 @@ stateDiagram-v2
 4. 用 `session.changeState(state)` 轉換以保留 STATE_CHANGED 通知，不從其他模組直接呼叫 machine.change。
 5. 加上可進入、可離開、事件只發一次、禁用命令被拒絕的測試；如果增加事件，先在 events.js 定義常數再讓其他模組訂閱。
 
+### B15 換樓層保留玩家狀態
+
+- 換樓層（`level/installLevelFlow.js`）仍是重新載入頁面；載入前用 `app.mode.carryOver()` 取得 `game/CarryOverState`（`GameMode` 預設 `null`，只有 `LocalMode` 會帶，線上不換關），由 `level/CarryOverStore` 寫進 sessionStorage，記下要去的關卡名稱。
+- `CarryOverState` 是純資料：血量、手上是哪一格、每一格的武器 id 和它自己的狀態。武器要帶什麼由武器決定：`Weapon.carryState()`／`restoreCarry(state)`（槍：`ammo`、`reserve`，起始手槍無限的備彈不寫；`CarriedItem`：`count`；`Chainsaw`：`battery`；其他近戰：沒有）。新武器有別的會用完的東西就覆寫這兩個方法。
+- 下一頁 `installGameplay` 用 `CarryOverStore.take(關卡名)` 取一次（取完就刪，重開或之後重新整理都是新的開始），只交給第一個 `LocalMode` 的第一次 run：`createGameplayRun` 把狀態套到新玩家（起始手槍和球棒原地還原，其他用 `createWeaponCatalog()` 重建），開始畫面換成 `ui/hud/ContinueScreen`（「點一下繼續」，整個畫面都能點），點一下就重新鎖滑鼠並開始。
+- 不帶的：計時效果（腎上腺素）、波次、擊殺數；新的一層從第一波開始。sessionStorage 不能用時只是不帶，不會出錯。
+
 ## 新增 HUD 元件
 
 1. 從 `ui/hud/HudWidget.js`、`ui/hud/HealthWidget.js`、`test/HudSurvivalHud.test.js` 開始，在 `ui/hud/` 新增自己的 `HudWidget` 子類，一個元件一個檔案。

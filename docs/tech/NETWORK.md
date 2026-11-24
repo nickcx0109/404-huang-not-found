@@ -51,7 +51,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 | `room` | `code`, `you`（玩家 id）, `host`（房主的玩家 id）, `players:[{id,name,away?}]`, `level`, `state`, `token` | 進房間或名單變動時送（房主換人、有人斷線或回來也會送）；`token` 是收到的人自己那個位置的 rejoin token（每個人只收到自己的）；`away: true` 表示那個人斷線、位置保留中；`protocol.js` 把 `host`、`token` 當可有可無，沒有 `host` 的舊 server 照舊讓任何人開始 |
 | `error` | `code`：`no-room`、`full`、`started`、`bad-message`、`bad-level`、`not-host`、`start-failed`、`server-error` | 被拒絕的原因；`not-host` 是不是房主的人按了開始（房間還在 lobby 才會回這個，已經開始就回 `started`），只回給按的人；`start-failed` 是遊戲沒能開始（例如關卡載入失敗），房間裡每個人都會收到，房間留在 `lobby`，可以再按一次開始；`bad-level` 是 `create` 的 `level` 不在 server 啟動時讀到的 `web/levels/*.json` 裡；`server-error` 是 server 處理這則訊息時出錯，狀態維持原樣（例如建房失敗時人還在原本的房間） |
 | `pong` | `c`, `s`（server 時間 ms） | 對時 |
-| `snapshot` | `tick`, `time`（server ms）, `ack`（這個玩家最後處理的 input `seq`）, `state`, `wave`, `kills`, `players:[…]`, `enemies:[…]`, `pickups?`，以及 HUD 用的 `goal`, `objective`, `breakSeconds` | 每秒 20 次 |
+| `snapshot` | `tick`, `time`（server ms）, `ack`（這個玩家最後處理的 input `seq`）, `state`, `wave`, `kills`, `players:[…]`, `enemies:[…]`, `pickups?`, `crates?`, `effects?`，以及 HUD 用的 `goal`, `objective`, `breakSeconds` | 每秒 20 次 |
 | `event` | `name`（`game/events.js` 的事件名）, `detail` | 需要立刻反應的事件：開槍、命中、死亡、倒地、波次開始、撿到東西。只送畫面和音效需要的欄位 |
 
 快照裡的玩家：`{id, x, y, z, yaw, pitch, health, downed, alive, weapon, ammo, reserve}`；殭屍：`{id, type, x, z, yaw, health, state}`。
@@ -61,6 +61,9 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 - 殭屍的 `type` 是註冊名稱（`walker`、`runner`、`tank`、`exploder`）；`state` 是 `chase`（有追的對象）、`idle`、`dead`（這一步剛死，下一步就不在快照裡）；`yaw` 是面向它追的玩家，沒有對象時維持上一次的方向。
 - HUD 欄位（瀏覽器的 `SnapshotStatus` 讀，`protocol.js` 不檢查，舊 client 會忽略）：每個玩家多了 `maxHealth`、`magazine`（彈匣容量，沒有子彈的武器是 `null`）、`reloading`、`slots`（`[{id, count, charge}]`，空格 `id` 是 `null`，和單機 `PlayerStatus.slots` 同格式）、`slot`（手上那格的 index）、`healing`（身上有治療道具）、`offer`（腳下能撿的東西 `{name, swap, full, verb, note}` 或 `null`）、`action`（正在治療／被治療／救人 `{text, fraction}` 或 `null`）、`rooted`（server 不會移動這個玩家：倒地、死亡或正在包紮，即 `session.isRooted(id)`）、`speed`（移動速度倍率，例如腎上腺素時是 1.3）；最上層多了 `goal`（開始畫面的目標文字）、`objective`（關卡倒數 `{label, seconds}` 或 `null`）、`breakSeconds`（波次間休息剩幾秒）。
 - `pickups` 是 `[{id, item}]`：關卡上每個武器點和上面現在放的東西（`WeaponCatalog` 的 id），被拿走沒留東西時 `item` 是 `null`。
+- `crates` 是 `[{id, ready}]`：關卡上每個彈藥箱（`ammo` marker 的 id）現在能不能用（`ready: false` 是冷卻中）。為了省流量不是每張都送：第一張、有任何一個箱子變了、或距離上次送滿 20 張（約 1 秒，中途錯過的 client 也會跟上）才有這個欄位；沒有這個欄位表示「和上次一樣」，關卡沒有彈藥箱就永遠不送。
+- `effects` 是 `[{id, kind, x, y, z, radius?}]`：自己在世界裡活一段時間的東西（`ctx.effects`）。`kind` 是 `grenade`（飛行中的手榴彈）、`molotov`（飛行中的汽油彈）、`fire`（燃燒的地面）；`id` 是 server 給的數字，同一個效果每張都一樣、不會重用；座標照協定取到小數點後 2 位；`radius` 只有效果本身有半徑時才送（燃燒範圍、手榴彈的爆炸半徑）。沒有任何效果時不送這個欄位，表示清單是空的。
+- `protocol.js` 檢查：`crates`、`effects` 可以沒有；有的話每一筆都要符合上面的形狀，不然整張快照丟掉。
 - `event` 轉送的事件和 `detail`（都是純資料，不送 entity）：`weapon.fired` `{ownerId, weaponId, ammo, reserve, count?, hit: {targetId, hitPart}|null}`、`weapon.reload-started`（多 `duration`）、`weapon.reloaded`、`weapon.changed`、`entity.damaged` `{targetId, sourceId, amount, health, hitPart, kind, downed}`（玩家被打到 0 血就是 `downed: true`，玩家沒有 `entity.died`）、`entity.died` `{targetId, sourceId, kind}`、`entity.healed` `{targetId, sourceId, amount, health}`（救起來也是這個）、`enemy.spawned` `{id, type, x, z, wave}`、`weapon.picked-up` `{ownerId, pickupId, weaponId, droppedId}`、`ammo.refilled` `{ownerId, crateId}`、`item.thrown` `{ownerId, itemId}`、`effect.exploded` `{kind, x, y, z, radius, ownerId}`、`wave.started` `{wave, count}`、`wave.cleared` `{wave, kills}`、`game.state-changed` `{state, wave}`、`game.over`、`game.victory` `{wave, kills}`。
 
 ## 斷線重連（G8i）
@@ -106,6 +109,8 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
   - 畫別人用 `SnapshotBuffer` 在 `clock.now() − 100 ms` 取樣：殭屍用和單機一樣的 `createEnemyBox`，隊友是依編號上色的膠囊加名字。server 的 `event` 由 `NetEventTranslator` 用同樣的事件名稱發到網頁的 bus，需要 entity 的地方放 `EntityStandIns`（從各殭屍類別的 prototype 建，`instanceof` 和聲音的類別對照照常可用），所以單機的音效、HUD 元件、爆炸效果不用改。隊友的 `weapon.fired` 照常發成 `weapon.fired`，`TeammateWeaponSounds` 用 `ownerId` 找 `EntityStandIns` 裡那個隊友（快照插值後的位置），在那裡播他那把武器的槍聲（左右聲道跟著自己的 yaw，60 m 外聽不到）；自己的槍已經在本機播過，server 回來的那一槍是 `net.shot-confirmed`，不會再播一次。`event` 的 `detail` 不用加欄位。
   - HUD 讀 `SnapshotStatus`（`PlayerStatus` 的子類別）：血量、彈藥（`reserve: null` 有彈匣時是無限備彈）、波次、擊殺、道具欄、隊友、倒地／救人、腳下的東西，自己的彈數會先扣掉還沒被 server 確認的子彈。
   - 地上的槍位置來自關卡 marker，上面放什麼只看 snapshot 的 `pickups`（`PickupMirror`）。
+  - 彈藥箱位置來自關卡的 `ammo` marker，能不能用只看 snapshot 的 `crates`（`AmmoCrateMirror`，形狀和 `AmmoCrateField` 一樣，交給同一個 `AmmoCrateViews`）；第一張有 `crates` 的快照之前都當作可以用（舊 server 不送）。冷卻中的箱子外框變暗、不閃。
+  - 手榴彈、汽油彈和燃燒的地面：`SnapshotBuffer` 也插值 `effects`（照 id 配對，沒有就是空的），`EffectMirror` 每格把插值後的清單變成 `EffectViews` 讀的 `ctx.effects`（同一個 id 同一個物件，有在動的才有 `velocity`，所以飛行中會轉、停下來不轉）。效果和別人一樣晚 100 ms 畫，爆炸閃光是 `effect.exploded` 事件，會比畫面上的手榴彈早一點點。
 - **重開。** 線上沒有「同一隊再來一局」：GameOver／Victory 的按鈕或 Enter 會離開隊伍、回到開始畫面，要再玩就重新建立或加入隊伍。
 - **燈光預算。** 能連線的網頁（`play=1` 且有 server）建場景前用 `LightBudget` 把 `alarm.light.count` 降到 1（第二章原本 3 盞），線上每格還要多畫遠端玩家和插值。
 - **關卡出口與障礙物**（`installLevelFlow`）線上一律不反應 E，由 server 的遊戲決定。

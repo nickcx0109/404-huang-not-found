@@ -11,8 +11,9 @@ import { EntityStandIns } from '../net/EntityStandIns.js';
 import { NetEventTranslator } from '../net/NetEventTranslator.js';
 import { ActionForwarder } from '../net/ActionForwarder.js';
 import { PickupMirror } from '../net/PickupMirror.js';
+import { AmmoCrateMirror } from '../net/AmmoCrateMirror.js';
+import { EffectMirror } from '../net/EffectMirror.js';
 import { createWeaponCatalog } from '../game/createSession.js';
-import { AmmoCrateField } from '../pickups/AmmoCrateField.js';
 import { AmmoCrateViews } from '../pickups/AmmoCrateViews.js';
 import { WeaponPickupViews } from '../pickups/WeaponPickupViews.js';
 import { EffectViews } from '../effects/EffectViews.js';
@@ -115,8 +116,10 @@ export class OnlineMode extends GameMode {
     const catalog = createWeaponCatalog();
     this.pickups = PickupMirror.fromLevel(app.level, catalog);
     this.pickupViews = new WeaponPickupViews(app.scene, this.pickups, events);
-    this.crateViews = new AmmoCrateViews(app.scene, AmmoCrateField.fromLevel(app.level), now);
-    this.effectViews = EffectViews.standard(app.scene, { effects: [] }, events);
+    this.crates = AmmoCrateMirror.fromLevel(app.level);
+    this.crateViews = new AmmoCrateViews(app.scene, this.crates, now);
+    this.effects = new EffectMirror();
+    this.effectViews = EffectViews.standard(app.scene, this.effects, events);
     this.enemyViews = new RemoteEnemyViews(app.scene, app.style);
     this.playerViews = new RemotePlayerViews(app.scene, events, id, playerId => this.view.nameOf(playerId));
     this.audio = installAudio({ events, player, enemies: () => this.standIns.living, playerId: id,
@@ -207,6 +210,7 @@ export class OnlineMode extends GameMode {
     this.enemyViews.update(sample?.enemies);
     this.playerViews.update(dt, sample?.players);
     this.crateViews.update(dt);
+    this.effects.apply(sample?.effects);
     this.effectViews.update(dt);
     this.audio.update(dt);
     this.hud.updateGame(dt, view);
@@ -238,6 +242,7 @@ export class OnlineMode extends GameMode {
     if (!this.view.applySnapshot(snapshot)) return;
     const changed = this.pickups.apply(snapshot.pickups);
     for (const pickupId of changed) this.pickupViews.refresh(pickupId);
+    this.crates.apply(snapshot.crates);
     const me = this.view.local;
     if (!me) return;
     const player = this.app.player;

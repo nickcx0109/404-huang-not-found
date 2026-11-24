@@ -5,6 +5,9 @@ import { TeamPresentation } from '../../web/js/ui/hud/logic/TeamPresentation.js'
 /** Zombies further than this from every player are left out of snapshots (docs/tech/NETWORK.md, 手感 5). */
 export const SNAPSHOT_RANGE = 60;
 
+/** The ammo crates' list is sent when a crate turns ready or not, and otherwise once every this many snapshots (1 s). */
+export const CRATE_REFRESH_FRAMES = 20;
+
 /**
  * Builds `snapshot` messages from a GameSession in exactly the shape web/js/net/protocol.js
  * accepts. `frame()` copies the shared part once per snapshot; `forViewer()` adds each
@@ -17,6 +20,12 @@ export class SnapshotWriter {
     this._yaw = new Map();
     /** Reads each player's pickup offer and timed action exactly as the single-player HUD would. */
     this._status = new PlayerStatus();
+    /** Wire id per live effect (effects have no id of their own); numbers keep the snapshot small. */
+    this._effectIds = new WeakMap();
+    this._nextEffectId = 1;
+    /** The crates' ready flags as last sent, and snapshots since then. */
+    this._crateKey = null;
+    this._crateFrames = 0;
   }
 
   /** The part every member shares. */
@@ -40,6 +49,10 @@ export class SnapshotWriter {
     };
     const pickups = this.pickups(session);
     if (pickups) message.pickups = pickups;
+    const crates = this.crates(session);
+    if (crates) message.crates = crates;
+    const effects = this.effects(session);
+    if (effects) message.effects = effects;
     return message;
   }
 
@@ -128,5 +141,52 @@ export class SnapshotWriter {
     const field = session.pickups?.weaponPickups;
     if (!field) return undefined;
     return field.pickups.map(pickup => ({ id: pickup.id, item: pickup.weapon?.id ?? null }));
+  }
+
+  /**
+   * Whether each ammo crate can be used now: [{id, ready}]. Sent on the first snapshot, when any crate
+   * changes, and every CRATE_REFRESH_FRAMES snapshots (so a page that missed one catches up);
+   * undefined otherwise and when the level has no crates.
+   */
+  crates(session) {
+    const crates = session.pickups?.ammoCrates?.crates;
+    if (!crates || crates.length === 0) return undefined;
+    const time = session.context.time;
+    const list = crates.map(crate => ({ id: crate.id, ready: crate.ready(time) }));
+    const key = list.map(crate => (crate.ready ? '1' : '0')).join('');
+    this._crateFrames++;
+    if (key === this._crateKey && this._crateFrames < CRATE_REFRESH_FRAMES) return undefined;
+    this._crateKey = key;
+    this._crateFrames = 0;
+    return list;
+  }
+
+  /**
+   * What lives in the world on its own (grenades and fire bottles in flight, burning ground):
+   * [{id, kind, x, y, z, radius?}], `radius` only for effects that have one. Undefined when there is none.
+   */
+  effects(session) {
+    const live = session.context.effects;
+    if (!live || live.length === 0) return undefined;
+    return live.map(effect => this.effect(effect));
+  }
+
+  effect(effect) {
+    const record = {
+      id: this.effectId(effect), kind: effect.kind,
+      x: coord(effect.position.x), y: coord(effect.position.y), z: coord(effect.position.z),
+    };
+    if (Number.isFinite(effect.radius)) record.radius = coord(effect.radius);
+    return record;
+  }
+
+  /** The same number for the same effect object in every snapshot. */
+  effectId(effect) {
+    let id = this._effectIds.get(effect);
+    if (id === undefined) {
+      id = this._nextEffectId++;
+      this._effectIds.set(effect, id);
+    }
+    return id;
   }
 }
