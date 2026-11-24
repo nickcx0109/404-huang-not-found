@@ -2,11 +2,12 @@
 import { RoomServer } from './RoomServer.js';
 import { WsTransport } from './transport/WsTransport.js';
 import { LevelCatalog } from './rooms/LevelCatalog.js';
-
-const STEP_SECONDS = 1 / 30;
+import { SessionRoomGame, STEP_SECONDS } from './game/SessionRoomGame.js';
 
 const levels = LevelCatalog.fromDirectory();
-const rooms = new RoomServer({ levels });
+const now = () => Date.now();
+// Every room runs its own GameSession (docs/tech/NETWORK.md); the clock is the one `pong` reports.
+const rooms = new RoomServer({ levels, now, createGame: () => new SessionRoomGame({ now }) });
 console.log(`Levels: ${[...levels.names].join(', ')}`);
 
 let ticker = null;
@@ -28,4 +29,11 @@ process.on('SIGTERM', () => shutdown(0));
 
 const port = await transport.listen(Number(process.env.PORT) || 8787);
 console.log(`Room server listening on ws://localhost:${port}`);
-ticker = setInterval(() => rooms.tick(STEP_SECONDS), STEP_SECONDS * 1000);
+// Rooms get the real time since the last tick, so a late timer does not slow the game down;
+// SessionRoomGame turns it into fixed 1/30 s steps.
+let lastTick = performance.now();
+ticker = setInterval(() => {
+  const tickAt = performance.now();
+  rooms.tick((tickAt - lastTick) / 1000);
+  lastTick = tickAt;
+}, STEP_SECONDS * 1000);
