@@ -87,6 +87,12 @@ export class OnlineMode extends GameMode {
       get time() { return now(); },
     };
 
+    /** What the server's events about our own weapon change in the prediction, by event name. */
+    this._ownHandlers = new Map([
+      [EVENTS.WEAPON_FIRED, (detail, time) => this.cadence.confirm(time)],
+      [EVENTS.WEAPON_RELOAD_STARTED, (detail, time) => this.loadout.startReload(detail.weaponId, detail.duration, time)],
+      [EVENTS.WEAPON_RELOADED, detail => this.loadout.finishReload(detail.weaponId)],
+    ]);
     this.translator = new NetEventTranslator(events, this.standIns, id, {
       isPredicted: weaponId => this.specs.get(weaponId).predicted,
       onOwnEvent: (name, detail) => this._ownEvent(name, detail),
@@ -244,10 +250,7 @@ export class OnlineMode extends GameMode {
 
   _ownEvent(name, detail) {
     this.view.applyEvent(name, detail);
-    const now = this.now();
-    if (name === EVENTS.WEAPON_FIRED) this.cadence.confirm(now);
-    else if (name === EVENTS.WEAPON_RELOAD_STARTED) this.loadout.startReload(detail.weaponId, detail.duration, now);
-    else if (name === EVENTS.WEAPON_RELOADED) this.loadout.finishReload(detail.weaponId);
+    this._ownHandlers.get(name)?.(detail, this.now());
   }
 
   _room(room) {
