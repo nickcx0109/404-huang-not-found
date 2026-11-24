@@ -91,10 +91,21 @@ export class NetworkedSession {
     return this.canMove && Boolean(me?.alive) && !me.downed;
   }
 
-  /** Whether the local player's feet must stay still. */
+  /**
+   * Whether the local player's feet must stay still: the server's `rooted` (downed, dead or
+   * bandaging, GameSession.isRooted), or downed/dead from a server that does not send it.
+   */
   get rooted() {
     const me = this.local;
-    return !me || !me.alive || me.downed;
+    if (!me) return true;
+    if (typeof me.rooted === 'boolean') return me.rooted;
+    return !me.alive || me.downed;
+  }
+
+  /** The local player's speed multiplier (adrenaline makes it 1.3); 1 before any snapshot. */
+  get speed() {
+    const speed = this.local?.speed;
+    return Number.isFinite(speed) && speed > 0 ? speed : 1;
   }
 
   get canRestart() {

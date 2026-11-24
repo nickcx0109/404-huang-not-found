@@ -185,6 +185,7 @@ export class OnlineMode extends GameMode {
       this.standIns.updatePlayers(sample.players);
     }
     app.player.rooted = view.rooted;
+    app.player.speedMultiplier = view.speed;
     if (this.reconciler.placed && view.canMove) this._sendPose(false);
     this.combat.update(dt);
     this.enemyViews.update(sample?.enemies);
@@ -333,6 +334,7 @@ export class OnlineMode extends GameMode {
     app.overlay = null;
     app.combat = null;
     app.player.rooted = false;
+    app.player.speedMultiplier = 1;
     this.pickupViews.dispose();
     this.crateViews.dispose();
     this.effectViews.dispose();

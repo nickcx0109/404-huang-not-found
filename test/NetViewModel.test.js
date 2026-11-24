@@ -57,6 +57,24 @@ test('NetworkedSession: team lobby, starting, then the snapshot state decides mo
   assert.equal(NetworkedSession.slotOf('p3'), 2);
 });
 
+test('NetworkedSession roots and speeds the local player as the server says', () => {
+  const view = new NetworkedSession({ you: 'p2', room });
+  assert.equal(view.rooted, true, 'no snapshot yet: stay put');
+  assert.equal(view.speed, 1);
+  view.applySnapshot(snapshot(100));
+  assert.equal(view.rooted, false, 'an older server without the field: standing and alive is free');
+  const bandaging = snapshot(110);
+  bandaging.players[1] = player('p2', { rooted: true, speed: 1.3 });
+  view.applySnapshot(bandaging);
+  assert.equal(view.rooted, true, 'bandaging holds the player still although not downed');
+  assert.equal(view.speed, 1.3);
+  const free = snapshot(120);
+  free.players[1] = player('p2', { rooted: false, speed: 0 });
+  view.applySnapshot(free);
+  assert.equal(view.rooted, false);
+  assert.equal(view.speed, 1, 'a nonsense multiplier falls back to 1');
+});
+
 test('SnapshotStatus fills the HUD record from the snapshot, the prediction and the controller', () => {
   const view = new NetworkedSession({ you: 'p2', room });
   view.applySnapshot(snapshot(100, { players: [player('p1', { health: 30, downed: true, healing: true }),
