@@ -95,7 +95,8 @@ classDiagram
 
 | 位置 | 契約與責任 |
 |---|---|
-| `game/installGameplay.js` | 唯一玩法組合入口；`createGameplayRun(app)` 建立每局實例並回傳 `{session,dispose}`，初次安裝與重開共用，不複製組合程式。Three.js 灰盒外觀使用既有 `greybox.dummy` 顏色 |
+| `game/createSession.js` | 單機和 server 共用的玩法組合入口。從已解析的關卡資料及注入的玩家控制器建立一局 `GameSession` |
+| `game/installGameplay.js` | `createGameplayRun(app)` 呼叫 `createSession()`，接上瀏覽器輸入、Three.js 視圖、音效和 HUD，再回傳 `{session, dispose}` 供初次安裝與重開共用 |
 | `game/GameplayLifecycle.js` | 不依賴 DOM 的每局資源管理者：訂閱 RESTART_REQUESTED，先 dispose 舊局，再呼叫注入的 createRun；離頁時連自己的訂閱也清掉 |
 | `game/GameContext.js` | `scene`、`collision`、`pathFinder`、`events`、`pools`、`players`、`enemies`、`rng`、`time`、`aim`、`session`；容器不是全域變數 |
 | `game/GameSession.js` | 唯一模擬權威：輸入命令、傷害套用、擊殺計數、物品互動、波次與 GameOver；App 擁有它並推進時鐘 |
@@ -127,7 +128,16 @@ classDiagram
 2. Session 驗證目前是 Playing、來源仍活著、目標存在、敵我不同，才套用 DamagePipeline 並呼叫目標 Damageable。
 3. Damageable 發送傷害／死亡通知；Session 用 `deathRecorded` 對自己追蹤的敵人只記錄一次死亡，玩家造成的死亡才計入擊殺數；UI／特效可訂閱通知。
 4. 已死敵人在下一個 simulation step 歸還 Factory，重新借出時用新的 id、生命與 deadline，舊的命中不能傷害新的生命。
-5. 目前 **Session 就是未來 Host 的放置點**。未來 Client 只送輸入，Host Session 決定傷害、擊殺與狀態，再傳送快照；不要讓各 Client 的 HUD 或 Weapon 各自裁定擊殺。這次不新增網路協定或連線實作。
+5. 線上模式由 server 推進同一套 `GameSession`。Client 傳送輸入，由 server 裁定傷害、擊殺與狀態並傳送快照。連線流程見 [連線設計](NETWORK.md)。
+
+## G8b 共用的 Session 工廠
+
+`createSession(levelRaw, { players, difficulty, events, rng, collision, createEnemyView })` 接收已解析的關卡 JSON，也接受瀏覽器已載入的 `LevelData`。回傳處於 Lobby 的 `GameSession`，呼叫 `start()` 後以 `update(dt)` 推進，結束時以 `dispose()` 釋放模擬資源並重設控制器的速度倍率。工廠建立波次、敵人工廠、關卡目標、地上物品和彈藥箱，並為每位玩家配置獨立的手槍和球棒。
+
+- `players` 中每筆是 `{ id, name?, controller }`，`id` 在同一局內須唯一。呼叫端先把控制器放到指定位置，再交給工廠；單機模式照既有的出生點選項呼叫 `PlayerController.spawnAt()`。
+- 控制器只需提供有限數值 `x`、`z`，以及可選的腳底高度 `y`（預設為 0），單位為公尺。每個遊戲步讀取座標，並把移動效果的倍率寫入可寫的 `speedMultiplier` 欄位。一般資料物件即可，無須實作方法。
+- `yaw`、`pitch` 可由控制器以弧度保存，供呼叫端更新瞄準。送出開火或其他需要瞄準的命令前，先依該玩家的視角填入 `session.context.aim.origin` 和 `direction`。瀏覽器由 `PlayerCombat` 讀取相機來完成這一步。
+- `difficulty` 接受 `Difficulty` 實例。`events`、`rng`、`collision` 和 `createEnemyView` 都可省略。瀏覽器傳入既有的事件匯流排和碰撞世界，讓移動、尋路和路障共用同一份碰撞資料，並提供 `createEnemyView(type, context)` 建立敵人視圖。Node 可直接建立無視圖的 Session。
 
 ## 設計模式對照
 
@@ -248,7 +258,7 @@ CrowdSeparation 對存活、啟用且高度相交的敵人做兩輪 O(n²) 配�
 
 - `waves(data)`：回傳放大後的波次資料副本。每種數量和 overflow 都乘 `count`，同時活著的上限也乘（但不超過 `maxAliveCap`，預設 40），生怪間隔除以 `count`（最短 0.05 秒），休息時間不變。
 - `tune(enemy)`：速度乘 `speed`，近戰和自爆傷害乘 `damage`。由 `EnemyFactory` 的 `prepare` 在每隻殭屍第一次建出來時呼叫一次；物件池重複使用同一隻，所以不會越用越快。
-- 現在的值在 `installGameplay`：`new Difficulty({ count: 10, speed: 2 })`，傷害不變。第一波 40 隻、同時最多 30 隻，走路殭屍 3.2 m/s（比玩家走路 4.5 m/s 慢）、跑者 6.8 m/s（比玩家衝刺 7 m/s 慢一點）。
+- `createSession()` 預設使用 `new Difficulty({ count: 10, speed: 2 })`，傷害為 1 倍。第一波 40 隻、同時最多 30 隻，走路殭屍 3.2 m/s（比玩家走路 4.5 m/s 慢）、跑者 6.8 m/s（比玩家衝刺 7 m/s 慢一點）。
 
 ## 新增武器
 
