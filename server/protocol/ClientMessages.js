@@ -1,11 +1,10 @@
 import { MessageSchema } from './MessageSchema.js';
+import { VariantSchema } from './VariantSchema.js';
 import { TextField, NumberField, IntegerField, BooleanField, ChoiceField } from './Fields.js';
 import { RoomCodes } from '../rooms/RoomCodes.js';
 
 /** Largest accepted client message, in UTF-8 bytes. Inputs are well under 200. */
 export const MAX_MESSAGE_BYTES = 4096;
-
-export const ACTION_KINDS = Object.freeze(['fire', 'reload', 'secondary', 'switch', 'cycle', 'pickup', 'revive']);
 
 const name = () => new TextField({ min: 1, max: 24, transform: text => text.trim() });
 const seq = () => new IntegerField({ min: 0 });
@@ -22,13 +21,21 @@ export function clientSchemas() {
       seq: seq(), x: new NumberField(), y: new NumberField(), z: new NumberField(),
       yaw: new NumberField(), pitch: new NumberField(),
     }),
-    new MessageSchema('action', {
-      seq: seq(), kind: new ChoiceField(ACTION_KINDS), at: new NumberField(),
-      index: new IntegerField({ min: 0, max: 16, optional: true }),
-      step: new IntegerField({ min: -1, max: 1, optional: true }),
-      holding: new BooleanField({ optional: true }),
-    }),
+    actionSchema(),
   ];
+}
+
+/** `action` fields depend on `kind`: switch needs `index`, cycle needs `step` (±1), revive needs `holding`. */
+export function actionSchema() {
+  return new VariantSchema('action', 'kind', { seq: seq(), at: new NumberField() }, {
+    fire: {},
+    reload: {},
+    secondary: {},
+    switch: { index: new IntegerField({ min: 0, max: 16 }) },
+    cycle: { step: new ChoiceField([-1, 1]) },
+    pickup: {},
+    revive: { holding: new BooleanField() },
+  });
 }
 
 /** Turns raw socket text into a validated message, or null for anything malformed. */

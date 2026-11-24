@@ -43,6 +43,29 @@ test('MessageParser rejects malformed text, wrong shapes and oversize messages',
   assert.equal(new MessageParser().schemas.get('ping').parse({ c: Infinity }), null);
 });
 
+test('action fields are chosen by kind', () => {
+  const base = { t: 'action', seq: 1, at: 900 };
+  for (const kind of ['fire', 'reload', 'secondary', 'pickup']) {
+    assert.deepEqual(parse({ ...base, kind, index: 3 }), { ...base, kind }, `${kind} drops extra fields`);
+  }
+  assert.deepEqual(parse({ ...base, kind: 'switch', index: 0 }), { ...base, kind: 'switch', index: 0 });
+  assert.deepEqual(parse({ ...base, kind: 'cycle', step: -1 }), { ...base, kind: 'cycle', step: -1 });
+  assert.deepEqual(parse({ ...base, kind: 'revive', holding: false }), { ...base, kind: 'revive', holding: false });
+  const bad = [
+    { ...base, kind: 'switch' },
+    { ...base, kind: 'switch', index: 1.5 },
+    { ...base, kind: 'switch', index: '1' },
+    { ...base, kind: 'cycle' },
+    { ...base, kind: 'cycle', step: 0 },
+    { ...base, kind: 'cycle', step: 2 },
+    { ...base, kind: 'revive' },
+    { ...base, kind: 'revive', holding: 1 },
+    { ...base, kind: 'toString' },
+    { t: 'action', seq: 1, kind: 'fire' },
+  ];
+  for (const message of bad) assert.equal(parse(message), null, JSON.stringify(message));
+});
+
 test('MessageParser can be built from custom schemas and limits', () => {
   const custom = new MessageParser([
     new MessageSchema('hello', { who: new TextField({ max: 3 }), n: new IntegerField({ min: 1, optional: true }) }),

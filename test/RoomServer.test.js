@@ -210,6 +210,22 @@ test('malformed messages get bad-message and change nothing', () => {
   server.receive(new FakeMember(), '{"t":"leave"}');
 });
 
+test('actions missing their kind-specific field get bad-message and never reach the game', () => {
+  const calls = [];
+  class SpyGame extends RoomGame {
+    action(room, id, message) { calls.push(message); }
+  }
+  const server = makeServer({ createGame: () => new SpyGame() });
+  const { host } = createRoom(server);
+  send(server, host, { t: 'start' });
+  host.clear();
+  for (const kind of ['switch', 'cycle', 'revive']) send(server, host, { t: 'action', seq: 1, kind, at: 0 });
+  assert.deepEqual(host.sent, Array(3).fill({ t: 'error', code: 'bad-message' }));
+  assert.deepEqual(calls, []);
+  send(server, host, { t: 'action', seq: 2, kind: 'switch', at: 0, index: 1 });
+  assert.deepEqual(calls, [{ t: 'action', seq: 2, kind: 'switch', at: 0, index: 1 }]);
+});
+
 test('ping is answered with pong carrying both clocks', () => {
   const server = makeServer();
   const client = connect(server, 'Ann');
