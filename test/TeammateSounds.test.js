@@ -91,3 +91,54 @@ test('online, the server\'s echo of my shot stays silent while a teammate\'s sho
   assert.ok(output.played[1].pan < -0.8, 'the teammate on my left is heard on the left');
   assert.ok(output.played[1].gain < 1);
 });
+
+
+test('teammate loops follow snapshots independently, release to idle and clean up', () => {
+  const events = new EventBus();
+  const output = new RecordingOutput();
+  const loops = new Map();
+  output.setLoop = (key, cue, mix) => cue === null ? loops.delete(key) : loops.set(key, { cue, ...mix });
+  const listener = { x: 0, z: 0, yaw: 0 };
+  let mates = [{ id: 'p1', weapon: 'chainsaw', x: 0, z: 0 },
+    { id: 'p2', weapon: 'chainsaw', x: 10, z: 0 },
+    { id: 'p3', weapon: 'chainsaw', x: -10, z: 0 }];
+  const board = new SoundBoard(output, () => listener);
+  const rule = new TeammateWeaponSounds(events, 'p1', id => mates.find(p => p.id === id), { teammates: () => mates })
+    .register('chainsaw', { held: 'idle', working: 'cut' });
+  board.install(rule);
+  board.update(0);
+  assert.equal(loops.size, 2);
+  events.emit(EVENTS.WEAPON_FIRED, { ownerId: 'p2', weaponId: 'chainsaw' });
+  board.update(0.01);
+  assert.equal(loops.get('teammate:p2').cue, 'cut');
+  assert.equal(loops.get('teammate:p3').cue, 'idle');
+  mates[1].x = -20;
+  board.update(0.01);
+  assert.ok(loops.get('teammate:p2').pan < 0);
+  listener.yaw = Math.PI;
+  board.update(0.01);
+  assert.ok(loops.get('teammate:p2').pan > 0);
+  board.update(0.2);
+  assert.equal(loops.get('teammate:p2').cue, 'idle');
+  events.emit(EVENTS.WEAPON_RELOADED, { ownerId: 'p2' });
+  events.emit(EVENTS.WEAPON_RELOADED, { ownerId: 'p1' });
+  assert.equal(output.played.length, 1);
+  assert.equal(output.played[0].cue, 'reload');
+  mates[1].weapon = 'pistol';
+  board.update(0);
+  assert.equal(loops.has('teammate:p2'), false);
+  mates[2].away = true;
+  board.update(0);
+  assert.equal(loops.size, 0);
+  mates[2].away = false;
+  board.update(0);
+  mates = [];
+  board.update(0);
+  assert.equal(loops.size, 0);
+  mates = [{ id: 'p2', weapon: 'chainsaw', x: 80, z: 0 }];
+  board.update(0);
+  assert.equal(loops.get('teammate:p2').gain, 0);
+  rule.dispose();
+  assert.equal(loops.size, 0);
+  board.dispose();
+});

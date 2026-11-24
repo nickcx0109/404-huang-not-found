@@ -70,14 +70,15 @@ export class SoundBoard {
   }
 
   /** Starts (or with `cue` null stops) loop `key` until told otherwise. */
-  loop(key, cue) {
+  loop(key, cue, { position = null, range = this.range } = {}) {
     const current = this.holds.get(key);
     if (cue === null) {
       if (current) this.output.setLoop(key, null);
       this.holds.delete(key);
       return;
     }
-    if (!current || current.cue !== cue) this.output.setLoop(key, cue, { gain: 1 });
+    const mix = SpatialMix.of(position ? this.listener() : null, position, range);
+    if (!current || current.cue !== cue || position) this.output.setLoop(key, cue, mix);
     this.holds.set(key, { cue, until: Infinity, then: null });
   }
 

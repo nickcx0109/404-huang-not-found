@@ -40,7 +40,7 @@ const withWeaponCues = rule => {
  * Online, `teammatePosition(ownerId)` (where a teammate stands, or null) adds TeammateWeaponSounds so
  * teammates' shots are heard from where they are; single player leaves it out.
  */
-export function installAudio({ events, player, enemies, playerId, teammatePosition = null }) {
+export function installAudio({ events, player, enemies, playerId, teammatePosition = null, teammates = () => [] }) {
   const output = new WebAudioOutput({ manifestUrl: MANIFEST_URL });
   const board = new SoundBoard(output, () => player)
     .cooldown('hurt', 0.25)
@@ -51,7 +51,7 @@ export function installAudio({ events, player, enemies, playerId, teammatePositi
     .cooldown('zombie_hiss', 0.6)
     .cooldown('heal', 0.4);
   board.install(withWeaponCues(new WeaponSounds(events, playerId)));
-  if (teammatePosition) board.install(withWeaponCues(new TeammateWeaponSounds(events, playerId, teammatePosition)));
+  if (teammatePosition) board.install(withWeaponCues(new TeammateWeaponSounds(events, playerId, teammatePosition, { teammates })));
   board.install(new HitSounds(events, playerId));
   board.install(new PlayerSounds(events, playerId));
   board.install(new PickupSounds(events, playerId)

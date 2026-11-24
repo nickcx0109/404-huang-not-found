@@ -128,3 +128,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 ## 拆分
 
 見 `TODO.md` 的 G8a～G8m。相依：G8a、G8b、G8c 可以同時做；G8d 要等 G8a、G8b；G8e 要等 G8c、G8d；G8f 部署準備之後，G8m 實際部署和實測最後。
+
+### G8o teammate loops and reload
+
+`TeammateWeaponSounds` reads interpolated player weapons/positions and maintains independent `teammate:<id>` loops. A held chainsaw idles; fire events renew a 0.2 second cutting interval, then return to idle. Distance and stereo pan update every frame without restarting the audio source. Switching weapons, going down, removal, an away room member, local disconnection and disposal stop loops. Rejoining rebuilds them from snapshots. Existing `weapon.reloaded` events play positional reload cues for teammates; local reload remains owned by `WeaponSounds`. No protocol changes.

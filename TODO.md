@@ -60,7 +60,6 @@
 
 ## 其他
 
-- [~] **G8o 隊友的電鋸、換彈聲**：G8j 只在隊友的位置播 `weapon.fired` 的 `fire`／`hit`（槍聲、揮刀）。隊友拿電鋸沒有循環聲（`SoundBoard.hold`／`loop` 沒有位置），隊友換彈也沒聲音。要讓循環聲帶位置、跟著隊友移動；加測試。（進行中：@nickcx0109，分支 feat/net-teammate-loops）
 
 
 ---
@@ -127,4 +126,5 @@
 - G8d server 跑遊戲：`SessionRoomGame`、`RemoteController`、開槍倒回時間、快照和事件轉送（PR #52）
 - G8e 瀏覽器接上連線：隊伍開始畫面和房間、`OnlineMode`（本地預測、快照插值、殭屍方塊和隊友膠囊、事件轉成單機事件）、連線時第二章警示燈降到 1（PR #54）
 - G8f 部署準備：一個 port 送網頁、`/health` 和 WebSocket（`server/http/`），game server 送出的網頁自動連自己、`Dockerfile`、`fly.toml`（東京）、`render.yaml`（新加坡）、`npm start`、`tools/net-latency.mjs`（PR #55）
+- G8o Teammate positional chainsaw loops and reload audio; per-player moving mixes and lifecycle cleanup (PR pending)
 - G8j 聽得到隊友的槍聲：`TeammateWeaponSounds` 在隊友的位置播他那把武器的槍聲（左右聲道、60 m 衰減），自己的槍不會播兩次（PR #56）

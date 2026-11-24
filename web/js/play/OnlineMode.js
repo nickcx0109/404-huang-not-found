@@ -123,7 +123,10 @@ export class OnlineMode extends GameMode {
     this.enemyViews = new RemoteEnemyViews(app.scene, app.style);
     this.playerViews = new RemotePlayerViews(app.scene, events, id, playerId => this.view.nameOf(playerId));
     this.audio = installAudio({ events, player, enemies: () => this.standIns.living, playerId: id,
-      teammatePosition: ownerId => this.standIns.players.get(ownerId)?.position ?? null });
+      teammatePosition: ownerId => this.view.connection === 'open'
+        && this.view.room?.players.some(p => p.id === ownerId && !p.away)
+        ? this.view.sampled?.players.find(p => p.id === ownerId) ?? null : null,
+      teammates: () => this.view.connection === 'open' ? this.view.sampled?.players ?? [] : [] });
     app.gameViews = [];
 
     // HUD.

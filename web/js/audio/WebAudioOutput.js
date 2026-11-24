@@ -65,12 +65,35 @@ export class WebAudioOutput {
   }
 
   setLoop(key, cue, mix = { pan: 0, gain: 1 }) {
+    const current = this.loops.get(key);
+    if (cue !== null && current?.cue === cue && current.update) {
+      current.mix = mix;
+      current.update(mix);
+      return;
+    }
     this.loops.get(key)?.stop?.();
     this.loops.delete(key);
     if (cue === null) return;
-    const stop = this.synth ? this.library.get(cue)?.startLoop(this.synth, mix) ?? null : null;
+    let stop = null;
+    let update = null;
+    if (this.synth) {
+      const context = this.synth.context;
+      const gain = context.createGain();
+      const pan = context.createStereoPanner?.();
+      gain.connect(pan ?? this.synth.output);
+      if (pan) pan.connect(this.synth.output);
+      update = next => {
+        gain.gain.value = next.gain;
+        if (pan) pan.pan.value = next.pan ?? 0;
+      };
+      update(mix);
+      const voice = Object.create(this.synth);
+      voice.output = gain;
+      const end = this.library.get(cue)?.startLoop(voice, { pan: 0, gain: 1 });
+      stop = () => { end?.(); gain.disconnect(); pan?.disconnect(); };
+    }
     // Remember the cue even if it could not start yet, so the loop starts once its file arrives.
-    this.loops.set(key, { cue, mix, stop });
+    this.loops.set(key, { cue, mix, stop, update });
   }
 
   async _loadFiles() {
@@ -105,7 +128,10 @@ export class WebAudioOutput {
   }
 
   _restartLoopsOf(cue) {
-    for (const [key, loop] of this.loops) if (loop.cue === cue) this.setLoop(key, cue, loop.mix);
+    for (const [key, loop] of [...this.loops]) if (loop.cue === cue) {
+      loop.update = null;
+      this.setLoop(key, cue, loop.mix);
+    }
   }
 
   dispose() {

@@ -100,3 +100,30 @@ test('sound unlocked while paused starts suspended', t => {
   assert.deepEqual(created[0].calls, ['suspend', 'resume']);
   output.dispose();
 });
+
+
+test('loop mix moves without restarting its source and file replacement restarts once', () => {
+  let starts = 0;
+  let stops = 0;
+  const nodes = [];
+  const node = field => {
+    const value = { [field]: { value: 0 }, connect() {}, disconnect() {} };
+    nodes.push(value);
+    return value;
+  };
+  const output = new WebAudioOutput();
+  output.synth = { output: {}, context: { createGain: () => node('gain'),
+    createStereoPanner: () => node('pan'), close() {} } };
+  output.library.set('idle', { startLoop() { starts++; return () => stops++; } });
+  output.setLoop('p2', 'idle', { pan: -1, gain: 0.5 });
+  output.setLoop('p2', 'idle', { pan: 1, gain: 0.2 });
+  assert.equal(starts, 1);
+  assert.equal(stops, 0);
+  assert.equal(nodes[0].gain.value, 0.2);
+  assert.equal(nodes[1].pan.value, 1);
+  output._restartLoopsOf('idle');
+  assert.equal(starts, 2);
+  assert.equal(stops, 1);
+  output.dispose();
+  assert.equal(stops, 2);
+});
