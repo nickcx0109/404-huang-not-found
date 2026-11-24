@@ -96,7 +96,11 @@ export class SceneBuilder {
     });
 
     level.props.forEach((p) => {
-      root.add(this.props.create(p, p.collider ? level.collider(p.collider) : null));
+      root.add(this.props.create(
+        p,
+        p.collider ? level.collider(p.collider) : null,
+        p.collider ? level.collisionBox(p.collider) : null
+      ));
     });
 
     built.unknownProps = Array.from(this.props.unknownNames);
