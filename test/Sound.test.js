@@ -82,6 +82,13 @@ test('SoundBoard skips a cue inside its cooldown and drops sounds out of earshot
   assert.equal(output.played[2].gain, 0.25);
 });
 
+test('SoundBoard.play keeps its own range unless one sound asks for another', () => {
+  const { output, board } = setup();
+  assert.equal(board.play('explosion', { position: { x: 40, z: 0 } }), false);
+  assert.equal(board.play('shot_pistol', { position: { x: 40, z: 0 }, range: 80 }), true);
+  assert.equal(output.played[0].gain, 0.5);
+});
+
 test('SoundBoard.hold keeps a loop going while renewed, then falls back or stops', () => {
   const { output, board } = setup();
   board.loop('weapon', 'idle');
