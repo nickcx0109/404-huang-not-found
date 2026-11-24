@@ -53,7 +53,7 @@
 
 細節和修法方向在 [docs/tech/KNOWN_ISSUES.md](docs/tech/KNOWN_ISSUES.md)。修好就在那份文件標成已修復，並從這裡刪掉。
 
-- [~] **B1** 綁了 collider 的道具旋轉或縮放後，外觀超出碰撞盒（KNOWN_ISSUES #3，和「AABB 不會跟著 rotY 轉」是同一件事）（進行中：@nickcx0109，分支 fix/rotated-colliders）
+- [ ] **B17** 有些車輛模型比關卡寫的 `size` 大，還是會凸出碰撞盒：`truck_wreck` 模型寬 3.22 m、`size` 2.6；`van_wreck` 2.57 對 2.2；`car_wreck` 1.64 對 1.8。修正各關卡的 `size`／`footprint`／collider，或在 manifest 記模型的實際範圍讓 `LevelData` 讀（細節見 PR #51 的「要注意」）。
 - [ ] **B7** `StaticBatcher` 整關合併、無法剔除，要改成按區塊合併（#9，S1 會遇到）
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
 - [ ] **B15** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、道具欄會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
@@ -113,3 +113,4 @@
 - G8a 房間 server：隊伍編號、建立／加入／離開／開始、訊息驗證、`server/main.mjs`（PR #49）
 - G8c 瀏覽器端連線類別：`NetClient`、`ServerClock`、`SnapshotBuffer`、`InputSender`（PR #48）
 - G8b 單機和 server 共用的 `createSession()`；遠端 controller 的規則寫在 GAMEPLAY.md（PR #50）
+- B1 旋轉、縮放的道具碰撞盒跟著變大；`footprint` 欄位（PR #51）
