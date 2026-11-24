@@ -66,7 +66,9 @@ export class SnapshotWriter {
   /**
    * What the player's own HUD needs beyond the protocol core (docs/tech/NETWORK.md, HUD fields):
    * the loadout, the magazine size, reloading, whether they carry healing, and the pickup offer
-   * and timed action text the single-player HUD would show.
+   * and timed action text the single-player HUD would show; `rooted` (the server will not move
+   * them: downed, dead or bandaging, GameSession.isRooted) and `speed` (their speed multiplier,
+   * e.g. 1.3 under adrenaline) let the browser predict its own walking the way the server checks it.
    */
   hud(player, session) {
     const weapon = player.weapons.current;
@@ -81,6 +83,8 @@ export class SnapshotWriter {
       offer: status.pickup === null ? null : { name: status.pickup, swap: status.pickupSwap,
         full: status.pickupFull, verb: status.pickupVerb, note: status.pickupNote },
       action: status.action === null ? null : { text: status.action, fraction: angle(status.actionProgress) },
+      rooted: session.isRooted(player.id),
+      speed: coord(player.controller.speedMultiplier ?? 1),
     };
   }
 
