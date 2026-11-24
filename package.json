@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "playwright": "^1.65.1"
+  },
+  "dependencies": {
+    "ws": "^8.23.0"
   }
 }
