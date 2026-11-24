@@ -1,0 +1,118 @@
+import { EVENTS } from '../game/events.js';
+
+/** Snapshot states in which players walk and shoot (GameSession.canMove). */
+const MOVING_STATES = new Set(['playing', 'wave-break']);
+/** States whose result screen offers RESTART (online: back to the start screen). */
+const RESULT_STATES = new Set(['game-over', 'victory']);
+
+/**
+ * What an online client knows about the game, in the shape the HUD and the views read instead
+ * of a GameSession: the team (room), the newest snapshot in message order (for the local
+ * player's own numbers) and the delayed, interpolated one (for drawing everyone else).
+ *
+ * `state` is the server's game state once snapshots arrive; before that it is 'team-lobby'
+ * (waiting in the team room) or 'starting' (start pressed, no snapshot yet).
+ * A view-model only: it changes nothing on the server and holds no DOM.
+ */
+export class NetworkedSession {
+  /** @param {{you: string, room?: object}} options  `you` is this client's player id (p1..p3) */
+  constructor({ you, room = null }) {
+    this.you = you;
+    this.room = room;
+    this.connection = 'open';
+    this.starting = false;
+    /** The newest snapshot received (message order). */
+    this.latest = null;
+    /** The interpolated world at render time (SnapshotBuffer.sample), or null. */
+    this.sampled = null;
+    /** Rounds in hand: the newest count from a snapshot or one of our own weapon events. */
+    this.ammo = null;
+    this.reserve = null;
+    this.names = new Map();
+    if (room) this.applyRoom(room);
+  }
+
+  applyRoom(room) {
+    this.room = room;
+    this.you = room.you ?? this.you;
+    this.names.clear();
+    for (const player of room.players ?? []) this.names.set(player.id, player.name);
+  }
+
+  applySnapshot(snapshot) {
+    if (this.latest && snapshot.time < this.latest.time) return false;
+    this.latest = snapshot;
+    const me = this.local;
+    if (me) {
+      this.ammo = me.ammo;
+      this.reserve = me.reserve;
+    }
+    return true;
+  }
+
+  /** Server events about our own weapon carry fresher round counts than the last snapshot. */
+  applyEvent(name, detail) {
+    if (detail?.ownerId !== this.you) return;
+    if (name === EVENTS.WEAPON_FIRED || name === EVENTS.WEAPON_RELOADED || name === EVENTS.WEAPON_CHANGED
+      || name === EVENTS.WEAPON_RELOAD_STARTED) {
+      if ('ammo' in detail) this.ammo = detail.ammo;
+      if ('reserve' in detail) this.reserve = detail.reserve;
+    }
+  }
+
+  setSampled(sampled) {
+    this.sampled = sampled;
+  }
+
+  get state() {
+    if (!this.latest) return this.starting ? 'starting' : 'team-lobby';
+    return this.latest.state === 'lobby' ? 'starting' : this.latest.state;
+  }
+
+  /** This client's player in the newest snapshot, or null. */
+  get local() {
+    return this.playerById(this.you);
+  }
+
+  playerById(id) {
+    return this.latest?.players.find(player => player.id === id) ?? null;
+  }
+
+  get canMove() {
+    return MOVING_STATES.has(this.state);
+  }
+
+  /** May this client's player act now (alive and standing, game running)? */
+  get canAct() {
+    const me = this.local;
+    return this.canMove && Boolean(me?.alive) && !me.downed;
+  }
+
+  /** Whether the local player's feet must stay still. */
+  get rooted() {
+    const me = this.local;
+    return !me || !me.alive || me.downed;
+  }
+
+  get canRestart() {
+    return RESULT_STATES.has(this.state);
+  }
+
+  get wave() {
+    return this.latest?.wave ?? 0;
+  }
+
+  get kills() {
+    return this.latest?.kills ?? 0;
+  }
+
+  nameOf(id) {
+    return this.names.get(id) ?? id;
+  }
+
+  /** Room slot (0..2) of a player id, from the server's p1..p3 naming; used for colours. */
+  static slotOf(id) {
+    const match = /^p(\d+)$/.exec(String(id));
+    return match ? Math.max(0, Number(match[1]) - 1) : 0;
+  }
+}
