@@ -25,6 +25,7 @@
 - 建房間的人拿到 4 碼編號，字元只用 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`（去掉容易看錯的 0 O 1 I L）。
 - 最多 3 人；遊戲開始後不能再加入（G8 先不做中途加入）。
 - 房間裡最後一個人離開，房間就刪掉。建房的人離開不會解散房間（server 跑遊戲，誰走都一樣）。
+- **房主**：建房的人是房主，只有房主能按開始。房主離開時，房主換成還在房間裡最早加入的人（`Room.host` 照加入順序取第一個；編號會被重用，所以不一定是 p1）。
 - 一個連線同時只在一個房間。
 
 ## 協定
@@ -38,7 +39,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 | `create` | `name`, `level` | 建房間；`level` 是 `web/levels/` 的檔名（不含 `.json`） |
 | `join` | `name`, `code` | 加入房間 |
 | `leave` | | 離開房間 |
-| `start` | | 房間裡任何人都可以按開始 |
+| `start` | | 只有房主（`room.host`）可以按開始，其他人會收到 `not-host` |
 | `ping` | `c`（client 時間 ms） | 對時用，server 回 `pong` |
 | `input` | `seq`, `x`, `z`, `y`, `yaw`, `pitch` | 每秒 30 次，自己算好的位置和視角 |
 | `action` | `seq`, `kind`, `at`, 其他 | `kind`：`fire`、`reload`、`secondary`、`switch`（`index`）、`cycle`（`step`）、`pickup`、`revive`（`holding`）。`at` 是 client 估計的 server 時間（ms），開槍倒回時間用 |
@@ -47,8 +48,8 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 
 | `t` | 欄位 | 說明 |
 |---|---|---|
-| `room` | `code`, `you`（玩家 id）, `players:[{id,name}]`, `level`, `state` | 進房間或名單變動時送 |
-| `error` | `code`：`no-room`、`full`、`started`、`bad-message`、`bad-level`、`start-failed`、`server-error` | 被拒絕的原因；`start-failed` 是遊戲沒能開始（例如關卡載入失敗），房間裡每個人都會收到，房間留在 `lobby`，可以再按一次開始；`bad-level` 是 `create` 的 `level` 不在 server 啟動時讀到的 `web/levels/*.json` 裡；`server-error` 是 server 處理這則訊息時出錯，狀態維持原樣（例如建房失敗時人還在原本的房間） |
+| `room` | `code`, `you`（玩家 id）, `host`（房主的玩家 id）, `players:[{id,name}]`, `level`, `state` | 進房間或名單變動時送（房主換人也會送）；`protocol.js` 把 `host` 當可有可無，沒有 `host` 的舊 server 照舊讓任何人開始 |
+| `error` | `code`：`no-room`、`full`、`started`、`bad-message`、`bad-level`、`not-host`、`start-failed`、`server-error` | 被拒絕的原因；`not-host` 是不是房主的人按了開始（房間還在 lobby 才會回這個，已經開始就回 `started`），只回給按的人；`start-failed` 是遊戲沒能開始（例如關卡載入失敗），房間裡每個人都會收到，房間留在 `lobby`，可以再按一次開始；`bad-level` 是 `create` 的 `level` 不在 server 啟動時讀到的 `web/levels/*.json` 裡；`server-error` 是 server 處理這則訊息時出錯，狀態維持原樣（例如建房失敗時人還在原本的房間） |
 | `pong` | `c`, `s`（server 時間 ms） | 對時 |
 | `snapshot` | `tick`, `time`（server ms）, `ack`（這個玩家最後處理的 input `seq`）, `state`, `wave`, `kills`, `players:[…]`, `enemies:[…]`, `pickups?`，以及 HUD 用的 `goal`, `objective`, `breakSeconds` | 每秒 20 次 |
 | `event` | `name`（`game/events.js` 的事件名）, `detail` | 需要立刻反應的事件：開槍、命中、死亡、倒地、波次開始、撿到東西。只送畫面和音效需要的欄位 |
@@ -85,7 +86,7 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 
 - **開關。** `?play=1&server=ws://host:port` 才有連線功能；`web/js/net/ServerConfig.js` 的 `DEFAULT_SERVER_URL` 是空字串，部署後可以填上預設 server（網址參數優先）；由 game server 自己送出的網頁不用參數（見「部署」）。只收 `ws:`／`wss:`。沒設定 server 時連線程式完全不載入，單機和以前一樣。
 - **開始畫面。** 有 server 時單機的開始按鈕不變，下面多一區：名字（存在 localStorage `net:player-name`，讀不到就不記）、「建立隊伍」、4 碼編號和「輸入編號加入」（只收 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`，小寫自動轉大寫）。錯誤碼都有中文說明（`teamErrors.js`）。網址加 `&join=CODE` 會自動加入；隊伍玩的關卡和網頁不同時，網頁換到那個關卡再加入一次。
-- **隊伍房間。** 大字顯示編號（可複製）、名單（p1～p3 的顏色和遠端玩家膠囊一樣）、開始和離開。任何人按開始都行；`start-failed` 顯示在房間裡，可以再按。斷線時 `ConnectionScreen` 顯示「正在重新連線」；重連後 server 拒絕重新加入（遊戲已開始、房間不見）就顯示原因，按鈕回開始畫面。重新加入後 `room.you` 可能換了編號（例如 p2 斷線、p1 離開，p2 回來變成 p1），這時 `OnlineHost` 用同一條連線重建 `OnlineMode`，HUD、音效和開火都換成新編號。
+- **隊伍房間。** 大字顯示編號（可複製）、名單（p1～p3 的顏色和遠端玩家膠囊一樣，房主後面標「（房主）」）、開始和離開。開始按鈕只有房主看得到（`NetworkedSession.isHost`、`SnapshotStatus.isHost`），其他人的提示是「等房主開始」；房主離開後新房主收到 `room` 就會出現按鈕。`start-failed`、`not-host` 顯示在房間裡，可以再按。斷線時 `ConnectionScreen` 顯示「正在重新連線」；重連後 server 拒絕重新加入（遊戲已開始、房間不見）就顯示原因，按鈕回開始畫面。重新加入後 `room.you` 可能換了編號（例如 p2 斷線、p1 離開，p2 回來變成 p1），這時 `OnlineHost` 用同一條連線重建 `OnlineMode`，HUD、音效和開火都換成新編號。
 - **模式。** `installGameplay` 用 `ModeSwitch` 在 `LocalMode`（瀏覽器裡跑 `GameSession`）和 `OnlineMode` 之間切換（Strategy，`GameMode`）。`OnlineMode` 不建 `GameSession`：
   - `PlayerController` 照舊每格算移動，`InputSender` 每秒送 30 次姿勢；`PoseReconciler` 拿 snapshot 的位置和同一個 `ack` 送出的姿勢比，差超過 1 m 才直接拉回（第一張 snapshot 把玩家放到 server 的出生點）。動作送出前先補送一次姿勢，因為 server 用最後收到的姿勢瞄準。自己的 `rooted`（倒地、死亡、正在包紮）和 `speed`（腎上腺素等速度倍率）照 snapshot 套到 `PlayerController`，所以本機走法和 server 的檢查一致，包紮時不會一直被拉回。
   - `PlayerCombat` 照舊發 `*_REQUESTED`，`ActionForwarder` 轉成 `action`。開火用 `FireCadence` 控制：每按一下送一次，自動武器按住時每「冷卻 + 8 ms」（最多每秒 30 次）再送一次。槍和近戰在本機立刻播槍聲、槍口火光、後座力和第一人稱動畫（本機 `weapon.fired`，`hit: null`）；server 回來的同一槍改成 `net.shot-confirmed`，只用來顯示命中標記，傷害數字、擊殺都等 server。投擲物和治療物不預測。
