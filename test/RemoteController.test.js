@@ -51,6 +51,45 @@ test('the allowance follows the speed multiplier and a long silence earns at mos
   assert.ok(Math.abs(controller.x - controller.allowance(MAX_INPUT_GAP_SECONDS)) < 1e-9);
 });
 
+test('flooding 300 inputs a second cannot outrun speed × 1.5 plus the capped slack', () => {
+  const { controller } = fixture();
+  const seconds = 2;
+  const perSecond = 300;
+  let now = 1000;
+  for (let seq = 1; seq <= seconds * perSecond; seq++) {
+    now += 1000 / perSecond;
+    // Every message claims a full 0.5 m step, which the old per-message slack would have allowed.
+    controller.accept(input(seq, { x: controller.x + 0.5 }), now);
+  }
+  const ceiling = PLAYER_SPEED.sprint * 1.5 * seconds + 0.5 + 0.5 * seconds;
+  assert.ok(controller.x <= ceiling + 1e-6, `moved ${controller.x} m in ${seconds} s, at most ${ceiling}`);
+});
+
+test('a legit 30 Hz sprint with arrival jitter and late bursts is never clamped', () => {
+  const { controller } = fixture();
+  const step = 1 / 30;
+  let arrived = 1000;
+  let x = 0;
+  for (let seq = 1; seq <= 300; seq++) {
+    x += PLAYER_SPEED.sprint * step;
+    // Sent every 33 ms; arrives 10..70 ms later, with a 250 ms hiccup every 50 inputs, in order.
+    const delay = 40 + 30 * Math.sin(seq * 1.7) + (seq % 50 === 25 ? 250 : 0);
+    arrived = Math.max(arrived, 1000 + seq * step * 1000 + delay);
+    assert.equal(controller.accept(input(seq, { x }), arrived), InputResult.MOVED, `input ${seq} was clamped`);
+  }
+  assert.ok(Math.abs(controller.x - x) < 1e-9);
+});
+
+test('a burst after a one-second network stall is taken without clamping', () => {
+  const { controller } = fixture();
+  let x = 0;
+  for (let seq = 1; seq <= 30; seq++) {
+    x += PLAYER_SPEED.sprint / 30;
+    // Nothing arrives for a second, then all 30 inputs come in a millisecond apart.
+    assert.equal(controller.accept(input(seq, { x }), 2000 + seq), InputResult.MOVED, `input ${seq} was clamped`);
+  }
+});
+
 test('walls stop the move: a reported position behind a wall is pulled back in front of it', () => {
   const wall = new Aabb(-5, 0, -1.5, 5, 3, -1);
   const { controller } = fixture({ walls: [wall] });

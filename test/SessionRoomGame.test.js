@@ -83,7 +83,7 @@ function startTwoPlayerGame(t, options) {
   const code = host.connection.last.code;
   const guest = new Browser(connect('guest'), send);
   send(guest.connection, { t: 'join', name: 'Bo', code });
-  send(guest.connection, { t: 'start' });
+  send(host.connection, { t: 'start' });
   host.placeAt(ch2.spawns.players[0]);
   guest.placeAt(ch2.spawns.players[1]);
   return { ...harness, host, guest, room: harness.server.findRoom(code) };

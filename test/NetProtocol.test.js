@@ -93,6 +93,13 @@ test('parseServerMessage requires a complete roster that includes `you`', () => 
   assert.deepEqual(parseServerMessage(JSON.stringify(ok)), ok);
 });
 
+test('parseServerMessage takes room.host as a player id, and rooms from servers without one', () => {
+  const hosted = { ...COMPLETE.room, host: 'p1' };
+  assert.deepEqual(parseServerMessage(JSON.stringify(hosted)), hosted);
+  assert.deepEqual(parseServerMessage(JSON.stringify(COMPLETE.room)), COMPLETE.room);
+  assert.equal(parseServerMessage(JSON.stringify({ ...COMPLETE.room, host: 1 })), null);
+});
+
 const PLAYER = Object.freeze({ id: 'p1', x: 1, y: 0, z: 2, yaw: 0.5, pitch: 0, health: 100, downed: false, alive: true, weapon: 'pistol', ammo: 12, reserve: 48 });
 const ENEMY = Object.freeze({ id: 7, type: 'walker', x: 3, z: 4, yaw: 1, health: 50, state: 'chase' });
 

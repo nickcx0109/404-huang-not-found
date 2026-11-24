@@ -86,7 +86,7 @@ node tools/serve.mjs
 
 - 沒有被任何道具指到的 collider，會直接畫成 collider 大小的灰色方塊（灰盒）。
 - 被道具指到的 collider 不再另外畫，由那個道具負責外觀。
-- 被道具指到的 collider，實際碰撞會自動放大到也包住那個道具畫出來的範圍：用 `footprint`（沒有就用 `size`，再沒有就用 collider 的大小）乘上 `scale`、轉 `rotY` 之後的外框，放在道具的 `x`、`z`、`y`。碰撞只會比寫的 collider 大，不會變小，所以已經照轉好的範圍寫的 collider 不受影響。例如 1.8 × 4.2 的車轉 28°，碰撞會是約 3.56 × 4.55。`LevelData.colliders` 仍是檔案裡寫的樣子（外觀照它畫），放大後的盒子在 `LevelData.collisionBoxes`，`CollisionWorld` 和出生點檢查用的是後者。模型的實際大小 Node 端不知道，所以模型和 `size` 差很多時，要把 `size` 或 collider 寫對。
+- 被道具指到的 collider，實際碰撞會自動放大到也包住那個道具畫出來的範圍：用 `footprint`（沒有就用 `size`，再沒有就用 collider 的大小）乘上 `scale`、轉 `rotY` 之後的外框，放在道具的 `x`、`z`、`y`。碰撞只會比寫的 collider 大，不會變小，所以已經照轉好的範圍寫的 collider 不受影響。例如 1.8 × 4.2 的車轉 28°，碰撞會是約 3.56 × 4.55。`LevelData.colliders` 仍是檔案裡寫的樣子（外觀照它畫），放大後的盒子在 `LevelData.collisionBoxes`，`CollisionWorld` 和出生點檢查用的是後者。模型的實際大小 Node 端不知道（伺服器和瀏覽器都只讀關卡檔），所以模型比 `size`（或 collider）大的道具要把模型的 `footprint` 抄到道具上：數值記在 `art/manifest/*.json` 那個資產的 `footprint`（從 GLB 量的，往外取到毫米），`test/ModelFootprints.test.js` 會檢查 manifest 包住 GLB、每個用模型的道具轉好、縮放後都在碰撞盒裡。例如 ch2 的 `truck_wreck`、`van_wreck`、`car_parked`；`car_wreck` 的 `size` 本來就比模型大，不用抄。
 - 每個道具照這個順序決定外觀：**模型**（`web/assets/models/<name>.glb`，要這一關的 `manifests` 裡有一份把它標成 `ready`，而且檔案載得到）→ **灰盒替身**（`web/js/props/` 裡註冊的）→ **灰色方塊**。模型壞掉或不見只會退回下一種，關卡照常能玩，console 會有一行警告。模型有自己的實際大小，`size` 和 collider 的大小只影響替身。
 - `PropFactory` 不認得的名稱會退回成灰色方塊：有 `collider` 就畫成那個 collider 的碰撞盒（`LevelData.collisionBoxes` 裡那個，沒放大時就是寫的大小和位置；不套 `rotY`），看到的就是會撞到的，沒有就畫 1 m 的方塊。所以可以先把之後要用的名稱（`barricade`、`guard_booth`…）寫進去，等模型做好再換，碰撞不用動。
 - 目前有灰盒替身的名稱，大小用 `size`，沒有就跟著 collider。新的替身加在**自己那一章**繼承 `PropSet` 的檔案裡（`static builders` 的 `name: builder`），由基底統一註冊；一個名稱只能由一個檔案擁有。

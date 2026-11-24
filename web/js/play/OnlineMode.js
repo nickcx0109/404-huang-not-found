@@ -28,6 +28,9 @@ import { installAudio } from '../audio/installAudio.js';
 import { RemoteEnemyViews } from './RemoteEnemyViews.js';
 import { RemotePlayerViews } from './RemotePlayerViews.js';
 
+/** Error codes after which the team room is back to waiting for start (NETWORK.md). */
+const START_REFUSALS = new Set(['start-failed', 'not-host']);
+
 /**
  * Online play: the server runs the GameSession; this page only predicts its own player's
  * movement and draws what the snapshots say.
@@ -172,8 +175,9 @@ export class OnlineMode extends GameMode {
     return this.view.canRestart;
   }
 
-  /** The team room's start button: anyone in the team may start. */
+  /** The team room's start button, shown to the host only (the server refuses anyone else). */
   startGame() {
+    if (!this.view.isHost) return;
     this.view.notice = null;
     if (this.client.start()) this.view.starting = true;
     this.app.player.requestLock();
@@ -278,7 +282,7 @@ export class OnlineMode extends GameMode {
       this.client.disconnect();
       return;
     }
-    if (code === 'start-failed') this.view.starting = false;
+    if (START_REFUSALS.has(code)) this.view.starting = false;
     this.view.notice = code;
   }
 

@@ -16,9 +16,13 @@ export class SnapshotStatus extends PlayerStatus {
     super();
     this.controller = controller;
     this.weapons = weapons;
-    /** The team: its code, the roster as plain records { id, name, you }, the connection and the last error code. */
+    /**
+     * The team: its code, the roster as plain records { id, name, you, host }, whether this player
+     * may press start, the connection and the last error code.
+     */
     this.teamCode = '';
     this.roster = [];
+    this.isHost = true;
     this.connection = 'open';
     this.notice = null;
   }
@@ -77,12 +81,15 @@ export class SnapshotStatus extends PlayerStatus {
   _copyTeam(view, playerId) {
     this.teamCode = view.room?.code ?? '';
     const players = view.room?.players ?? [];
+    const host = view.host;
     for (let index = 0; index < players.length; index++) {
-      const record = this.roster[index] ?? (this.roster[index] = { id: null, name: '', you: false });
+      const record = this.roster[index] ?? (this.roster[index] = { id: null, name: '', you: false, host: false });
       record.id = players[index].id;
       record.name = players[index].name;
       record.you = players[index].id === playerId;
+      record.host = players[index].id === host;
     }
+    this.isHost = host === null || host === playerId;
     this.roster.length = players.length;
     this.connection = view.connection;
     this.notice = view.notice;

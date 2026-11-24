@@ -34,7 +34,7 @@ test('create opens a room with a fresh code and replies with room', () => {
   const { host, code } = createRoom(server);
   assert.equal(code, 'AAAA');
   assert.deepEqual(host.last, {
-    t: 'room', code: 'AAAA', you: 'p1', players: [{ id: 'p1', name: 'Ann' }], level: 'ch2', state: 'lobby',
+    t: 'room', code: 'AAAA', you: 'p1', host: 'p1', players: [{ id: 'p1', name: 'Ann' }], level: 'ch2', state: 'lobby',
   });
   assert.equal(createRoom(server, 'Bo').code, 'BBBB');
   assert.equal(server.rooms.size, 2);
@@ -62,7 +62,7 @@ test('join by code adds the player and updates everyone', () => {
   const guest = connect(server, 'Bo');
   send(server, guest, { t: 'join', name: 'Bo', code: code.toLowerCase() });
   const players = [{ id: 'p1', name: 'Ann' }, { id: 'p2', name: 'Bo' }];
-  assert.deepEqual(guest.last, { t: 'room', code, you: 'p2', players, level: 'ch2', state: 'lobby' });
+  assert.deepEqual(guest.last, { t: 'room', code, you: 'p2', host: 'p1', players, level: 'ch2', state: 'lobby' });
   assert.deepEqual(host.last.players, players);
   assert.equal(host.last.you, 'p1');
 });
@@ -82,14 +82,37 @@ test('joining after start gets started, and start twice gets started', () => {
   const { host, code } = createRoom(server);
   const guest = connect(server, 'Bo');
   send(server, guest, { t: 'join', name: 'Bo', code });
-  send(server, guest, { t: 'start' });
+  send(server, host, { t: 'start' });
   assert.equal(host.last.state, 'playing');
   assert.equal(guest.last.state, 'playing');
+  send(server, guest, { t: 'start' });
+  assert.deepEqual(guest.last, { t: 'error', code: 'started' }, 'once playing, everyone hears started');
   const late = connect(server, 'Cy');
   send(server, late, { t: 'join', name: 'Cy', code });
   assert.deepEqual(late.sent, [{ t: 'error', code: 'started' }]);
   send(server, host, { t: 'start' });
   assert.deepEqual(host.last, { t: 'error', code: 'started' });
+});
+
+test('only the host may start: others get not-host, and the host passes on when the host leaves', () => {
+  const server = makeServer();
+  const { host, code } = createRoom(server);
+  const guest = connect(server, 'Bo');
+  const third = connect(server, 'Cy');
+  send(server, guest, { t: 'join', name: 'Bo', code });
+  send(server, third, { t: 'join', name: 'Cy', code });
+  assert.equal(third.last.host, 'p1');
+  const before = host.sent.length;
+  send(server, guest, { t: 'start' });
+  assert.deepEqual(guest.last, { t: 'error', code: 'not-host' });
+  assert.equal(server.findRoom(code).state, 'lobby');
+  assert.equal(host.sent.length, before, 'a refused start tells nobody else');
+  send(server, host, { t: 'leave' });
+  assert.deepEqual([guest.last.host, third.last.host], ['p2', 'p2'], 'the earliest remaining member is the new host');
+  send(server, third, { t: 'start' });
+  assert.deepEqual(third.last, { t: 'error', code: 'not-host' });
+  send(server, guest, { t: 'start' });
+  assert.equal(third.last.state, 'playing');
 });
 
 test('unknown codes and start outside a room get no-room', () => {
@@ -256,7 +279,7 @@ test('a failed start tells every member start-failed and the room can try again'
   send(server, guest, { t: 'join', name: 'Bo', code });
   host.clear();
   guest.clear();
-  send(server, guest, { t: 'start' });
+  send(server, host, { t: 'start' });
   assert.deepEqual(host.sent, [{ t: 'error', code: 'start-failed' }]);
   assert.deepEqual(guest.sent, [{ t: 'error', code: 'start-failed' }]);
   assert.equal(server.findRoom(code).state, 'lobby');

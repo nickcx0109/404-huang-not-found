@@ -46,7 +46,7 @@ test('Room admits three members with ids p1..p3 and refuses a fourth', () => {
   assert.equal(room.admitRefusal(), AdmitRefusal.FULL);
   assert.throws(() => room.add(new FakeMember(), 'Dee'), /full/);
   assert.deepEqual(a.last, {
-    t: 'room', code: 'ABCD', you: 'p1', level: 'ch2', state: RoomState.LOBBY,
+    t: 'room', code: 'ABCD', you: 'p1', host: 'p1', level: 'ch2', state: RoomState.LOBBY,
     players: [{ id: 'p1', name: 'Ann' }, { id: 'p2', name: 'Bo' }, { id: 'p3', name: 'Cy' }],
   });
   assert.equal(c.last.you, 'p3');
@@ -61,6 +61,26 @@ test('Room reuses a freed slot and announces the roster when someone leaves', ()
   assert.equal(room.remove('p1'), false);
   assert.deepEqual(b.last.players, [{ id: 'p2', name: 'Bo' }]);
   assert.equal(room.add(new FakeMember(), 'Cy'), 'p1');
+});
+
+test('Room host is the creator and passes to the earliest remaining member', () => {
+  const room = new Room('ABCD', 'ch2');
+  assert.equal(room.host, null);
+  const [a, b, c] = [new FakeMember(), new FakeMember(), new FakeMember()];
+  room.add(a, 'Ann');
+  room.add(b, 'Bo');
+  room.add(c, 'Cy');
+  assert.equal(room.host, 'p1');
+  assert.ok(room.isHost('p1') && !room.isHost('p2') && !room.isHost(null));
+  assert.equal(b.last.host, 'p1', 'every member is told who the host is');
+  room.remove('p1');
+  assert.equal(room.host, 'p2');
+  assert.deepEqual([b.last.host, c.last.host], ['p2', 'p2']);
+  const late = new FakeMember();
+  assert.equal(room.add(late, 'Dee'), 'p1', 'the freed id is reused');
+  assert.equal(late.last.host, 'p2', 'but the host is still whoever joined earliest');
+  room.remove('p2');
+  assert.equal(room.host, 'p3');
 });
 
 test('Room start switches to playing once and drives the game strategy', () => {

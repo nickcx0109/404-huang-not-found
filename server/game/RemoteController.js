@@ -1,8 +1,12 @@
 import { PLAYER_BODY } from '../../web/js/player/PlayerBody.js';
 import { PLAYER_SPEED } from '../../web/js/player/PlayerSpeed.js';
+import { MoveBudget } from './MoveBudget.js';
 
-/** How far a browser's reported move may run ahead of the fastest legal walk (docs/tech/NETWORK.md, 手感 1). */
-export const MOVE_TOLERANCE = Object.freeze({ factor: 1.5, slack: 0.5 });
+/**
+ * How far a browser's reported moves may run ahead of the fastest legal walk (docs/tech/NETWORK.md, 手感 1):
+ * speed × time × factor, plus a slack pool of `slack` metres that refills in `slackRefillSeconds`.
+ */
+export const MOVE_TOLERANCE = Object.freeze({ factor: 1.5, slack: 0.5, slackRefillSeconds: 1 });
 /** Longest gap between two inputs that still earns movement; a stalled client cannot bank minutes of walking. */
 export const MAX_INPUT_GAP_SECONDS = 1;
 /** Feet may leave the ground only by a jump (JumpMotion peaks near 0.8 m). */
@@ -45,6 +49,8 @@ export class RemoteController {
     /** Last input seq processed (the snapshot's `ack`); -1 before the first. */
     this.ack = -1;
     this.lastInputAt = now;
+    /** Metres this player may still walk; refilled by server time, not by messages. */
+    this.budget = new MoveBudget({ ...MOVE_TOLERANCE, bankSeconds: MAX_INPUT_GAP_SECONDS });
     this.session = null;
     this.playerId = null;
     this._moved = { x: 0, z: 0, hitX: false, hitZ: false };
@@ -57,9 +63,17 @@ export class RemoteController {
     return this;
   }
 
-  /** Furthest legal move for a gap of `seconds`: speed × time × 1.5 + 0.5 m. */
+  /** Metres per second this player may walk now (sprint × speedMultiplier). */
+  get rate() {
+    return this.speed * this.speedMultiplier;
+  }
+
+  /**
+   * Furthest legal move for the next input if it arrives `seconds` after the last one: what the
+   * budget holds then (at most speed × 1 s × 1.5 earned by time, plus up to 0.5 m slack).
+   */
   allowance(seconds) {
-    return this.speed * this.speedMultiplier * seconds * MOVE_TOLERANCE.factor + MOVE_TOLERANCE.slack;
+    return this.budget.peek(this.rate, seconds);
   }
 
   get rooted() {
@@ -75,6 +89,7 @@ export class RemoteController {
     this.ack = input.seq;
     const seconds = Math.min(Math.max((now - this.lastInputAt) / 1000, 0), MAX_INPUT_GAP_SECONDS);
     this.lastInputAt = now;
+    const limit = this.budget.refill(this.rate, seconds);
     this.yaw = input.yaw;
     this.pitch = Math.min(Math.max(input.pitch, -MAX_PITCH), MAX_PITCH);
     if (this.rooted) return InputResult.ROOTED;
@@ -82,13 +97,13 @@ export class RemoteController {
     let dx = input.x - this.x;
     let dz = input.z - this.z;
     const distance = Math.hypot(dx, dz);
-    const limit = this.allowance(seconds);
     if (distance > limit) {
       dx *= limit / distance;
       dz *= limit / distance;
     }
     const moved = this.session.context.collision.move(this.x, this.z, dx, dz,
       this.body.radius, 0, this.body.height, this._moved);
+    this.budget.spend(Math.hypot(moved.x - this.x, moved.z - this.z));
     this.x = moved.x;
     this.z = moved.z;
     this.y = Math.min(Math.max(input.y, 0), MAX_FEET_HEIGHT);
