@@ -20,8 +20,12 @@
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker` 這兩個範例。
 
 - **G8 線上多人連線**：設計和協定都在 [docs/tech/NETWORK.md](docs/tech/NETWORK.md)，每一項開工前先讀。雲端 Node server 跑 `GameSession`，瀏覽器用隊伍編號加入。相依：G8a、G8b、G8c 可以同時做；G8d 等 G8a、G8b；G8e 等 G8c、G8d；G8f 最後。
-  - [ ] **G8e 瀏覽器接上連線**（等 G8c、G8d）：開始畫面加「建立隊伍／輸入編號加入」；連線時不在本地跑 session，改畫快照；其他玩家的模型（先用膠囊）；本地先播開槍回饋；連線時第二章 `alarm.light.count` 降到 1。
   - [ ] **G8f 部署和實測**（最後）：部署到亞洲機房，README 寫怎麼開房和加入；兩台電腦在不同網路實際打完第二章，記錄延遲和問題。
+  - [ ] **G8h 快照補上彈藥箱和飛行中的效果**：協定還沒有彈藥箱能不能拿（線上的箱子永遠顯示可以拿），也沒有 `effects` 清單（飛行中的手榴彈、汽油彈、燃燒的地面），瀏覽器只畫得出爆炸閃光。在 snapshot 加欄位（記得更新 NETWORK.md 和 `protocol.js` 的檢查），瀏覽器用 `AmmoCrateViews`、`EffectViews` 畫出來；加測試。
+  - [ ] **G8i 遊戲中斷線可以回來**：遊戲開始後重新連線，server 會回 `started`，瀏覽器只能顯示「連線中斷」。讓斷線的玩家在同一個位置（同一個編號、血量和武器）回到進行中的遊戲；加測試。
+  - [ ] **G8j 聽得到隊友的槍聲**：線上只播自己的槍聲，`WeaponSounds` 只處理自己開的槍。隊友的 `weapon.fired` 依他的位置播 3D 槍聲。
+  - [ ] **G8k 線上的關卡出口和障礙物**：`installLevelFlow` 線上整個關掉（`OnlineMode.blocksLevelFlow`）。改成由 server 決定：有人在出口按 E 時送 action，server 處理後用事件通知所有人。
+  - [ ] **G8l 只有房主能按開始**：現在隊伍裡任何人都能按開始。改成只有建立隊伍的人（或 p1）能按，其他人看到「等房主開始」；server 也要檢查。
 - [~] **G9 槍的第一人稱模型和動畫**（進行中：@nickcx0109，分支 feat/weapons-art，暫停）
   - 做到一半，已 push 到分支 `feat/weapons-art`（5 個 commit，還沒開 PR、沒合併）：資產庫的可動零件、手槍模型 `pistol.glb`、`art/manifest/weapons.json`、`web/js/weapons/` 的 `WeaponRig`、`WeaponView`、`PistolView`、`Clip`、`WeaponModel`（開槍、換彈、拿出的動畫）。
   - 接手前：這個分支是從 PR #6 之前的 `main` 開的，要先 `git rebase main`。`web/js/App.js` 會衝突，兩邊的改動都要留。
@@ -116,3 +120,4 @@
 - G8b 單機和 server 共用的 `createSession()`；遠端 controller 的規則寫在 GAMEPLAY.md（PR #50）
 - B1 旋轉、縮放的道具碰撞盒跟著變大；`footprint` 欄位（PR #51）
 - G8d server 跑遊戲：`SessionRoomGame`、`RemoteController`、開槍倒回時間、快照和事件轉送（PR #52）
+- G8e 瀏覽器接上連線：隊伍開始畫面和房間、`OnlineMode`（本地預測、快照插值、殭屍方塊和隊友膠囊、事件轉成單機事件）、連線時第二章警示燈降到 1（PR #54）
