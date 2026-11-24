@@ -96,7 +96,11 @@ export class SceneBuilder {
     });
 
     level.props.forEach((p) => {
-      root.add(this.props.create(p, p.collider ? level.collider(p.collider) : null));
+      root.add(this.props.create(
+        p,
+        p.collider ? level.collider(p.collider) : null,
+        p.collider ? level.collisionBox(p.collider) : null
+      ));
     });
 
     built.unknownProps = Array.from(this.props.unknownNames);
@@ -249,7 +253,7 @@ export class SceneBuilder {
       [4, 5], [5, 7], [7, 6], [6, 4],
       [0, 4], [1, 5], [2, 6], [3, 7],
     ];
-    level.colliders.forEach((c) => {
+    level.collisionBoxes.forEach((c) => {
       const box = Aabb.fromCollider(c);
       const corner = (i) => [
         i & 1 ? box.maxX : box.minX,

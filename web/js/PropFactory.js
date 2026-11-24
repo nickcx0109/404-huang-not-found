@@ -93,9 +93,11 @@ export class PropFactory {
   /**
    * @param {object} prop      a LevelData prop
    * @param {object|null} collider the LevelData collider it is bound to, if any
-   * @returns {THREE.Object3D} placed in level space
+   * @param {object|null} [collisionBox] that collider's collision box (LevelData.collisionBox),
+   *   which the fallback box shows; defaults to the collider
+   * @returns {THREE.Object3D} placed in level space; userData.collider is the bound collider id
    */
-  create(prop, collider) {
+  create(prop, collider, collisionBox) {
     const colliderSize = collider ? { w: collider.w, h: collider.h, d: collider.d } : null;
     const size = prop.size || colliderSize || DEFAULT_SIZE;
     const builder = this._builders.get(prop.name);
@@ -118,10 +120,12 @@ export class PropFactory {
       object.scale.setScalar(prop.scale);
     } else {
       this.unknownNames.add(prop.name);
-      object = this.box(colliderSize || size, 'prop');
-      if (collider) {
-        // Show exactly what the player collides with: axis-aligned, at the collider.
-        object.position.set(collider.x, collider.y, collider.z);
+      // Show exactly what the player collides with: axis-aligned, the collision box (the
+      // collider grown to cover this prop turned and scaled), not turned itself.
+      const solid = collider ? collisionBox || collider : null;
+      object = this.box(solid ? { w: solid.w, h: solid.h, d: solid.d } : size, 'prop');
+      if (solid) {
+        object.position.set(solid.x, solid.y, solid.z);
       } else {
         object.position.set(prop.x, prop.y, prop.z);
         object.rotation.y = THREE.MathUtils.degToRad(prop.rotY);
@@ -132,6 +136,7 @@ export class PropFactory {
 
     object.name = prop.name;
     object.userData.propName = prop.name;
+    object.userData.collider = collider ? collider.id : null;
     return object;
   }
 

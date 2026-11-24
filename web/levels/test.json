@@ -37,7 +37,7 @@
     { "name": "pillar", "collider": "post_r" },
     { "name": "crate", "collider": "crate_a" },
     { "name": "crate", "collider": "crate_b", "rotY": 0 },
-    { "name": "generator", "collider": "generator", "rotY": 90 },
+    { "name": "generator", "collider": "generator" },
     { "name": "debris", "x": -9, "y": 0, "z": -9, "rotY": 30 },
     { "name": "crate", "x": 10.5, "y": 0, "z": 5, "rotY": 20, "scale": 0.6 },
 

@@ -78,7 +78,7 @@
 
   "props": [
     { "name": "road", "x": 0, "y": 0, "z": 0, "size": [6, 0.04, 120] },
-    { "name": "car_wreck", "collider": "car_wreck", "x": 2.1, "z": -1.5, "rotY": 28, "size": [1.8, 1.4, 4.2] },
+    { "name": "car_wreck", "collider": "car_wreck", "x": 2.1, "z": -1.5, "rotY": 28, "size": [1.8, 1.4, 4.2], "footprint": {"min": [-0.95,0,-2.1], "max": [0.92,1.44,2.1]} },
     { "name": "escape_car", "collider": "escape_car", "x": -0.9, "z": -13.5, "rotY": 0, "size": [1.8, 1.4, 4.2] },
     { "name": "tree", "x": -4.65, "y": 0, "z": -44.31, "size": [0.57, 7.2, 0.57] },
     { "name": "tree", "x": -3.95, "y": 0, "z": -42.24, "size": [0.38, 8.9, 0.38] },
