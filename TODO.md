@@ -19,10 +19,13 @@
 
 玩法比美術優先。介面和擴充步驟都在 [docs/tech/GAMEPLAY.md](docs/tech/GAMEPLAY.md)，每一項都先讀它。新內容一律放在新檔案、用繼承或註冊加進去，不改 `Pistol`、`Walker` 這兩個範例。
 
-- [ ] **G8 區網多人連線**（大項，認領前先拆小）
-  - 起點：`GAMEPLAY.md` 的「傷害與行為的邊界」第 5 點；舊原型的 `reference/old-web-prototype/prototype-web/server.mjs`（WebSocket 房間轉送）和 `core/net.js`、`core/coop.js`。
-  - 內容：Host 跑 `GameSession`，Client 只送輸入，Host 傳快照；顯示其他玩家；`ChaseBrain` 改成追最近的玩家（現在只追 `ctx.players[0]`）；連線時把第二章的 `alarm.light.count` 降到 1 或 0（動態燈上限）。
-  - 完成：兩台電腦在同一個區網可以一起打第二章。
+- **G8 線上多人連線**：設計和協定都在 [docs/tech/NETWORK.md](docs/tech/NETWORK.md)，每一項開工前先讀。雲端 Node server 跑 `GameSession`，瀏覽器用隊伍編號加入。相依：G8a、G8b、G8c 可以同時做；G8d 等 G8a、G8b；G8e 等 G8c、G8d；G8f 最後。
+  - [~] **G8a 房間 server**（進行中：@nickcx0109，分支 feat/net-rooms）：`server/` 底下的 `RoomServer`、`Room`、`RoomCodes`、訊息驗證；`create`、`join`、`leave`、`start`、`ping`；人滿、已開始、編號不存在的錯誤。先不接遊戲（`Room` 留一個 `onTick` 的空位）。完成：多個假 client 的測試通過，`node server/main.mjs` 能跑。
+  - [~] **G8b 單機和 server 共用的 `createSession()`**（進行中：@nickcx0109，分支 feat/session-factory）：把 `installGameplay.js` 裡建 `GameSession` 的部分（關卡、碰撞、尋路、工廠、波次、難度、地上物品、玩家）抽成不依賴 three.js 和 DOM 的 `createSession(levelRaw, { players })`，瀏覽器版改成呼叫它。完成：Node 測試讀 `web/levels/ch2.json` 建出 session、跑 60 秒不出錯；`play=1` 行為不變；沒有 `play=1` 的截圖比對全部 `same` 或 `noise`。
+  - [~] **G8c 瀏覽器端的連線類別**（進行中：@nickcx0109，分支 feat/net-client）：`web/js/net/` 的 `NetClient`（WebSocket、重連、對時）、`SnapshotBuffer`（補間、外插上限）、`ServerClock`。只做類別和測試，先不接到 `App`。
+  - [ ] **G8d server 跑遊戲**（等 G8a、G8b）：`Room` 開始後用 `createSession()` 建 session，每秒 30 步、20 次快照；`RemoteController` 收 `input` 並檢查速度；`action` 轉成 session 的事件；開槍倒回時間（`EnemyHistory`）；`ChaseBrain` 改追最近的活著的玩家。
+  - [ ] **G8e 瀏覽器接上連線**（等 G8c、G8d）：開始畫面加「建立隊伍／輸入編號加入」；連線時不在本地跑 session，改畫快照；其他玩家的模型（先用膠囊）；本地先播開槍回饋；連線時第二章 `alarm.light.count` 降到 1。
+  - [ ] **G8f 部署和實測**（最後）：部署到亞洲機房，README 寫怎麼開房和加入；兩台電腦在不同網路實際打完第二章，記錄延遲和問題。
 - [~] **G9 槍的第一人稱模型和動畫**（進行中：@nickcx0109，分支 feat/weapons-art，暫停）
   - 做到一半，已 push 到分支 `feat/weapons-art`（5 個 commit，還沒開 PR、沒合併）：資產庫的可動零件、手槍模型 `pistol.glb`、`art/manifest/weapons.json`、`web/js/weapons/` 的 `WeaponRig`、`WeaponView`、`PistolView`、`Clip`、`WeaponModel`（開槍、換彈、拿出的動畫）。
   - 接手前：這個分支是從 PR #6 之前的 `main` 開的，要先 `git rebase main`。`web/js/App.js` 會衝突，兩邊的改動都要留。
@@ -53,11 +56,11 @@
 
 細節和修法方向在 [docs/tech/KNOWN_ISSUES.md](docs/tech/KNOWN_ISSUES.md)。修好就在那份文件標成已修復，並從這裡刪掉。
 
-- [ ] **B1** 綁了 collider 的道具旋轉或縮放後，外觀超出碰撞盒（KNOWN_ISSUES #3，和「AABB 不會跟著 rotY 轉」是同一件事）
+- [~] **B1** 綁了 collider 的道具旋轉或縮放後，外觀超出碰撞盒（KNOWN_ISSUES #3，和「AABB 不會跟著 rotY 轉」是同一件事）（進行中：@nickcx0109，分支 fix/rotated-colliders）
 - [ ] **B7** `StaticBatcher` 整關合併、無法剔除，要改成按區塊合併（#9，S1 會遇到）
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
 - [ ] **B15** 換樓層（`web/js/level/LevelFlow.js`）會重新載入頁面：`play=1` 時血量、子彈、道具欄會重來，也要再點一下才能鎖滑鼠。要讓玩法狀態跨關卡保留，或改成不重新載入就換關
-- [ ] **B16** 視窗很矮時（例如 640×360）右邊的彈藥會蓋到道具欄下面幾格：`.hud` 的字級最小 10px，高度再小就放不下。G15 之前就有；可以在矮視窗縮小道具欄或改成橫排。
+- [~] **B16** 視窗很矮時（例如 640×360）右邊的彈藥會蓋到道具欄下面幾格：`.hud` 的字級最小 10px，高度再小就放不下。G15 之前就有；可以在矮視窗縮小道具欄或改成橫排。（進行中：@nickcx0109，分支 fix/hud-short-window）
 
 ## 其他
 
