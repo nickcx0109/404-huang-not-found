@@ -1,0 +1,52 @@
+{
+  "name": "opening",
+  "note": "Cutscene 1, the phone call part (docs/story/cutscenes/script.md c1_09 to c1_12). Pictures are the GPT storyboards.",
+  "next": "index.html?level=ch1&play=1",
+  "shots": [
+    {
+      "id": "c1_09",
+      "type": "image",
+      "duration": 4,
+      "image": "c1_09_call.webp",
+      "move": { "from": { "scale": 1.0 }, "to": { "scale": 1.06, "y": -1 } }
+    },
+    {
+      "id": "c1_10",
+      "type": "image",
+      "duration": 4,
+      "image": "c1_10_camp.webp",
+      "move": { "from": { "scale": 1.0 }, "to": { "scale": 1.12 } }
+    },
+    {
+      "id": "c1_11",
+      "type": "image",
+      "duration": 3,
+      "image": "c1_11_listen.webp",
+      "move": { "from": { "scale": 1.04 }, "to": { "scale": 1.0 } }
+    },
+    {
+      "id": "c1_12",
+      "type": "split",
+      "line": { "top": 0.57, "bottom": 0.37 },
+      "left": {
+        "image": "c1_11_listen.webp",
+        "move": { "from": { "x": -18, "scale": 1.0 }, "to": { "x": -18, "scale": 1.05 } }
+      },
+      "right": {
+        "image": "c1_09_call.webp",
+        "move": { "from": { "x": 20, "scale": 1.05 }, "to": { "x": 20, "scale": 1.0 } }
+      },
+      "captions": {
+        "delaySeconds": 0.6,
+        "charSeconds": 0.045,
+        "holdSeconds": 1.1,
+        "gapSeconds": 0.3,
+        "lines": [
+          "MY ARMORED JEEP // DEEP IN THE CAMP",
+          "ROCKET ON MY ROOF. 4 SEATS.",
+          { "text": "COME. NOW.", "charSeconds": 0.12, "holdSeconds": 1.6 }
+        ]
+      }
+    }
+  ]
+}

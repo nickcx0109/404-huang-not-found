@@ -1,0 +1,138 @@
+/* Cutscene page (web/cutscene.html). Colours from docs/story/cutscenes/script.md:
+   caption green #76ff3a, a little magenta #ff2bd6, faint scanlines. */
+
+body.cutscene {
+  background: #000;
+  --caption-green: #76ff3a;
+  --caption-magenta: #ff2bd6;
+  --caption-cyan: #2bf0ff;
+  --paper: #e9dcc0;
+  --ink: #120d08;
+}
+
+/* 16:9 stage, letterboxed in any window */
+#stage {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+  overflow: hidden;
+  background: #000;
+  container-type: size;
+}
+
+/* faint scanlines over everything */
+#stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0 2px, rgba(0, 0, 0, 0.16) 2px 3px);
+  mix-blend-mode: multiply;
+}
+
+.shot {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.35s ease-out;
+}
+.shot.shown { opacity: 1; }
+
+.panel {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.panel img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  user-select: none;
+}
+
+/* split screen: panels are clipped by the slanted line (inline clip-path) */
+.split .gutter {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.split .gutter line {
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: square;
+}
+.split .gutter .ink { stroke: var(--ink); stroke-width: 12px; }
+.split .gutter .paper { stroke: var(--paper); stroke-width: 6px; }
+
+/* typewriter caption: bottom centre, crossing the split line */
+.caption {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: 7%;
+  transform: translateX(-50%);
+  max-width: 88%;
+  padding: 0.35em 0.7em;
+  font-family: 'Share Tech Mono', ui-monospace, Consolas, monospace;
+  font-size: 3.6cqh;
+  letter-spacing: 0.08em;
+  white-space: pre;
+  color: var(--caption-green);
+  text-shadow: 0 0 6px rgba(118, 255, 58, 0.75), 0 0 18px rgba(118, 255, 58, 0.35);
+  background: rgba(0, 0, 0, 0.62);
+  border-left: 3px solid var(--caption-magenta);
+}
+.caption.empty { visibility: hidden; }
+.caption .text { position: relative; }
+.caption .cursor {
+  margin-left: 0.08em;
+  color: var(--caption-green);
+}
+
+/* RGB split + jitter while a line appears or leaves */
+.caption.glitch .text::before,
+.caption.glitch .text::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.caption.glitch .text::before {
+  color: var(--caption-magenta);
+  transform: translate(-3px, 0);
+  mix-blend-mode: screen;
+  clip-path: inset(0 0 55% 0);
+}
+.caption.glitch .text::after {
+  color: var(--caption-cyan);
+  transform: translate(3px, 1px);
+  mix-blend-mode: screen;
+  clip-path: inset(45% 0 0 0);
+}
+.caption.glitch { animation: caption-jitter 0.09s steps(2) infinite; }
+
+@keyframes caption-jitter {
+  0% { transform: translate(-50%, 0) skewX(0deg); }
+  50% { transform: translate(calc(-50% + 3px), -1px) skewX(-6deg); }
+  100% { transform: translate(calc(-50% - 2px), 1px) skewX(3deg); }
+}
+
+#skip {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 20;
+  padding: 6px 12px;
+  font: 13px ui-monospace, Consolas, monospace;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+}
+#skip:hover { color: #fff; }

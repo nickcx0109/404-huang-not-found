@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 Huang Not Found — 過場</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/cutscene.css">
+</head>
+<body class="cutscene">
+  <div id="stage"></div>
+
+  <button id="skip" type="button" hidden>跳過 Esc</button>
+
+  <div id="start" hidden>
+    <div class="panel">
+      <h1>點一下播放</h1>
+      <p>Esc：跳過</p>
+    </div>
+  </div>
+
+  <pre id="error" hidden></pre>
+
+  <script type="module" src="js/cutscenes/main.js"></script>
+</body>
+</html>
