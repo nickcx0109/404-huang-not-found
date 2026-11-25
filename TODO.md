@@ -60,7 +60,9 @@
 
 ## 其他
 
-- [~] **C1 過場播放器**：在遊戲裡播劇情過場（`docs/story/cutscenes/`），先做開場打電話那段：老黃、三人接電話、斜切分割畫面（左邊三人、右邊老黃）加打字機字幕。鏡頭種類用繼承和註冊加（圖片、分割畫面），內容放 JSON；打字機和時間軸是純邏輯，要有測試。（進行中：@big0527，分支 feat/cutscene-player）
+- [ ] **C2 開場其他鏡頭**（C1 做好了播放器）：把開場剩下的分鏡（`c1_01` 到 `c1_08`、`c1_13` 到 `c1_18`）加進 `web/assets/cutscenes/opening.json`，圖片轉 WebP 放同一個資料夾。字幕照 `docs/story/cutscenes/script.md`。
+- [ ] **C3 過場接上遊戲流程**（等 C2）：第一次開始遊戲先播開場，播完進第一章；章節之間播對應的過場（過場 2 到 5 的腳本要先做）。看要從大廳進 `cutscene.html`，還是讓 App 在換關時先導過去。
+- [ ] **C4 影片鏡頭**：組員把分鏡做成影片後，加一個 `VideoShot`（繼承 `Shot`、在 `ShotTypes` 註冊），JSON 用 `{ type: "video", video }`；分割畫面的兩邊也要能放影片。
 - [~] **G8o 隊友的電鋸、換彈聲**：G8j 只在隊友的位置播 `weapon.fired` 的 `fire`／`hit`（槍聲、揮刀）。隊友拿電鋸沒有循環聲（`SoundBoard.hold`／`loop` 沒有位置），隊友換彈也沒聲音。要讓循環聲帶位置、跟著隊友移動；加測試。（進行中：@nickcx0109，分支 feat/net-teammate-loops）
 
 
@@ -88,6 +90,7 @@
 
 格式：`代號 標題（PR #編號）`。
 
+- C1 過場播放器：`web/cutscene.html`，開場打電話那段（斜切分割畫面加打字機字幕）（PR #待補）
 - G5 開始、結束、重開畫面（PR #31）
 - G6 第二章過關條件：守住大門 180 秒到開鎖（`Objective` 類別，關卡檔的 `objective`）（PR #32）
 
