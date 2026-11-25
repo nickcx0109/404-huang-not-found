@@ -33,7 +33,7 @@
 | `enemies/`、`enemies/behaviour/` | Enemy 基底、Brain 策略、最小行為樹、Walker 範例、註冊 Factory 與 ObjectPool |
 | `pickups/` | 地上武器、投擲物與治療物的拾取，以及可重用的彈藥箱；`InteractionList` 統一 E 鍵互動 |
 | `ui/` | `ui/hud/` 的 SurvivalHud 繼承既有 Hud（不替換錯誤面板），由一組 HudWidget 組成 |
-| `cutscenes/` | 劇情過場，獨立頁面 `web/cutscene.html`，不經過 App。`logic/` 的 `Typewriter`、`CutsceneTimeline`、`SplitLine`、`CameraMove` 是純邏輯；`Shot` 子類（`ImageShot`、`SplitShot`）由 `ShotTypes` 註冊，`CutscenePlayer` 只呼叫 `Shot` 介面。內容在 `web/assets/cutscenes/<名稱>.json` |
+| `cutscenes/` | 劇情過場，獨立頁面 `web/cutscene.html`，不經過 App。`logic/` 的 `Typewriter`、`CutsceneTimeline`、`SplitLine`、`CameraMove` 是純邏輯；`Shot` 子類（`ImageShot`、`SplitShot`、`TitleShot`）由 `ShotTypes` 註冊，`CutscenePlayer` 只呼叫 `Shot` 介面。內容在 `web/assets/cutscenes/<名稱>.json` |
 | `audio/` | 音效：`SoundBoard`、`SpatialMix`、`SoundRule` 和它的子類是純邏輯；`WebAudioOutput`、`Synth`、`Sound` 子類用 WebAudio，只在 `play=1` 由 `installAudio` 組起來 |
 
 原有檔名及類別名保留；同檔原本公開的輔助類別（例如 `Aabb`、`LevelError`、`AppOptions`、`BuiltLevel`）也用具名 export 匯出。
@@ -96,5 +96,5 @@ PostFX composites exposure, ACES, saturation, vignette, sRGB and grain, then run
 
 - 打開 `web/cutscene.html`（預設播 `opening`；`?name=` 換腳本）。`?at=c1_12` 從某個鏡頭開始，`?at=c1_12&freeze=2` 停在那個鏡頭第 2 秒，方便截圖。播完或按 Esc 跳過後，前往腳本的 `next`。
 - 腳本 `web/assets/cutscenes/<名稱>.json`：`shots` 依序排列，每鏡有 `id`、`type`、`duration`；有 `captions`（打字機字幕）的鏡頭可以省略 `duration`，字幕打完再停 0.8 秒。圖片放在同一個資料夾。
-- `image`：`{ image, move? }`。`split`：`{ line: { top, bottom }, left: { image, move? }, right: { image, move? } }`，`top`、`bottom` 是斜線碰到上下邊的位置（0 到 1）。`move` 是 `{ from: { x, y, scale }, to: {...} }`，`x`、`y` 是百分比。
+- `image`：`{ image, move? }`。`title`：黑底標題卡，字從 `captions` 來，`captions.position` 設 `"center"` 放在正中間。`split`：`{ line: { top, bottom }, left: { image, move? }, right: { image, move? } }`，`top`、`bottom` 是斜線碰到上下邊的位置（0 到 1）。`move` 是 `{ from: { x, y, scale }, to: {...} }`，`x`、`y` 是百分比。
 - 新增一種鏡頭：寫一個繼承 `Shot` 的類別（覆寫 `build`、`update`，需要預先載入的圖放 `pictures`），在 `cutscenes/main.js` 加一行 `register('種類', 類別)`。不要在 `CutscenePlayer` 裡判斷種類。
