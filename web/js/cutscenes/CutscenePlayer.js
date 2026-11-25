@@ -80,7 +80,7 @@ export class CutscenePlayer {
     this.#clear();
     const shot = this.shots[entry.index];
     shot.mount(this.stage);
-    const caption = entry.captions ? new CaptionView(this.stage) : null;
+    const caption = entry.captions ? new CaptionView(this.stage, { position: entry.spec.captions.position }) : null;
     this.current = { entry, shot, caption, keys: 0 };
   }
 

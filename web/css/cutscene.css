@@ -89,6 +89,24 @@ body.cutscene {
   border-left: 3px solid var(--caption-magenta);
 }
 .caption.empty { visibility: hidden; }
+
+/* chapter title on a black card */
+.title-card { position: absolute; inset: 0; background: #000; }
+.caption--center {
+  bottom: auto;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 6cqh;
+  letter-spacing: 0.2em;
+  background: none;
+  border-left: none;
+}
+.caption--center.glitch { animation-name: caption-jitter-center; }
+@keyframes caption-jitter-center {
+  0% { transform: translate(-50%, -50%) skewX(0deg); }
+  50% { transform: translate(calc(-50% + 3px), calc(-50% - 1px)) skewX(-6deg); }
+  100% { transform: translate(calc(-50% - 2px), calc(-50% + 1px)) skewX(3deg); }
+}
 .caption .text { position: relative; }
 .caption .cursor {
   margin-left: 0.08em;

@@ -6,9 +6,10 @@ const GLITCH_SECONDS = 0.22;
  * block cursor, and an RGB-split glitch when a line appears or leaves.
  */
 export class CaptionView {
-  constructor(stage) {
+  /** @param {{ position?: 'bottom' | 'center' }} options */
+  constructor(stage, { position = 'bottom' } = {}) {
     this.root = document.createElement('div');
-    this.root.className = 'caption';
+    this.root.className = `caption caption--${position === 'center' ? 'center' : 'bottom'}`;
     this.text = document.createElement('span');
     this.text.className = 'text';
     this.cursor = document.createElement('span');

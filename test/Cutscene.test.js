@@ -134,7 +134,7 @@ test('the opening cutscene file is a valid script whose pictures exist', async (
   const base = new URL('../web/assets/cutscenes/', import.meta.url);
   const script = JSON.parse(await readFile(new URL('opening.json', base), 'utf8'));
   const timeline = new CutsceneTimeline(script);
-  assert.ok(timeline.duration > 10 && timeline.duration < 60);
+  assert.ok(timeline.duration > 40 && timeline.duration < 90);
 
   const images = new Set();
   for (const { spec } of timeline.entries) {
@@ -145,8 +145,12 @@ test('the opening cutscene file is a valid script whose pictures exist', async (
   for (const image of images) {
     await readFile(new URL(image, base)); // throws if missing
   }
-  const split = timeline.entries.find(e => e.spec.type === 'split');
-  assert.ok(split?.captions, 'the phone call is a split shot with captions');
+  assert.deepEqual(timeline.entries.map(e => e.id), [
+    'c1_01', 'c1_02', 'c1_03', 'c1_04', 'c1_05', 'c1_06', 'c1_07', 'c1_08', 'c1_09', 'c1_10', 'title',
+  ]);
+  const call = timeline.entries.find(e => e.id === 'c1_08');
+  assert.equal(call.captions.lines.length, 3, 'the phone call types three lines');
+  assert.equal(timeline.entries.at(-1).spec.type, 'title');
 });
 
 test('ShotTypes creates the registered class for each type and refuses unknown or duplicate types', async () => {

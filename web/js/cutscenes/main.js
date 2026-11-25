@@ -11,6 +11,7 @@ import { CutsceneTimeline } from './logic/CutsceneTimeline.js';
 import { ShotTypes } from './ShotTypes.js';
 import { ImageShot } from './ImageShot.js';
 import { SplitShot } from './SplitShot.js';
+import { TitleShot } from './TitleShot.js';
 import { CutscenePlayer } from './CutscenePlayer.js';
 import { KeyClick } from './KeyClick.js';
 
@@ -29,7 +30,8 @@ try {
 
   const shotTypes = new ShotTypes()
     .register('image', ImageShot)
-    .register('split', SplitShot);
+    .register('split', SplitShot)
+    .register('title', TitleShot);
   const keyClick = new KeyClick();
   const player = new CutscenePlayer(document.getElementById('stage'), timeline, shotTypes, {
     assetUrl: file => new URL(file, scriptUrl).href,
