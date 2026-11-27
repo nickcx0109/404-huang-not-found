@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { StaticChunkGrid } from './core/StaticChunkGrid.js';
+import { WholeLevelGrid } from './core/StaticChunkGrid.js';
 
 // Batch nearby meshes with the same material so both cameras can cull each batch independently.
 const _position = new THREE.Vector3();
@@ -13,11 +13,10 @@ export class StaticBatcher {
    * material needs attributes the batch does not carry (vertex colours, tangents).
    * Texture coordinates are carried, so boxes with a tiling surface texture merge as well.
    * @param {THREE.Object3D} root
-   * @param {{cellSize?:number}} [options] XZ cell size in world metres (default 20)
+   * @param {{grid?:{keyForCenter:(c:THREE.Vector3)=>string}}} [options] how batches are split; default one batch per material
    * @returns {{before:number, after:number}} mesh counts
    */
-  static merge(root, { cellSize } = {}) {
-    const grid = new StaticChunkGrid(cellSize);
+  static merge(root, { grid = new WholeLevelGrid() } = {}) {
     root.updateWorldMatrix(true, true);
     const rootInverse = new THREE.Matrix4().copy(root.matrixWorld).invert();
     const groups = new Map();
