@@ -1,0 +1,107 @@
+{
+  "name": "opening",
+  "note": "Cutscene 1, the opening: 10 storyboards (launch, glitch, outbreak, Lao Huang's call, leaving the cabin, into the forest). Timings and captions from docs/story/cutscenes/script.md. Video prompts for turning these into clips: opening-video-prompts.txt.",
+  "next": "index.html?level=ch1&play=1",
+  "shots": [
+    {
+      "id": "c1_01",
+      "type": "image",
+      "duration": 5,
+      "image": "c1_01.webp",
+      "move": { "from": { "scale": 1.0 }, "to": { "scale": 1.1 } },
+      "captions": {
+        "delaySeconds": 1.2,
+        "lines": ["MVIDIA NEURO-CHIP // THE FUTURE IS INSIDE YOU"]
+      }
+    },
+    {
+      "id": "c1_02",
+      "type": "image",
+      "duration": 3,
+      "image": "c1_02.webp",
+      "move": { "from": { "scale": 1.02 }, "to": { "scale": 1.06, "y": -1 } }
+    },
+    {
+      "id": "c1_03",
+      "type": "image",
+      "duration": 4,
+      "image": "c1_03.webp",
+      "move": { "from": { "x": 3, "scale": 1.08 }, "to": { "x": -3, "scale": 1.08 } }
+    },
+    {
+      "id": "c1_04",
+      "type": "image",
+      "duration": 3,
+      "image": "c1_04.webp",
+      "move": { "from": { "scale": 1.0 }, "to": { "scale": 1.03 } },
+      "captions": {
+        "delaySeconds": 0.8,
+        "charSeconds": 0.06,
+        "lines": ["// SIGNAL ERROR //"]
+      }
+    },
+    {
+      "id": "c1_05",
+      "type": "image",
+      "duration": 3,
+      "image": "c1_05.webp",
+      "move": { "from": { "scale": 1.0 }, "to": { "scale": 1.05 } }
+    },
+    {
+      "id": "c1_06",
+      "type": "image",
+      "duration": 4,
+      "image": "c1_06.webp",
+      "move": { "from": { "scale": 1.06, "x": -1 }, "to": { "scale": 1.0, "x": 1 } }
+    },
+    {
+      "id": "c1_07",
+      "type": "image",
+      "duration": 4,
+      "image": "c1_07.webp",
+      "move": { "from": { "scale": 1.0 }, "to": { "scale": 1.04 } }
+    },
+    {
+      "id": "c1_08",
+      "type": "image",
+      "image": "c1_08.webp",
+      "move": { "from": { "scale": 1.0 }, "to": { "scale": 1.04 } },
+      "captions": {
+        "delaySeconds": 0.6,
+        "charSeconds": 0.045,
+        "holdSeconds": 1.1,
+        "gapSeconds": 0.3,
+        "lines": [
+          "MY ARMORED JEEP // DEEP IN THE CAMP",
+          "ROCKET ON MY ROOF. 4 SEATS.",
+          { "text": "COME. NOW.", "charSeconds": 0.12, "holdSeconds": 1.6 }
+        ]
+      }
+    },
+    {
+      "id": "c1_09",
+      "type": "image",
+      "duration": 3,
+      "image": "c1_09.webp",
+      "move": { "from": { "scale": 1.0 }, "to": { "scale": 1.05 } }
+    },
+    {
+      "id": "c1_10",
+      "type": "image",
+      "duration": 5,
+      "image": "c1_10.webp",
+      "move": { "from": { "scale": 1.0 }, "to": { "scale": 1.1, "y": -1 } }
+    },
+    {
+      "id": "title",
+      "type": "title",
+      "captions": {
+        "delaySeconds": 0.5,
+        "charSeconds": 0.18,
+        "holdSeconds": 1.6,
+        "position": "center",
+        "lines": ["第一章　找車"]
+      }
+    }
+  ]
+}
