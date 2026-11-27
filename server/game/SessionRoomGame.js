@@ -55,6 +55,8 @@ export class SessionRoomGame extends RoomGame {
     this.session = null;
     this.cleared = new Set();
     this.pendingLevel = null;
+    /** Seats whose page still shows the previous level: ignored until they rejoin on a new connection. */
+    this.reloading = new Set();
     this.controllers = new Map();
     /** One InputThrottle per player in front of their controller (G8n). */
     this.inputs = new Map();
@@ -173,6 +175,8 @@ export class SessionRoomGame extends RoomGame {
     this.relay.attach(this.session.context.events, message => room.broadcast(message));
     this.writer = new SnapshotWriter();
     this.levelFlow.notify = message => room.broadcast(message);
+    // The old pages keep sending poses for the previous floor until they reload.
+    this.reloading = new Set(this.controllers.keys());
     room.level = target;
     room.broadcast({ t: 'event', name: 'level.changed', detail: { level: target, from } });
     room.announce();
@@ -180,12 +184,13 @@ export class SessionRoomGame extends RoomGame {
   }
 
   input(room, playerId, message) {
+    if (this.reloading.has(playerId)) return;
     this.inputs.get(playerId)?.offer(message, this.now());
   }
 
   action(room, playerId, message) {
     const controller = this.controllers.get(playerId);
-    if (!controller || !this.session) return;
+    if (!controller || !this.session || this.reloading.has(playerId)) return;
     // The browser sends its pose right before an action; aim with it, not with an older one.
     this.inputs.get(playerId)?.flush(this.now());
     this.actions.dispatch({
@@ -204,12 +209,14 @@ export class SessionRoomGame extends RoomGame {
 
   /** The player is back on a new connection, which numbers its inputs from scratch. */
   memberBack(room, playerId) {
+    this.reloading.delete(playerId);
     this.controllers.get(playerId)?.resume(this.now());
     this.inputs.get(playerId)?.reset();
   }
 
   /** The player leaves the run (or their held seat expired); everyone else keeps playing. */
   memberLeft(room, playerId) {
+    this.reloading.delete(playerId);
     this.inputs.delete(playerId);
     if (!this.controllers.delete(playerId) || !this.session) return;
     const ctx = this.session.context;

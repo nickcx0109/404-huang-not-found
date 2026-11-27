@@ -91,6 +91,7 @@ test('blocked exit progress is server timed, cancels on release/range/away and c
   assert.ok(game.cleared.has('a:to_b'));
   assert.ok(host.ofType('event').some(m => m.name === 'level.block-cleared'));
   place(5); step(1, true); assert.equal(room.level, 'b');
+  room.drop('p1', 100000); room.reclaim(room.describeFor('p1').token, host); // the page reloads
   place(0); step(); place(5); step(1, true);
   assert.equal(room.level, 'a');
   assert.ok(!game.session.context.collision.boxes.some(box => box.id === 'block_to_b'), 'cleared across visits');
@@ -136,4 +137,24 @@ test('interact action validates holding and dispatches only the seat identity', 
   let held;
   new InteractAction().handle({ playerId: 'p2', message, levelFlow: { hold: (...args) => { held = args; } } });
   assert.deepEqual(held, ['p2', true]);
+});
+
+test('inputs and actions the old page sends after a level change cannot move the arrival pose', t => {
+  const { game, room, host, step, place } = setup(t);
+  place(5); step(1, true);
+  assert.equal(room.level, 'b');
+  // In flight from the old page, before it reloads: an old-floor pose and a held E.
+  game.input(room, 'p1', { t: 'input', seq: 900, at: 0, x: 4.6, y: 0, z: 0.2, yaw: 0, pitch: 0 });
+  game.action(room, 'p1', { kind: 'interact', holding: true });
+  step(3);
+  const arrived = game.controllers.get('p1');
+  assert.equal(arrived.x, 5);
+  assert.equal(arrived.yaw, Math.PI / 2);
+  assert.equal(room.level, 'b', 'a stale held E does not travel back');
+  // The reloaded page rejoins on a new connection and numbers its inputs from 1 again.
+  room.drop('p1', 100000);
+  room.reclaim(room.describeFor('p1').token, host);
+  game.input(room, 'p1', { t: 'input', seq: 1, at: 0, x: 5, y: 0, z: 0.1, yaw: 1, pitch: 0 });
+  step();
+  assert.equal(game.controllers.get('p1').yaw, 1, 'the new page drives the seat again');
 });
