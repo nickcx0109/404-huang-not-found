@@ -43,7 +43,6 @@ export function actionSchema() {
     cycle: { step: new ChoiceField([-1, 1]) },
     pickup: {},
     interact: { holding: new BooleanField() },
-    interact: { holding: new BooleanField() },
     revive: { holding: new BooleanField() },
   });
 }
