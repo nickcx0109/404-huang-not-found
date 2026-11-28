@@ -35,7 +35,7 @@ export class WeaponRig {
     this.modelContext = modelContext;
     this.view = null;
     this.model = null;
-    this._loading = null;
+    this._equipRequest = null;
     this._disposed = false;
     this._models = new Map();
     this._views = new Map();
@@ -94,35 +94,46 @@ export class WeaponRig {
   async equip(id) {
     if (this._disposed) return;
     const entry = id ? this.registry.get(id) : null;
-    this._loading = id;
-    if (!entry) {
-      this._show(null, null);
-      return;
-    }
+    const request = {};
+    this._equipRequest = request;
+    const cached = this._views.get(id);
+    if (cached) return this._equipView(cached);
+
+    this._show(null, null);
+    if (!entry) return;
     if (!this._models.has(id)) {
       // the promise is cached at once, so asking twice while it loads builds one model
-      this._models.set(id, Promise.resolve(entry.createModel(this.modelContext)));
+      this._models.set(id, Promise.resolve().then(() => entry.createModel(this.modelContext)));
     }
+    const pending = this._models.get(id);
     let model;
     try {
-      model = await this._models.get(id);
+      model = await pending;
     } catch (err) {
-      this._models.delete(id);
-      console.warn('[weapons] ' + err.message);
+      if (this._models.get(id) === pending) this._models.delete(id);
+      if (this._equipRequest === request) console.warn('[weapons] ' + err.message);
       return;
     }
-    if (this._loading !== id) return; // another weapon was asked for meanwhile
+    if (this._equipRequest !== request) return;
 
-    if (!this._views.has(id)) this._views.set(id, new entry.View(model, this.events));
-    this._show(model, this._views.get(id));
-    this.view.equip();
-    this.view.update(0, 0);
+    const view = new entry.View(model, this.events);
+    this._views.set(id, view);
+    this._equipView(view);
+  }
+
+  _equipView(view) {
+    this._show(view.model, view);
+    view.equip();
+    view.update(0, 0);
   }
 
   /** Plays one shot or swing; the game has already decided it happened. */
-  fire() {
-    return this.view ? this.view.fire(true) : false;
+  fire({ hit } = {}) {
+    return this.view ? this.view.fire(true, { hit }) : false;
   }
+
+  get hasSwingCue() { return this.view !== null && 'swingCue' in this.view; }
+  get swingCue() { return this.view?.swingCue ?? null; }
 
   /** @param {number} [seconds]  how long the game's reload takes */
   reload(seconds) {
@@ -226,7 +237,7 @@ export class WeaponRig {
   dispose() {
     if (this._disposed) return;
     this._disposed = true;
-    this._loading = null;
+    this._equipRequest = null;
     this._unsubscribe.forEach((off) => off());
     this.flash.parent?.remove(this.flash);
     this.flash.geometry.dispose();

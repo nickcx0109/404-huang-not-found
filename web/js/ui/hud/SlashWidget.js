@@ -1,4 +1,5 @@
 import { EVENTS } from '../../game/events.js';
+import { SWING_EVENTS } from '../../weapons/views/swingEvents.js';
 import { HudWidget } from './HudWidget.js';
 import { SlashStyles } from './logic/SlashStyles.js';
 import { SlashTrail } from './logic/SlashTrail.js';
@@ -18,31 +19,62 @@ export class SlashWidget extends HudWidget {
     this.canvas = this.part('canvas', 'hud-slash__canvas');
     this.canvas.hidden = true;
     this.trail = null;
+    this._pendingFire = null;
+    this._queuedSwings = new WeakSet();
+    this._drivenByView = false;
     this._drawn = false;
   }
 
   bind(events, playerId) {
+    this.listen(events, SWING_EVENTS.QUEUED, detail => {
+      if (detail.ownerId === playerId) this._queuedSwings.add(detail);
+    });
     this.listen(events, EVENTS.WEAPON_FIRED, detail => {
-      if (detail.ownerId !== playerId) return;
-      const style = this.styles.get(detail.weaponId);
-      if (!style) return;
-      if (!this.trail || this.trail.style !== style) {
-        const side = this.trail ? this.trail.side : -1;
-        this.trail = new SlashTrail(style);
-        this.trail.side = side;
+      if (detail.ownerId === playerId && this.styles.has(detail.weaponId)) this._pendingFire = detail;
+    });
+    this.listen(events, SWING_EVENTS.FRAME, ({ ownerId, cue }) => {
+      if (ownerId !== playerId) return;
+      if (cue && this._selectTrail(cue.weaponId)) {
+        this._drivenByView = true;
+        this.trail.start(cue.hit, cue.side, cue.sweepSeconds);
+        this.trail.update(cue.elapsed);
+        this._renderTrail();
+      } else if (this._drivenByView) {
+        this._drivenByView = false;
+        this.trail = null;
+        if (this._drawn) this._clear();
       }
-      this.trail.start(detail.hit != null);
     });
   }
 
-  advance(dt) {
-    const trail = this.trail;
-    if (trail?.active) {
-      this._draw(trail);
-      trail.update(dt);
-    } else if (this._drawn) {
-      this._clear();
+  _selectTrail(weaponId) {
+    const style = this.styles.get(weaponId);
+    if (!style) return false;
+    if (this.trail?.style !== style) {
+      const side = this.trail?.side ?? -1;
+      this.trail = new SlashTrail(style);
+      this.trail.side = side;
     }
+    return true;
+  }
+
+  advance(dt) {
+    const fire = this._pendingFire;
+    this._pendingFire = null;
+    // The driver and HUD both hear WEAPON_FIRED. Wait until delivery is complete
+    // before using the fallback, regardless of their subscription order.
+    if (fire && !this._queuedSwings.has(fire) && this._selectTrail(fire.weaponId)) {
+      this._drivenByView = false;
+      this.trail.start(fire.hit != null);
+    }
+    if (this._drivenByView) return;
+    this._renderTrail();
+    this.trail?.update(dt);
+  }
+
+  _renderTrail() {
+    if (this.trail?.active) this._draw(this.trail);
+    else if (this._drawn) this._clear();
   }
 
   _context() {
@@ -146,6 +178,7 @@ export class SlashWidget extends HudWidget {
 
   dispose() {
     this.trail = null;
+    this._pendingFire = null;
     super.dispose();
   }
 }

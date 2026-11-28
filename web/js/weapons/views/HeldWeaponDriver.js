@@ -1,4 +1,5 @@
 import { EVENTS } from '../../game/events.js';
+import { SWING_EVENTS } from './swingEvents.js';
 
 /**
  * Tells the first-person weapon what the player's held weapon just did. No Three.js, no DOM.
@@ -19,11 +20,13 @@ export class HeldWeaponDriver {
    * @param {object} target
    */
   constructor(events, ownerId, holder, target) {
+    this.events = events;
     this.ownerId = ownerId;
     this.holder = holder;
     this.target = target;
     this.weapon = undefined;
     this._reloading = false;
+    this._showedSwing = false;
     const mine = handler => detail => {
       if (detail?.ownerId === this.ownerId) handler(detail);
     };
@@ -31,7 +34,10 @@ export class HeldWeaponDriver {
       events.on(EVENTS.WEAPON_CHANGED, mine(() => this._sync())),
       events.on(EVENTS.WEAPON_FIRED, mine(detail => {
         this._sync();
-        if (detail.weaponId === this.weapon?.id) this.target.fire({ hit: detail.hit ?? null });
+        if (detail.weaponId !== this.weapon?.id) return;
+        if (this.target.fire({ hit: detail.hit ?? null }) && this.target.hasSwingCue) {
+          events.emit(SWING_EVENTS.QUEUED, detail);
+        }
       })),
       events.on(EVENTS.WEAPON_RELOADED, mine(detail => {
         if (detail.weaponId !== this.weapon?.id) return;
@@ -57,6 +63,14 @@ export class HeldWeaponDriver {
     this._reloading = reloading;
     const progress = typeof weapon?.progress === 'function' ? weapon.progress(time) : null;
     this.target.showProgress(progress ? progress.fraction : null);
+  }
+
+  /** Publishes the swing after the rig has posed the blade for this frame. */
+  presentSwing() {
+    const cue = this.target.swingCue ?? null;
+    if (!cue && !this._showedSwing) return;
+    this._showedSwing = cue !== null;
+    this.events.emit(SWING_EVENTS.FRAME, { ownerId: this.ownerId, cue });
   }
 
   /** Equips the view when the weapon in hand is a different object (a swapped gun of the same kind too). */

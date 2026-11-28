@@ -13,13 +13,15 @@ export class SlashTrail {
     this.elapsed = Infinity;
     this.side = -1;
     this.hit = false;
+    this.sweepSeconds = style.sweepSeconds;
   }
 
   /** Starts a new slash. `hit`: the blade touched something, so it is drawn brighter. */
-  start(hit = false) {
+  start(hit = false, side = -this.side, sweepSeconds = this.style.sweepSeconds) {
     this.elapsed = 0;
-    this.side = -this.side;
+    this.side = side;
     this.hit = Boolean(hit);
+    this.sweepSeconds = sweepSeconds;
   }
 
   update(dt) {
@@ -27,7 +29,7 @@ export class SlashTrail {
   }
 
   get duration() {
-    return this.style.sweepSeconds + this.style.fadeSeconds;
+    return this.sweepSeconds + this.style.fadeSeconds;
   }
 
   get active() {
@@ -37,14 +39,14 @@ export class SlashTrail {
   /** Where the leading end of the arc is, 0 (start) to 1 (other side); eased so it starts fast. */
   get head() {
     if (!this.active) return 1;
-    const t = Math.min(1, this.elapsed / this.style.sweepSeconds);
+    const t = Math.min(1, this.elapsed / this.sweepSeconds);
     return 1 - (1 - t) * (1 - t) * (1 - t);
   }
 
   /** Where the trailing end is, 0..1, never past the head. */
   get tail() {
     if (!this.active) return 1;
-    const fading = Math.max(0, this.elapsed - this.style.sweepSeconds) / this.style.fadeSeconds;
+    const fading = Math.max(0, this.elapsed - this.sweepSeconds) / this.style.fadeSeconds;
     // While fading the tail also catches up a little, so the crescent shrinks as it dies.
     return Math.min(this.head, Math.max(0, this.head - this.style.trail * (1 - 0.6 * fading)));
   }
@@ -52,7 +54,7 @@ export class SlashTrail {
   /** How visible the whole trail is, 1 while sweeping, then down to 0. */
   get alpha() {
     if (!this.active) return 0;
-    const fading = Math.max(0, this.elapsed - this.style.sweepSeconds) / this.style.fadeSeconds;
+    const fading = Math.max(0, this.elapsed - this.sweepSeconds) / this.style.fadeSeconds;
     return (1 - fading) * (1 - fading);
   }
 
