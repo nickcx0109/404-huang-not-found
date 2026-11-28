@@ -1966,6 +1966,19 @@ class Shell {
     return this;
   }
 
+  /** Record decorative vertices without splitting or reordering the material meshes. */
+  omitFromFootprint(build) {
+    const starts = new Map();
+    this.parts.forEach((buffers, key) => starts.set(key, buffers.positions.length / 3));
+    build();
+    this.parts.forEach((buffers, key) => {
+      const start = starts.get(key) ?? 0;
+      const end = buffers.positions.length / 3;
+      if (start === end) return;
+      (buffers.footprintOmissions ??= []).push([start, end]);
+    });
+  }
+
   /** The faces collected for one material as a geometry (for a shape that many objects share). */
   geometry(key) {
     const buffers = this.buffers(key);
@@ -1989,6 +2002,7 @@ class Shell {
       mesh.castShadow = key === 'paint' || key === 'dark' || key === 'black' || key === 'steel';
       mesh.receiveShadow = key === 'paint' || key === 'steel';
       mesh.userData.dynamic = true;
+      if (buffers.footprintOmissions) mesh.userData.footprintOmissions = buffers.footprintOmissions;
       list.push(mesh);
     });
     return list;
@@ -2533,6 +2547,7 @@ function buildCar(factory, options) {
   const depth = options.clean ? 0.75 : 0.55;
   shell.tint = [tone.r * depth, tone.g * depth, tone.b * depth];
   const car = new THREE.Group();
+  car.userData.vehicleFootprint = true;
   const origin0 = [0, 0, 0];
   const doors = options.doors || [];
   const hinged = (faces, glassFaces, pivot, rotation) => {
@@ -2545,6 +2560,7 @@ function buildCar(factory, options) {
     if (glassFaces && glassFaces.length) leaf.add('glass', skin(glassFaces, pivot));
     leaf.meshes(materials).forEach((mesh) => group.add(mesh));
     car.add(group);
+    return group;
   };
   const shards = (faces) => { // what is left of a broken pane: splinters standing along its lower edge
     faces.forEach(([a, b], n) => {
@@ -2573,7 +2589,8 @@ function buildCar(factory, options) {
       const pane = ((right && broken === 'right') || (!right && broken === 'left')) && frontDoor ? [] : pieces.get(glassName) || [];
       if (swing) {
         const hingeZ = frontDoor ? doorFront : doorMid;
-        hinged(faces, pane, [(right ? 1 : -1) * halfWidth(hingeZ) * 0.97, 0, hingeZ], [0, (right ? 1 : -1) * swing, 0]);
+        const door = hinged(faces, pane, [(right ? 1 : -1) * halfWidth(hingeZ) * 0.97, 0, hingeZ], [0, (right ? 1 : -1) * swing, 0]);
+        door.userData.vehicleFootprint = false;
       } else {
         shell.add('paint', skin(faces, origin0));
         if (pane.length) shell.add('glass', skin(pane, origin0));
@@ -2639,8 +2656,10 @@ function buildCar(factory, options) {
       shell.box(options.indicators ? 'blink' : 'lensAmber', tailX + side * 0.24, tailY, zR - 0.06, 0.1, 0.11, 0.03);
     }
     // mirrors, handles, the strip under the windows
-    shell.box('black', side * (halfWidth(glassFront) * 0.93 + 0.05), type.belt + 0.06, glassFront - 0.02, 0.1, 0.03, 0.05);
-    shell.box('black', side * (halfWidth(glassFront) * 0.93 + 0.12), type.belt + 0.08, glassFront - 0.02, 0.07, 0.1, 0.15);
+    shell.omitFromFootprint(() => {
+      shell.box('black', side * (halfWidth(glassFront) * 0.93 + 0.05), type.belt + 0.06, glassFront - 0.02, 0.1, 0.03, 0.05);
+      shell.box('black', side * (halfWidth(glassFront) * 0.93 + 0.12), type.belt + 0.08, glassFront - 0.02, 0.07, 0.1, 0.15);
+    });
     shell.box('chrome', side * halfWidth(doorMid) * 0.985, type.belt - 0.11, doorMid - 0.16, 0.025, 0.03, 0.15);
     if (hasRear) shell.box('chrome', side * halfWidth(doorRear) * 0.985, type.belt - 0.11, doorRear - 0.16, 0.025, 0.03, 0.15);
     shell.box('chrome', side * halfWidth(doorMid) * 0.94, type.belt + 0.004, (doorFront + (hasRear ? doorRear : doorMid)) / 2, 0.02, 0.018, (hasRear ? doorRear : doorMid) - doorFront);
@@ -2655,7 +2674,9 @@ function buildCar(factory, options) {
     shell.box('black', 0, type.belt - 0.33, zR - 0.02, 0.48, 0.15, 0.015);
     shell.box('plate', 0, type.belt - 0.33, zR - 0.012, 0.42, 0.11, 0.01);
     shell.add('chrome', new THREE.CylinderGeometry(0.03, 0.03, 0.22, 8), new THREE.Matrix4().makeRotationX(Math.PI / 2).setPosition(W * 0.27, type.clearance + 0.04, zR - 0.08));
-    shell.add('black', new THREE.CylinderGeometry(0.004, 0.006, 0.5, 4), new THREE.Matrix4().makeRotationX(-0.3).setPosition(W * 0.3, topAt(roofRear) + 0.2, roofRear + 0.1));
+    shell.omitFromFootprint(() => {
+      shell.add('black', new THREE.CylinderGeometry(0.004, 0.006, 0.5, 4), new THREE.Matrix4().makeRotationX(-0.3).setPosition(W * 0.3, topAt(roofRear) + 0.2, roofRear + 0.1));
+    });
   }
 
   shell.meshes(Object.assign({}, materials, { head: options.headlamps, tail: options.taillamps, blink: options.indicators }))
@@ -4041,9 +4062,11 @@ export class Ch1Props extends PropSet {
       shell.box('black', side * 1.13, 0.56, -2.35, 0.3, 0.05, 0.52);
       shell.box('black', side * 1.02, 0.64, -2.35, 0.05, 0.2, 0.06);
       [1.25, 1.95].forEach((y) => shell.box('chrome', side * 1.135, y, -3.34, 0.03, 0.1, 0.05));
-      [1.78, 2.12].forEach((y) => shell.box('chrome', side * 1.3, y, -3.12, 0.34, 0.022, 0.022));
-      shell.box('black', side * 1.5, 1.95, -3.12, 0.07, 0.42, 0.2);
-      shell.box('chrome', side * 1.5, 1.95, -3.012, 0.05, 0.36, 0.008);
+      shell.omitFromFootprint(() => {
+        [1.78, 2.12].forEach((y) => shell.box('chrome', side * 1.3, y, -3.12, 0.34, 0.022, 0.022));
+        shell.box('black', side * 1.5, 1.95, -3.12, 0.07, 0.42, 0.2);
+        shell.box('chrome', side * 1.5, 1.95, -3.012, 0.05, 0.36, 0.008);
+      });
     });
     shell.quad('steel', [-hw, y1, z0], [-hw, y1, z1], [hw, y1, z1], [hw, y1, z0]);
     shell.quad('steel', [hw, y0, z0], [-hw, y0, z0], [-hw, y1, z0], [hw, y1, z0]);
@@ -4084,7 +4107,10 @@ export class Ch1Props extends PropSet {
     shell.add('alu', new THREE.CylinderGeometry(0.13, 0.13, 0.6, 10), along.clone().setPosition(-0.62, 0.45, 0.2));
     // on the cab roof: a row of small marker lamps
     for (let i = -2; i <= 2; i++) shell.box('lensAmber', i * 0.42, 2.54, -3.02, 0.1, 0.045, 0.06);
-    shell.meshes(parts).forEach((mesh) => truck.add(mesh));
+    shell.meshes(parts).forEach((mesh) => {
+      mesh.userData.vehicleFootprint = true;
+      truck.add(mesh);
+    });
 
     // ---- rear wheels (two side by side on each end of the axle) and the spare ----------------------------
     const wheels = wheelGeometries();
@@ -4122,6 +4148,7 @@ export class Ch1Props extends PropSet {
       mesh.frustumCulled = false;
       mesh.castShadow = mesh !== rivets;
       mesh.userData.dynamic = true;
+      mesh.userData.vehicleFootprint = true;
       truck.add(mesh);
     });
 

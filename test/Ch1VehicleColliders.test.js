@@ -3,39 +3,74 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { LevelData } from '../web/js/LevelData.js';
 import { CollisionWorld } from '../web/js/CollisionWorld.js';
+import { ColliderFootprint } from '../web/js/level/ColliderFootprint.js';
 import { PathFinder } from '../web/js/PathFinder.js';
 import { PLAYER_BODY } from '../web/js/player/PlayerBody.js';
 
 const load = async () => new LevelData(JSON.parse(await readFile(new URL('../web/levels/ch1.json', import.meta.url), 'utf8')));
 const placed = (prop, x, z) => {
   const angle = prop.rotY * Math.PI / 180;
-  return { x: prop.x + x * Math.cos(angle) + z * Math.sin(angle), z: prop.z - x * Math.sin(angle) + z * Math.cos(angle) };
+  return {
+    x: prop.x + prop.scale * (x * Math.cos(angle) + z * Math.sin(angle)),
+    z: prop.z + prop.scale * (-x * Math.sin(angle) + z * Math.cos(angle)),
+  };
 };
 
-test('ch1 vehicle doors, mirrors and tipped body sections block traversal', async () => {
+const cars = ['car_wreck_2', 'car_flipped_10', 'car_wreck_16', 'car_flipped_23', 'car_wreck_27', 'car_wreck_33', 'escape_car_38'];
+const largerVehicles = ['truck_wreck_8', 'van_wreck_18', 'truck_wreck_30'];
+
+test('ch1 collision boxes cover the measured vehicle body footprints', async () => {
+  const level = await load();
+  assert.deepEqual(level.warnings, []);
+  const world = CollisionWorld.fromLevel(level);
+  for (const id of [...cars, ...largerVehicles]) {
+    const prop = level.props.find(p => p.collider === id);
+    assert.ok(prop?.footprint, id + ' missing measured footprint');
+    const extent = ColliderFootprint.ofProp(prop, level.collider(id));
+    const box = world.boxes.find(b => b.id === id);
+    for (const axis of ['X', 'Y', 'Z']) {
+      assert.ok(box['min' + axis] <= extent['min' + axis] + 1e-9, id + ' min' + axis);
+      assert.ok(box['max' + axis] >= extent['max' + axis] - 1e-9, id + ' max' + axis);
+    }
+    assert.equal(world.hit(prop.x, prop.z, PLAYER_BODY.radius, 0, PLAYER_BODY.height)?.id, id);
+  }
+});
+
+test('ch1 cars block rays through the body and let eye-height rays pass over the roof', async () => {
   const level = await load();
   const world = CollisionWorld.fromLevel(level);
-  // Independently measured solid points, in the builders' local space. These used to sit
-  // outside the written colliders. Quarter-turned vehicles exercise the level transform too.
-  const probes = [
-    ['car_wreck_2', 0, -2.26], ['truck_wreck_8', 2.12, -2.7],
-    ['car_flipped_10', -1.02, 0], ['car_wreck_16', -1.32, -0.5],
-    ['van_wreck_18', 1.87, -0.5], ['car_flipped_23', 1, 0],
-    ['car_wreck_27', -1.91, -0.5], ['car_wreck_27', 1.94, -0.5],
-    ['truck_wreck_30', 1.52, -3.1], ['car_wreck_33', -0.97, 0],
-    ['escape_car_38', 0, -2.17],
-  ];
-  for (const [id, x, z] of probes) {
+  const direction = { x: 1, y: 0, z: 0 };
+  for (const id of cars) {
     const prop = level.props.find(p => p.collider === id);
-    const point = placed(prop, x, z);
-    const old = level.collider(id);
-    assert.ok(Math.abs(point.x - old.x) > old.w / 2 || Math.abs(point.z - old.z) > old.d / 2, id + ' regression probe');
-    assert.ok(world.hit(point.x, point.z, 0.001, 0, PLAYER_BODY.height), id + ' solid point');
+    const box = world.boxes.find(b => b.id === id);
+    const bodyTop = prop.y + prop.footprint.maxY * prop.scale;
+    assert.ok(bodyTop < PLAYER_BODY.eyeHeight, id + ' measured body is below eye height');
+    const written = level.collider(id);
+    assert.ok(box.maxY <= Math.max(bodyTop, written.y + written.h) + 1e-9, id + ' collision top');
+
+    const origin = { x: box.minX - 0.1, y: bodyTop / 2, z: (box.minZ + box.maxZ) / 2 };
+    const distance = box.maxX - box.minX + 0.2;
+    assert.ok(Math.abs(world.raycast(origin, direction, distance) - 0.1) < 1e-9, id + ' body blocks ray');
+    origin.y = PLAYER_BODY.eyeHeight;
+    assert.equal(world.raycast(origin, direction, distance), Infinity, id + ' eye-height shot');
+    assert.equal(world.raycastFace(origin, direction, distance), null, id + ' eye-height throw');
   }
-  const open = level.props.find(p => p.collider === 'car_wreck_27');
-  const moved = world.move(open.x + 3, open.z, -2, 0, PLAYER_BODY.radius, 0, PLAYER_BODY.height);
-  assert.ok(moved.hitX);
-  assert.ok(moved.x >= open.x + 1.953 + PLAYER_BODY.radius, 'movement stops outside the open door');
+});
+
+test('ch1 open side doors and mirrors leave room to walk beside the vehicles', async () => {
+  const level = await load();
+  const world = CollisionWorld.fromLevel(level);
+  for (const id of ['car_wreck_16', 'van_wreck_18', 'car_wreck_27', 'truck_wreck_30']) {
+    const prop = level.props.find(p => p.collider === id);
+    const collider = level.collider(id);
+    const halfWidth = (prop.rotY === 90 ? collider.d : collider.w) / 2;
+    // Leave 10 cm beyond the original width for the truck's running boards.
+    const offset = halfWidth + PLAYER_BODY.radius + 0.1;
+    for (const side of [-1, 1]) {
+      const p = placed(prop, side * offset, 0);
+      assert.equal(world.hit(p.x, p.z, PLAYER_BODY.radius, 0, PLAYER_BODY.height), null, id + ' side ' + side);
+    }
+  }
 });
 
 test('ch1 loose luggage, cartons, skid marks and light pools stay walkable', async () => {

@@ -1,9 +1,11 @@
 ﻿// B18: measure only solid vehicle sections, excluding decals, light cones and loose debris.
-// Run from the repository root: node tools/art/check-ch1-vehicles.mjs
+// Run from the repository root: node tools/art/check-ch1-vehicles.mjs [--measure]
 import assert from 'node:assert/strict';
+import { parseArgs } from 'node:util';
 import { startServer } from '../serve.mjs';
 import { chromium } from 'playwright';
 
+const { values } = parseArgs({ options: { measure: { type: 'boolean' } } });
 const server = await startServer({ port: 0, quiet: true });
 let browser;
 try {
@@ -21,30 +23,12 @@ try {
       object.position.set(0, 0, 0);
       object.rotation.set(0, 0, 0);
       object.scale.setScalar(1);
-      const root = object.children[0];
-      const solid = new THREE.Group();
-      if (prop.name.startsWith('ch1_box_truck')) {
-        // The truck's first group contains cab, shell, wheels, rivets, then dressing.
-        // Dressing decals use renderOrder 3/4/7; loose cartons are BoxGeometry meshes.
-        for (const child of [...root.children]) {
-          if (child.renderOrder === 0 && child.geometry?.type !== 'BoxGeometry') solid.add(child);
-        }
-        solid.rotation.copy(root.rotation); // the blocking truck is internally slewed -0.2 rad
-      } else {
-        solid.add(root); // buildCar, including open doors and fitted wheels; excludes dressCar
-        if (prop.name === 'ch1_car_crashed') {
-          // The bent post and sign plate are also solid; smoke planes and skid marks are not.
-          for (const child of [...object.children]) {
-            if (['BoxGeometry', 'CylinderGeometry'].includes(child.geometry?.type)) solid.add(child);
-          }
-        }
-      }
-      solid.updateMatrixWorld(true);
+      object.updateMatrixWorld(true);
       const box = new THREE.Box3();
       const vertex = new THREE.Vector3();
       const matrix = new THREE.Matrix4();
-      solid.traverse(mesh => {
-        if (!mesh.isMesh) return;
+      const expandMesh = (mesh) => {
+        const omissions = mesh.userData.footprintOmissions ?? [];
         const positions = mesh.geometry.attributes.position;
         for (let instance = 0; instance < (mesh.isInstancedMesh ? mesh.count : 1); instance++) {
           if (mesh.isInstancedMesh) {
@@ -52,25 +36,37 @@ try {
             matrix.premultiply(mesh.matrixWorld);
           } else matrix.copy(mesh.matrixWorld);
           for (let i = 0; i < positions.count; i++) {
+            if (omissions.some(([start, end]) => i >= start && i < end)) continue;
             vertex.fromBufferAttribute(positions, i).applyMatrix4(matrix);
             box.expandByPoint(vertex);
           }
         }
-      });
+      };
+      // A body group includes its children. Open side doors opt out as a whole group.
+      const visit = (node, inherited) => {
+        if (node.userData.vehicleFootprint === false) return;
+        const included = node.userData.vehicleFootprint ?? inherited;
+        if (included && node.isMesh) expandMesh(node);
+        for (const child of node.children) visit(child, included);
+      };
+      visit(object, false);
+      if (box.isEmpty()) throw new Error(prop.collider + ' has no tagged vehicle body geometry');
       rows.push({ id: prop.collider, footprint: prop.footprint, min: box.min.toArray(), max: box.max.toArray() });
     }
     return rows;
   });
   assert.equal(rows.length, 10);
   for (const row of rows) {
-    assert.ok(row.footprint, row.id + ' missing footprint');
-    for (const [axis, name] of ['X', 'Y', 'Z'].entries()) {
-      const low = row.min[axis] - row.footprint['min' + name];
-      const high = row.footprint['max' + name] - row.max[axis];
-      assert.ok(low >= -1e-6 && low < 0.0011, row.id + ' min' + name);
-      assert.ok(high >= -1e-6 && high < 0.0011, row.id + ' max' + name);
+    const min = row.min.map(value => Math.floor(value * 1000) / 1000);
+    const max = row.max.map(value => Math.ceil(value * 1000) / 1000);
+    if (values.measure) {
+      console.log(row.id + ' ' + JSON.stringify({ min, max }));
+      continue;
     }
-    console.log(row.id + ': solid footprint covers geometry, rounded outward within 1 mm');
+    assert.ok(row.footprint, row.id + ' missing footprint');
+    const { minX, minY, minZ, maxX, maxY, maxZ } = row.footprint;
+    assert.deepEqual({ min: [minX, minY, minZ], max: [maxX, maxY, maxZ] }, { min, max }, row.id);
+    console.log(row.id + ': footprint matches tagged body geometry to the nearest outward millimetre');
   }
 } finally {
   await browser?.close();
