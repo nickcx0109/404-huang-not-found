@@ -83,6 +83,11 @@ export class HeldWeaponDriver {
   }
 
   dispose() {
+    // Clear a trail that is still on screen; nothing will publish another frame.
+    if (this._showedSwing) {
+      this._showedSwing = false;
+      this.events.emit(SWING_EVENTS.FRAME, { ownerId: this.ownerId, cue: null });
+    }
     this._unsubscribe.forEach(off => off());
     this._unsubscribe = [];
   }
