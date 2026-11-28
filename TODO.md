@@ -51,7 +51,6 @@
 ## 其他
 
 - [~] **C1 過場播放器**：在遊戲裡播劇情過場（`docs/story/cutscenes/`），先做開場打電話那段：老黃、三人接電話、斜切分割畫面（左邊三人、右邊老黃）加打字機字幕。鏡頭種類用繼承和註冊加（圖片、分割畫面），內容放 JSON；打字機和時間軸是純邏輯，要有測試。（進行中：@big0527，分支 feat/cutscene-player）
-- [~] **G8o 隊友的電鋸、換彈聲**：G8j 只在隊友的位置播 `weapon.fired` 的 `fire`／`hit`（槍聲、揮刀）。隊友拿電鋸沒有循環聲（`SoundBoard.hold`／`loop` 沒有位置），隊友換彈也沒聲音。要讓循環聲帶位置、跟著隊友移動；加測試。（進行中：@nickcx0109，分支 feat/net-teammate-loops）
 
 
 ---
@@ -122,4 +121,5 @@
 - G8k Online exits and obstacles: server-owned E, shared collision/navigation updates, room transitions, health/loadout carry-over and rejoin consistency; 578 tests and 8 ch2 screenshots same (PR #62)
 - G8e 瀏覽器接上連線：隊伍開始畫面和房間、`OnlineMode`（本地預測、快照插值、殭屍方塊和隊友膠囊、事件轉成單機事件）、連線時第二章警示燈降到 1（PR #54）
 - G8f 部署準備：一個 port 送網頁、`/health` 和 WebSocket（`server/http/`），game server 送出的網頁自動連自己、`Dockerfile`、`fly.toml`（東京）、`render.yaml`（新加坡）、`npm start`、`tools/net-latency.mjs`（PR #55）
+- G8o Teammate positional chainsaw loops and reload audio; per-player moving mixes and lifecycle cleanup (PR #63)
 - G8j 聽得到隊友的槍聲：`TeammateWeaponSounds` 在隊友的位置播他那把武器的槍聲（左右聲道、60 m 衰減），自己的槍不會播兩次（PR #56）

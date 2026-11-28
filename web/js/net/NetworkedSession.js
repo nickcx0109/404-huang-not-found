@@ -84,6 +84,12 @@ export class NetworkedSession {
     this.sampled = sampled;
   }
 
+  resumeConnection(buffer) {
+    buffer.clear();
+    this.setSampled(null);
+    this.connection = 'open';
+  }
+
   get state() {
     if (!this.latest) return this.starting ? 'starting' : 'team-lobby';
     return this.latest.state === 'lobby' ? 'starting' : this.latest.state;

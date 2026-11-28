@@ -128,7 +128,10 @@ export class OnlineMode extends GameMode {
     this.enemyViews = new RemoteEnemyViews(app.scene, app.style);
     this.playerViews = new RemotePlayerViews(app.scene, events, id, playerId => this.view.nameOf(playerId));
     this.audio = installAudio({ events, player, enemies: () => this.standIns.living, playerId: id,
-      teammatePosition: ownerId => this.standIns.players.get(ownerId)?.position ?? null });
+      teammatePosition: ownerId => this.view.connection === 'open'
+        && this.view.room?.players.some(p => p.id === ownerId && !p.away)
+        ? this.view.sampled?.players.find(p => p.id === ownerId) ?? null : null,
+      teammates: () => this.view.connection === 'open' ? this.view.sampled?.players ?? [] : [] });
     app.gameViews = [];
 
     // HUD.
@@ -304,7 +307,8 @@ export class OnlineMode extends GameMode {
     if (this.view.connection === 'reconnecting') {
       // Back in the seat after a dropped connection: the server restarted our input acks and
       // kept the player where they stood, so let the next snapshot place us and send at once.
-      this.view.connection = 'open';
+      this.audio.resetTeammateLoops();
+      this.view.resumeConnection(this.buffer);
       this.reconciler.reset();
       this.inputs.reset();
     }
