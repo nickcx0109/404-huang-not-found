@@ -45,7 +45,6 @@
 
 細節和修法方向在 [docs/tech/KNOWN_ISSUES.md](docs/tech/KNOWN_ISSUES.md)。修好就在那份文件標成已修復，並從這裡刪掉。
 
-- [~] **B18** 第一章的車、卡車替身（`Ch1Props.js` 的 `ch1_*`、`escape_car`）畫出來比 collider 大，B17 量過但沒改：`ch1_car_crashed` 凸出 0.13 m、`ch1_car_flipped` 0.08 m、`ch1_car_hazard` 0.035 m、`escape_car` 0.03 m，`ch1_box_truck` 0.29 m；`ch1_car_blocking`（1.8 m）、`ch1_car_lights`（0.8 m）、`ch1_box_truck_looted`（3.1 m）、`ch1_car_open`（3.8 m）凸出的多半是打開的車門和地上散落的東西。要決定哪些算擋路，再補 `footprint` 或改 collider，記得看出怪路線（`test/CrowdStall.test.js`）（進行中：@nickcx0109，分支 fix/ch1-vehicle-colliders）
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
 
 ## 其他
@@ -117,6 +116,7 @@
 - G8b 單機和 server 共用的 `createSession()`；遠端 controller 的規則寫在 GAMEPLAY.md（PR #50）
 - B1 旋轉、縮放的道具碰撞盒跟著變大；`footprint` 欄位（PR #51）
 - B17 車輛模型的碰撞盒包住整台模型：manifest 記 GLB 量的 `footprint`，ch2 的卡車、廂型車、停著的車照抄（PR #57）
+- B18 第一章車輛替身的碰撞盒貼合車身（PR #64）
 - G8d server 跑遊戲：`SessionRoomGame`、`RemoteController`、開槍倒回時間、快照和事件轉送（PR #52）
 - G8k Online exits and obstacles: server-owned E, shared collision/navigation updates, room transitions, health/loadout carry-over and rejoin consistency; 578 tests and 8 ch2 screenshots same (PR #62)
 - G8e 瀏覽器接上連線：隊伍開始畫面和房間、`OnlineMode`（本地預測、快照插值、殭屍方塊和隊友膠囊、事件轉成單機事件）、連線時第二章警示燈降到 1（PR #54）
