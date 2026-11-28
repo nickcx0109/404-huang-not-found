@@ -54,11 +54,12 @@
 
 細節和修法方向在 [docs/tech/KNOWN_ISSUES.md](docs/tech/KNOWN_ISSUES.md)。修好就在那份文件標成已修復，並從這裡刪掉。
 
-- [ ] **B7** `StaticBatcher` 整關合併、無法剔除，要改成按區塊合併（#9，S1 會遇到）
+- [~] **B7** `StaticBatcher` 整關合併、無法剔除，要改成按區塊合併（#9，S1 會遇到）（進行中：@nickcx0109，分支 perf/b7-chunked-batching）
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
 
 ## 其他
 
+- [~] **C1 過場播放器**：在遊戲裡播劇情過場（`docs/story/cutscenes/`），先做開場打電話那段：老黃、三人接電話、斜切分割畫面（左邊三人、右邊老黃）加打字機字幕。鏡頭種類用繼承和註冊加（圖片、分割畫面），內容放 JSON；打字機和時間軸是純邏輯，要有測試。（進行中：@big0527，分支 feat/cutscene-player）
 - [~] **G8o 隊友的電鋸、換彈聲**：G8j 只在隊友的位置播 `weapon.fired` 的 `fire`／`hit`（槍聲、揮刀）。隊友拿電鋸沒有循環聲（`SoundBoard.hold`／`loop` 沒有位置），隊友換彈也沒聲音。要讓循環聲帶位置、跟著隊友移動；加測試。（進行中：@nickcx0109，分支 feat/net-teammate-loops）
 
 
@@ -123,7 +124,7 @@
 - G8b 單機和 server 共用的 `createSession()`；遠端 controller 的規則寫在 GAMEPLAY.md（PR #50）
 - B1 旋轉、縮放的道具碰撞盒跟著變大；`footprint` 欄位（PR #51）
 - B17 車輛模型的碰撞盒包住整台模型：manifest 記 GLB 量的 `footprint`，ch2 的卡車、廂型車、停著的車照抄（PR #57）
-- B18 ???????????????????????????????????PR #64?
+- B18 第一章車輛替身的碰撞盒貼合車身（PR #64）
 - G8d server 跑遊戲：`SessionRoomGame`、`RemoteController`、開槍倒回時間、快照和事件轉送（PR #52）
 - G8e 瀏覽器接上連線：隊伍開始畫面和房間、`OnlineMode`（本地預測、快照插值、殭屍方塊和隊友膠囊、事件轉成單機事件）、連線時第二章警示燈降到 1（PR #54）
 - G8f 部署準備：一個 port 送網頁、`/health` 和 WebSocket（`server/http/`），game server 送出的網頁自動連自己、`Dockerfile`、`fly.toml`（東京）、`render.yaml`（新加坡）、`npm start`、`tools/net-latency.mjs`（PR #55）
