@@ -20,6 +20,20 @@ class RecordingOutput {
   setLoop() {}
 }
 
+test('a loop returns to full centered volume after losing its position or being torn down', () => {
+  const output = new RecordingOutput();
+  const calls = [];
+  output.setLoop = (...args) => calls.push(args);
+  const board = new SoundBoard(output, () => ({ x: 0, z: 0, yaw: 0 }));
+  board.loop('saw', 'idle', { position: { x: 10, z: 0 } });
+  assert.ok(calls.at(-1)[2].gain < 1);
+  board.loop('saw', 'idle');
+  assert.deepEqual(calls.at(-1), ['saw', 'idle', { pan: 0, gain: 1 }]);
+  board.dispose();
+  assert.deepEqual(calls.at(-1), ['saw', null]);
+  assert.equal(board.holds.size, 0);
+});
+
 function setup({ listener = { x: 0, z: 0, yaw: 0 }, positions = {} } = {}) {
   const events = new EventBus();
   const output = new RecordingOutput();

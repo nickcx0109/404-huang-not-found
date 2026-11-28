@@ -65,7 +65,7 @@ export class SoundBoard {
    */
   hold(key, cue, seconds, { then = null } = {}) {
     const current = this.holds.get(key);
-    if (!current || current.cue !== cue) this.output.setLoop(key, cue, { gain: 1 });
+    if (!current || current.cue !== cue || current.positional) this.output.setLoop(key, cue, { gain: 1 });
     this.holds.set(key, { cue, until: this.time + seconds, then });
   }
 
@@ -78,8 +78,8 @@ export class SoundBoard {
       return;
     }
     const mix = SpatialMix.of(position ? this.listener() : null, position, range);
-    if (!current || current.cue !== cue || position) this.output.setLoop(key, cue, mix);
-    this.holds.set(key, { cue, until: Infinity, then: null });
+    if (!current || current.cue !== cue || position || current.positional) this.output.setLoop(key, cue, mix);
+    this.holds.set(key, { cue, until: Infinity, then: null, positional: Boolean(position) });
   }
 
   update(dt) {
