@@ -14,7 +14,7 @@ export class Sound {
   }
 
   /** @returns {(() => void) | null} stops the loop; null if this sound cannot loop */
-  startLoop(synth, mix) {
+  startLoop(synth, mix, onEnded) {
     return null;
   }
 }
@@ -43,12 +43,20 @@ export class SampleSound extends Sound {
     source.start();
   }
 
-  startLoop(synth, mix) {
+  startLoop(synth, mix, onEnded) {
     const source = this._source(synth, true);
     const gain = synth.mixer(mix.gain * this.volume, mix.pan);
     source.connect(gain);
+    source.onended = () => {
+      source.disconnect();
+      gain.disconnect();
+      onEnded?.();
+    };
     source.start();
+    let stopping = false;
     return () => {
+      if (stopping) return;
+      stopping = true;
       // A short fade, or the cut clicks.
       const now = synth.context.currentTime;
       gain.gain.setTargetAtTime(0, now, 0.03);

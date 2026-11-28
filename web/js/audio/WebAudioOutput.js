@@ -18,6 +18,7 @@ export class WebAudioOutput {
     this.synth = null;
     this.library = new Map();
     this.loops = new Map();
+    this.loopDisconnects = new Set();
     this.disposed = false;
     this.paused = false;
     this.loads = new AbortController();
@@ -71,26 +72,36 @@ export class WebAudioOutput {
       current.update(mix);
       return;
     }
-    this.loops.get(key)?.stop?.();
+    current?.stop?.();
     this.loops.delete(key);
     if (cue === null) return;
     let stop = null;
     let update = null;
-    if (this.synth) {
+    const sound = this.library.get(cue);
+    if (this.synth && sound) {
       const context = this.synth.context;
       const gain = context.createGain();
       const pan = context.createStereoPanner?.();
       gain.connect(pan ?? this.synth.output);
       if (pan) pan.connect(this.synth.output);
-      update = next => {
-        gain.gain.value = next.gain;
-        if (pan) pan.pan.value = next.pan ?? 0;
-      };
-      update(mix);
       const voice = Object.create(this.synth);
       voice.output = gain;
-      const end = this.library.get(cue)?.startLoop(voice, { pan: 0, gain: 1 });
-      stop = () => { end?.(); gain.disconnect(); pan?.disconnect(); };
+      const disconnect = () => {
+        if (!this.loopDisconnects.delete(disconnect)) return;
+        gain.disconnect();
+        pan?.disconnect();
+      };
+      this.loopDisconnects.add(disconnect);
+      stop = sound.startLoop(voice, { pan: 0, gain: 1 }, disconnect);
+      if (stop) {
+        update = next => {
+          gain.gain.value = next.gain;
+          if (pan) pan.pan.value = next.pan ?? 0;
+        };
+        update(mix);
+      } else {
+        disconnect();
+      }
     }
     // Remember the cue even if it could not start yet, so the loop starts once its file arrives.
     this.loops.set(key, { cue, mix, stop, update });
@@ -139,6 +150,7 @@ export class WebAudioOutput {
     this.disposed = true;
     this.loads.abort();
     for (const key of [...this.loops.keys()]) this.setLoop(key, null);
+    for (const disconnect of this.loopDisconnects) disconnect();
     this.synth?.context.close();
     this.synth = null;
     this.library.clear();

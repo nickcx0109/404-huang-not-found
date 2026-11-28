@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { SampleSound, SynthSound } from '../web/js/audio/Sound.js';
+import { Synth } from '../web/js/audio/Synth.js';
 import { WebAudioOutput } from '../web/js/audio/WebAudioOutput.js';
 
 test('disposing audio during a file read aborts loads without decoding against a closed context', async context => {
@@ -126,4 +128,69 @@ test('loop mix moves without restarting its source and file replacement restarts
   assert.equal(stops, 1);
   output.dispose();
   assert.equal(stops, 2);
+});
+
+
+function setup() {
+  const nodes = [];
+  const calls = [];
+  const node = () => {
+    const result = {
+      connections: [],
+      connect(destination) { this.connections.push(destination); },
+      disconnect() { this.connections.length = 0; },
+    };
+    nodes.push(result);
+    return result;
+  };
+  const context = {
+    currentTime: 1,
+    createGain: () => Object.assign(node(), {
+      gain: { setTargetAtTime: (...args) => calls.push(['fade', ...args]) },
+    }),
+    createStereoPanner: () => Object.assign(node(), { pan: {} }),
+    createBufferSource: () => Object.assign(node(), {
+      start() {},
+      stop: when => calls.push(['stop', when]),
+    }),
+    close: () => calls.push(['close']),
+  };
+  const output = new WebAudioOutput();
+  output.synth = Object.assign(Object.create(Synth.prototype), { context, output: {} });
+  return { output, nodes, calls };
+}
+
+test('a stopped loop stays connected through the fade and disconnects on ended', () => {
+  const { output, nodes, calls } = setup();
+  output.library.set('idle', new SampleSound([{}]));
+  output.setLoop('saw', 'idle');
+  const [, , source] = nodes;
+  output.setLoop('saw', null);
+  output.setLoop('saw', null);
+  assert.deepEqual(calls, [['fade', 0, 1, 0.03], ['stop', 1.15]]);
+  assert.equal(nodes.every(node => node.connections.length === 1), true);
+  source.onended();
+  assert.equal(nodes.every(node => node.connections.length === 0), true);
+  assert.equal(output.loopDisconnects.size, 0);
+});
+
+test('an unavailable loop keeps its latest mix without leaving connected nodes', () => {
+  const { output, nodes } = setup();
+  output.setLoop('saw', 'idle');
+  assert.equal(nodes.length, 0);
+  output.library.set('idle', new SynthSound(() => {}));
+  output.setLoop('saw', 'idle', { gain: 0.4, pan: -0.7 });
+  assert.equal(nodes.every(node => node.connections.length === 0), true);
+  output.library.set('idle', new SampleSound([{}]));
+  output._restartLoopsOf('idle');
+  const [gain, panner, source] = nodes.slice(2);
+  assert.equal(gain.gain.value, 0.4);
+  assert.equal(panner.pan.value, -0.7);
+  output.setLoop('saw', null);
+  output.dispose();
+  assert.equal(gain.connections.length, 0);
+  assert.equal(panner.connections.length, 0);
+  assert.equal(output.loopDisconnects.size, 0);
+  source.onended();
+  assert.equal(nodes.every(node => node.connections.length === 0), true);
 });
