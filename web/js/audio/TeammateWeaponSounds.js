@@ -41,7 +41,9 @@ export class TeammateWeaponSounds extends SoundRule {
       const position = sound ? this.positionOf(detail.ownerId) : null;
       if (!position) return;
       const where = { position: { x: position.x, z: position.z }, range: this.range };
-      if (sound.working) this.cutting.set(detail.ownerId, this.board.time + this.workingSeconds);
+      if (sound.working) this.cutting.set(detail.ownerId, {
+        weaponId: detail.weaponId, until: this.board.time + this.workingSeconds,
+      });
       if (sound.fire) this.board.play(sound.fire, where);
       if (sound.hit && detail.hit) this.board.play(sound.hit, where);
     });
@@ -60,18 +62,25 @@ export class TeammateWeaponSounds extends SoundRule {
       const position = this.positionOf(mate.id);
       if (!sound?.held || !position) continue;
       seen.add(mate.id);
-      const cue = this.board.time < (this.cutting.get(mate.id) ?? 0) ? sound.working : sound.held;
+      const cut = this.cutting.get(mate.id);
+      const working = sound.working && cut?.weaponId === mate.weapon && this.board.time < cut.until;
+      if (!working) this.cutting.delete(mate.id);
+      const cue = working ? sound.working : sound.held;
       this.board.loop('teammate:' + mate.id, cue, { position, range: this.range });
     }
     for (const id of this.active) if (!seen.has(id)) {
       this.board.loop('teammate:' + id, null);
-      this.cutting.delete(id);
     }
+    for (const id of this.cutting.keys()) if (!seen.has(id)) this.cutting.delete(id);
     this.active = seen;
   }
 
   dispose() {
     super.dispose();
+    this.resetLoops();
+  }
+
+  resetLoops() {
     for (const id of this.active) this.board.loop('teammate:' + id, null);
     this.active.clear();
     this.cutting.clear();
