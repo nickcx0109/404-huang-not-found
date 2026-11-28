@@ -276,7 +276,8 @@ export class OnlineMode extends GameMode {
     if (this.view.connection === 'reconnecting') {
       // Back in the seat after a dropped connection: the server restarted our input acks and
       // kept the player where they stood, so let the next snapshot place us and send at once.
-      this.view.connection = 'open';
+      this.audio.resetTeammateLoops();
+      this.view.resumeConnection(this.buffer);
       this.reconciler.reset();
       this.inputs.reset();
     }

@@ -7,6 +7,8 @@ import { WeaponSounds } from '../web/js/audio/WeaponSounds.js';
 import { TeammateWeaponSounds } from '../web/js/audio/TeammateWeaponSounds.js';
 import { EntityStandIns } from '../web/js/net/EntityStandIns.js';
 import { NetEventTranslator } from '../web/js/net/NetEventTranslator.js';
+import { NetworkedSession } from '../web/js/net/NetworkedSession.js';
+import { SnapshotBuffer } from '../web/js/net/SnapshotBuffer.js';
 
 class RecordingOutput {
   constructor() {
@@ -32,6 +34,40 @@ test('a loop returns to full centered volume after losing its position or being 
   board.dispose();
   assert.deepEqual(calls.at(-1), ['saw', null]);
   assert.equal(board.holds.size, 0);
+});
+
+test('reconnect clears buffered and sampled teammate loops before a fresh snapshot', () => {
+  const events = new EventBus();
+  const output = new RecordingOutput();
+  const loops = new Map();
+  output.setLoop = (key, cue) => cue === null ? loops.delete(key) : loops.set(key, cue);
+  const board = new SoundBoard(output, () => ({ x: 0, z: 0, yaw: 0 }));
+  const buffer = new SnapshotBuffer();
+  const view = new NetworkedSession({ you: 'p1' });
+  const teammates = () => view.connection === 'open' ? view.sampled?.players ?? [] : [];
+  const rule = new TeammateWeaponSounds(events, 'p1', id => teammates().find(p => p.id === id), { teammates })
+    .register('chainsaw', { held: 'idle', working: 'cut' });
+  board.install(rule);
+  const snapshot = { time: 100, players: [{ id: 'p2', weapon: 'chainsaw', x: 5, z: 0 }], enemies: [] };
+  buffer.push(snapshot);
+  view.setSampled(buffer.sample(100));
+  events.emit(EVENTS.WEAPON_FIRED, { ownerId: 'p2', weaponId: 'chainsaw' });
+  board.update(0);
+  assert.equal(loops.get('teammate:p2'), 'cut');
+
+  view.connection = 'reconnecting';
+  rule.resetLoops();
+  view.resumeConnection(buffer);
+  assert.equal(view.connection, 'open');
+  assert.equal(view.sampled, null);
+  assert.equal(buffer.sample(110), null);
+  board.update(0);
+  assert.equal(loops.size, 0);
+
+  buffer.push({ ...snapshot, time: 120 });
+  view.setSampled(buffer.sample(120));
+  board.update(0);
+  assert.equal(loops.get('teammate:p2'), 'idle');
 });
 
 function setup({ listener = { x: 0, z: 0, yaw: 0 }, positions = {} } = {}) {
