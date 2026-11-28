@@ -65,17 +65,42 @@ test('only guns light the muzzle flash; blades swing without one', () => {
   }
 });
 
-test('KatanaView cuts right-to-left, then left-to-right, in step with the slash light', () => {
+test('KatanaView takes the side and sweep timing from the four alternating cuts', () => {
   const view = new KatanaView(noModel(), null);
-  const order = [];
-  for (let i = 0; i < 4; i++) {
-    view.fire(true);
-    order.push(view.state.clip.name);
-    view.update(0.05, 0);
+  const order = [['fire', 1], ['fireBack', -1], ['fire', 1], ['fireBack', -1]];
+  for (const [clip, side] of order) {
+    const hit = side < 0 ? { targetId: 'z1' } : null;
+    view.fire(true, { hit });
+    assert.equal(view.state.clip.name, clip);
+    view.update(0.059, 0);
+    assert.equal(view.swingCue, null, 'the wind-up has no trail');
+    view.update(0.001, 0);
+    assert.equal(view.swingCue.side, side);
+    assert.equal(view.swingCue.hit, hit !== null);
+    near(view.swingCue.elapsed, 0, 'the cue starts at the swing marker');
+    near(view.swingCue.sweepSeconds, 0.08, 'the cue uses the duration to the cut marker');
+    view.update(0.02, 0);
+    near(view.swingCue.elapsed, 0.02, 'cue and clip advance together');
+    view.update(0.42, 0);
   }
-  assert.deepEqual(order, ['fire', 'fireBack', 'fire', 'fireBack']);
   assert.ok(KatanaView.clips.fire.sample(0.06)['gun.rot.y'] < 0, 'drawn back to the right first');
   assert.ok(KatanaView.clips.fireBack.sample(0.06)['gun.rot.y'] > 0, 'the return cut starts on the left');
+});
+
+test('KatanaView resets on equip and a swing interrupted during wind-up leaves the next side available', () => {
+  const view = new KatanaView(noModel());
+  view.fire(true, { hit: { targetId: 'z1' } });
+  view.update(0.03, 0);
+  view.fire(true);
+  view.update(0.06, 0);
+  assert.equal(view.swingCue.side, 1);
+  assert.equal(view.swingCue.hit, false);
+
+  view.equip();
+  assert.equal(view.swingCue, null);
+  view.fire(true);
+  view.update(0.06, 0);
+  assert.equal(view.swingCue.side, 1, 'equipping again resets the cached view');
 });
 
 test('the chainsaw engine and the molotov flame keep moving while held', () => {

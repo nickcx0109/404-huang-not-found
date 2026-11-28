@@ -1,27 +1,9 @@
-import { ClipState } from '../WeaponView.js';
 import { MeleeView } from './MeleeView.js';
 import { ClipKit } from './ClipKit.js';
+import { SwingClipState } from './SwingClipState.js';
 
-// KatanaView: the katana (KatanaModel), held up and to the right. Cuts go back and forth: the
-// first from right to left, the next from left to right, in step with the blade light on the
-// screen (ui/hud/SlashWidget, whose SlashTrail also flips side every cut). The cut itself takes
-// as long as the light's sweep (SlashStyles: 0.08 seconds).
+// The first cut starts on the right. Each clip supplies the timing for its screen trail.
 const SWEEP = 0.08;
-
-/** Plays the cut clips in turn, one per swing. */
-export class AlternatingClipState extends ClipState {
-  constructor(view, clips) {
-    super(view, clips[clips.length - 1]);
-    this.clips = clips;
-    this.turn = -1;
-  }
-
-  restart() {
-    this.turn = (this.turn + 1) % this.clips.length;
-    this.clip = this.clips[this.turn];
-    super.restart();
-  }
-}
 
 export class KatanaView extends MeleeView {
   static id = 'katana';
@@ -37,7 +19,21 @@ export class KatanaView extends MeleeView {
 
   createStates() {
     const states = super.createStates();
-    states.fire = new AlternatingClipState(this, [this.constructor.clips.fire, this.constructor.clips.fireBack]);
+    const { fire, fireBack } = this.constructor.clips;
+    states.fire = new SwingClipState(this, [{ clip: fire, side: 1 }, { clip: fireBack, side: -1 }]);
     return states;
+  }
+
+  get swingCue() { return this.state === this.states.fire ? this.state.cue : null; }
+
+  equip() {
+    this.states.fire.reset();
+    return super.equip();
+  }
+
+  fire(force = false, { hit } = {}) {
+    if (!super.fire(force)) return false;
+    this.states.fire.hit = hit != null;
+    return true;
   }
 }
