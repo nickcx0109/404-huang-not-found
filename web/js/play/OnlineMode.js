@@ -1,3 +1,4 @@
+import { LevelFlowMirror } from '../net/LevelFlowMirror.js';
 import { GameMode } from '../game/modes/GameMode.js';
 import { EVENTS } from '../game/events.js';
 import { SnapshotBuffer } from '../net/SnapshotBuffer.js';
@@ -54,12 +55,16 @@ export class OnlineMode extends GameMode {
    *   onRenamed?: (room: object) => void}} options  `onRenamed` builds a new OnlineMode on the same
    *   client when the server gives this page another player id (a rejoin into a different slot)
    */
-  constructor(app, { client, room, onLeave, onRenamed = null }) {
+  constructor(app, { client, room, onLeave, onRenamed = null, onLevel = null }) {
     super();
     this.app = app;
     this.client = client;
     this.onLeave = onLeave;
     this.onRenamed = onRenamed;
+    this.onLevel = onLevel;
+    this.flowMirror = app.flow ? new LevelFlowMirror(app.level, app.built.collision, app.built.root) : null;
+    this.flowHeld = false;
+    this.flowHeartbeat = 0;
     this.disposed = false;
     this.left = false;
     /** True once the client was passed on to a new OnlineMode: disposing must not leave the team. */
@@ -218,6 +223,22 @@ export class OnlineMode extends GameMode {
     if (state !== this._state) this._stateChanged(this._state, state);
   }
 
+  levelFlowReady() {
+    this.flowMirror ??= new LevelFlowMirror(this.app.level, this.app.built.collision, this.app.built.root);
+  }
+
+  /** E is a heartbeat; the server determines range, progress and the destination. */
+  updateLevelFlow(dt, holding) {
+    const next = Boolean(holding && this.view.canAct);
+    this.flowHeartbeat += dt;
+    if (next !== this.flowHeld || (next && this.flowHeartbeat >= 0.1)) {
+      this._sendPose(true);
+      this.client.action('interact', { holding: next });
+      this.flowHeld = next;
+      this.flowHeartbeat = 0;
+    }
+  }
+
   /** Online the level's exits and obstacles stay put: the server's game decides. */
   blocksLevelFlow() {
     return true;
@@ -238,8 +259,13 @@ export class OnlineMode extends GameMode {
   }
 
   _snapshot(snapshot) {
+    if (snapshot.level && snapshot.level !== this.app.options.level) return;
     this.buffer.push(snapshot); // duplicates and very late ones are refused by the buffer itself
     if (!this.view.applySnapshot(snapshot)) return;
+    this.flowMirror?.apply(snapshot.cleared);
+    this.app.events.emit(EVENTS.PROMPT_CHANGED, snapshot.flow
+      ? { id: 'online-level-flow', text: snapshot.flow.kind === 'exit' ? 'E   TRAVEL WITH TEAM' : 'HOLD E   CLEAR THE WAY', progress: snapshot.flow.progress }
+      : { id: 'online-level-flow', text: null });
     const changed = this.pickups.apply(snapshot.pickups);
     for (const pickupId of changed) this.pickupViews.refresh(pickupId);
     this.crates.apply(snapshot.crates);
@@ -269,6 +295,11 @@ export class OnlineMode extends GameMode {
   }
 
   _room(room) {
+    if (room.level !== this.app.options.level && this.onLevel) {
+      this.handedOff = true;
+      this.onLevel(room);
+      return;
+    }
     const renamed = this.view.applyRoom(room);
     if (this.view.connection === 'reconnecting') {
       // Back in the seat after a dropped connection: the server restarted our input acks and
@@ -357,6 +388,8 @@ export class OnlineMode extends GameMode {
     }
     this.ctx.session.disposed = true;
     for (const unsubscribe of this._unsubscribe) unsubscribe();
+    this.flowMirror?.dispose();
+    this.app.events.emit(EVENTS.PROMPT_CHANGED, { id: 'online-level-flow', text: null });
     this.combat.dispose();
     this.forwarder.dispose();
     const app = this.app;

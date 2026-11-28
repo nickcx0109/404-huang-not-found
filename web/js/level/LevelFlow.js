@@ -23,9 +23,10 @@ export class LevelFlow {
    * @param {(target: string, from: string) => void} parts.navigate  loads another level
    * @param {{has: (key: string) => boolean, add: (key: string) => void}} [parts.store]
    * @param {number} [parts.clearSeconds]  how long the interact key must be held
+   * @param {boolean} [parts.requireInteract] online exits require held E; local exits remain automatic
    * @param {number} [parts.reach]  how close to a block the player must stand, in metres
    */
-  constructor({ level, collision, player, navigate, store = new Set(), clearSeconds = 2.5, reach = 1.6 }) {
+  constructor({ level, collision, player, navigate, store = new Set(), clearSeconds = 2.5, reach = 1.6, requireInteract = false }) {
     this.level = level;
     this.collision = collision;
     this.player = player;
@@ -33,6 +34,7 @@ export class LevelFlow {
     this.store = store;
     this.clearSeconds = clearSeconds;
     this.reach = reach;
+    this.requireInteract = requireInteract;
     /** Called with the removed box whenever a block is cleared, also for remembered ones. */
     this.onCleared = null;
 
@@ -90,7 +92,7 @@ export class LevelFlow {
       // they have stepped out of it once.
       if (!inside) {
         exit.armed = true;
-      } else if (exit.armed && !this.blocks.has(exit.marker.id)) {
+      } else if (exit.armed && (!this.requireInteract || holding) && !this.blocks.has(exit.marker.id)) {
         this._leaving = true;
         this.navigate(exit.target, this.level.name);
         return null;
@@ -123,6 +125,12 @@ export class LevelFlow {
     this._disarmWherePlayerStands();
     if (this.onCleared) this.onCleared(box);
     return true;
+  }
+
+  /** A refused room transition may be retried after stepping out and back in. */
+  cancelDeparture() {
+    this._leaving = false;
+    this._disarmWherePlayerStands();
   }
 
   isBlocked(exitId) {
