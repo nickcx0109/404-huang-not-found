@@ -100,6 +100,7 @@ export function installLevelFlow(app) {
 
   flow.remembered.forEach((box) => hideVisuals(app.built.root, box));
   flow.onCleared = (box) => hideVisuals(app.built.root, box);
+  app.mode?.levelFlowReady?.();
 
   const from = new URLSearchParams(window.location.search).get('from');
   if (from) flow.arriveFrom(from);
@@ -116,7 +117,13 @@ export function installLevelFlow(app) {
   return {
     flow,
     update(dt) {
-      // The game mode decides (dead, downed, reviving, not started; online play always blocks).
+      if (app.mode?.updateLevelFlow) {
+        app.mode.updateLevelFlow(dt, holding && app.player.locked);
+        flow.cancelInteraction();
+        prompt.show(null);
+        return;
+      }
+      // The game mode decides (dead, downed, reviving, not started).
       const blocked = app.mode?.blocksLevelFlow() ?? false;
       if (blocked) {
         flow.cancelInteraction();

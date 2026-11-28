@@ -23,15 +23,6 @@
   - [ ] **G8m 實際部署和實測**（最後）：照 README「線上多人」部署到東京（Fly.io，`fly.toml`）或新加坡（Render，`render.yaml`），確認只有一台機器在跑；兩台電腦在不同網路用隊伍編號一起打完第二章，用 `node tools/net-latency.mjs wss://<網址> 50` 記錄延遲（min／median／p95），把延遲和遇到的問題寫進 NETWORK.md「部署」或新的 TODO 項目。
   - [ ] **G8h 快照補上彈藥箱和飛行中的效果**：協定還沒有彈藥箱能不能拿（線上的箱子永遠顯示可以拿），也沒有 `effects` 清單（飛行中的手榴彈、汽油彈、燃燒的地面），瀏覽器只畫得出爆炸閃光。在 snapshot 加欄位（記得更新 NETWORK.md 和 `protocol.js` 的檢查），瀏覽器用 `AmmoCrateViews`、`EffectViews` 畫出來；加測試。
   - [ ] **G8i 遊戲中斷線可以回來**：遊戲開始後重新連線，server 會回 `started`，瀏覽器只能顯示「連線中斷」。讓斷線的玩家在同一個位置（同一個編號、血量和武器）回到進行中的遊戲；加測試。
-  - [~] **G8k 線上的關卡出口和障礙物**：`installLevelFlow` 線上整個關掉（`OnlineMode.blocksLevelFlow`）。改成由 server 決定：有人在出口按 E 時送 action，server 處理後用事件通知所有人。（進行中：@nickcx0109，分支 feat/net-level-flow）
-- [~] **G9 槍的第一人稱模型和動畫**（進行中：@nickcx0109，分支 feat/weapons-art，暫停）
-  - 做到一半，已 push 到分支 `feat/weapons-art`（5 個 commit，還沒開 PR、沒合併）：資產庫的可動零件、手槍模型 `pistol.glb`、`art/manifest/weapons.json`、`web/js/weapons/` 的 `WeaponRig`、`WeaponView`、`PistolView`、`Clip`、`WeaponModel`（開槍、換彈、拿出的動畫）。
-  - 接手前：這個分支是從 PR #6 之前的 `main` 開的，要先 `git rebase main`。`web/js/App.js` 會衝突，兩邊的改動都要留。
-  - 還沒做：
-    - 改用玩法骨架的事件。現在用自己的 `weapon:fire`、`weapon:reload`，還自己綁滑鼠和 R 鍵；要改成訂閱 `game/events.js` 的 `WEAPON_FIRED`、`WEAPON_RELOADED`、`WEAPON_CHANGED`。
-    - 走動模式現在預設會拿槍，畫面會變。要決定是只在 `play=1` 顯示，還是接受走動模式的截圖改變。
-    - 測試，以及 G1 的步槍和霰彈槍模型。
-    - 武士刀模型（G24 只做了刀光）：參考舊原型 `reference/old-web-prototype/prototype-web/gfx/weapons.js` 的 `katana()`，鮫皮柄加柄卷的菱形窗、黃銅鐔、彎的刀身分鎬地／平地／刃三段，刃口一條淡藍發光線。揮刀動畫的掃過時間對齊刀光（`ui/hud/logic/SlashStyles.js` 的 `sweepSeconds`，0.08 秒），方向也要一致：刀光每一刀左右交替（`SlashTrail.side`）。
 - [~] **G27 左輪和霰彈槍一發一發裝**（進行中：@big0527，分支 feat/single-round-reload）
   - 內容：按 R 之後一發一發裝進去，每裝一發就有一聲；裝到一半按左鍵可以直接開火（只裝一發也能打）。
 - [~] **G28 真實音效**（進行中：@big0527，分支 feat/real-sounds）
@@ -54,19 +45,18 @@
 
 細節和修法方向在 [docs/tech/KNOWN_ISSUES.md](docs/tech/KNOWN_ISSUES.md)。修好就在那份文件標成已修復，並從這裡刪掉。
 
-- [~] **B7** `StaticBatcher` 整關合併、無法剔除，要改成按區塊合併（#9，S1 會遇到）（進行中：@nickcx0109，分支 perf/b7-chunked-batching）
 - [ ] **B11** 品質分級和自動降解析度（PERFORMANCE_PLAN 3.3）；固定的效能測試場景（第 4 節第 2 點）
 
 ## 其他
 
 - [~] **C1 過場播放器**：在遊戲裡播劇情過場（`docs/story/cutscenes/`），先做開場打電話那段：老黃、三人接電話、斜切分割畫面（左邊三人、右邊老黃）加打字機字幕。鏡頭種類用繼承和註冊加（圖片、分割畫面），內容放 JSON；打字機和時間軸是純邏輯，要有測試。（進行中：@big0527，分支 feat/cutscene-player）
-- [~] **G8o 隊友的電鋸、換彈聲**：G8j 只在隊友的位置播 `weapon.fired` 的 `fire`／`hit`（槍聲、揮刀）。隊友拿電鋸沒有循環聲（`SoundBoard.hold`／`loop` 沒有位置），隊友換彈也沒聲音。要讓循環聲帶位置、跟著隊友移動；加測試。（進行中：@nickcx0109，分支 feat/net-teammate-loops）
 
 
 ---
 
 ## 已完成
 
+- B7 StaticBatcher 按區塊合併（PR #66）
 - G8i 遊戲中斷線可以回來：斷線保留位置 60 秒、帶 rejoin token 拿回（PR #61）
 - G8n 限制 input 頻率（`InputThrottle`）（PR #61）
 - B15 換樓層保留血量、子彈和道具欄，點一下繼續（PR #60）
@@ -113,6 +103,8 @@
 - G18 G19 G13 武士刀、鏈鋸（每個場景 2 個近戰點）、彈藥箱（每個場景 3 個）；投擲物會傷到自己和隊友（PR #20）
 - G24 武士刀刀光：揮刀時畫面有一道弧形刀光，打到更亮更粗；`SlashStyles` 註冊表讓之後的近戰也能用（PR #24）
 - G25 其他武器的第一人稱模型：`play=1` 時十一把武器都看得到，換武器會切換，開槍有後座和火光、換彈和揮砍有動作；沿用 G9 的 `WeaponRig`、`WeaponView`、`Clip`（PR #25）
+- G9 武士刀刀身與刀光同步（PR #67）
+  - G25 已涵蓋舊分支 `feat/weapons-art` 的第一人稱武器成果，PR #67 完成 G9 剩餘的同步工作。
 - G26 拿掉商店和金錢（PR #30）
 - B10 抗鋸齒（PR #44）
 - G10 音效（PR #21）
@@ -126,6 +118,8 @@
 - B17 車輛模型的碰撞盒包住整台模型：manifest 記 GLB 量的 `footprint`，ch2 的卡車、廂型車、停著的車照抄（PR #57）
 - B18 第一章車輛替身的碰撞盒貼合車身（PR #64）
 - G8d server 跑遊戲：`SessionRoomGame`、`RemoteController`、開槍倒回時間、快照和事件轉送（PR #52）
+- G8k Online exits and obstacles: server-owned E, shared collision/navigation updates, room transitions, health/loadout carry-over and rejoin consistency; 578 tests and 8 ch2 screenshots same (PR #62)
 - G8e 瀏覽器接上連線：隊伍開始畫面和房間、`OnlineMode`（本地預測、快照插值、殭屍方塊和隊友膠囊、事件轉成單機事件）、連線時第二章警示燈降到 1（PR #54）
 - G8f 部署準備：一個 port 送網頁、`/health` 和 WebSocket（`server/http/`），game server 送出的網頁自動連自己、`Dockerfile`、`fly.toml`（東京）、`render.yaml`（新加坡）、`npm start`、`tools/net-latency.mjs`（PR #55）
+- G8o Teammate positional chainsaw loops and reload audio; per-player moving mixes and lifecycle cleanup (PR #63)
 - G8j 聽得到隊友的槍聲：`TeammateWeaponSounds` 在隊友的位置播他那把武器的槍聲（左右聲道、60 m 衰減），自己的槍不會播兩次（PR #56）

@@ -1,3 +1,6 @@
+import { RoomLevelFlow } from './RoomLevelFlow.js';
+import { CarryOverState } from '../../web/js/game/CarryOverState.js';
+import { createWeaponCatalog } from '../../web/js/game/createSession.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RoomGame } from '../rooms/RoomGame.js';
@@ -50,6 +53,10 @@ export class SessionRoomGame extends RoomGame {
     this.history = history;
     this.rewind = new ShotRewind(history);
     this.session = null;
+    this.cleared = new Set();
+    this.pendingLevel = null;
+    /** Seats whose page still shows the previous level: ignored until they rejoin on a new connection. */
+    this.reloading = new Set();
     this.controllers = new Map();
     /** One InputThrottle per player in front of their controller (G8n). */
     this.inputs = new Map();
@@ -76,6 +83,9 @@ export class SessionRoomGame extends RoomGame {
     this.controllers = controllers;
     this.inputs = new Map([...controllers].map(([id, controller]) => [id, new InputThrottle(controller)]));
     this.relay.attach(session.context.events, message => room.broadcast(message));
+    this.levelFlow = new RoomLevelFlow(session, controllers, this.cleared,
+      (target, from) => { this.pendingLevel ??= { target, from }; }, this.now);
+    this.levelFlow.notify = message => room.broadcast(message);
     session.start();
     return true;
   }
@@ -107,6 +117,16 @@ export class SessionRoomGame extends RoomGame {
   /** One fixed simulation step, recorded for shot rewind; sends snapshots when one is due. */
   step(room, time) {
     this.session.update(STEP_SECONDS);
+    this.levelFlow.update(STEP_SECONDS, room);
+    if (this.pendingLevel) {
+      const next = this.pendingLevel;
+      this.pendingLevel = null;
+      if (!this.changeLevel(room, next)) {
+        for (const flow of this.levelFlow.flows.values()) {
+          flow.cancelDeparture();
+        }
+      }
+    }
     this.tickCount++;
     this.history.record(time, this.session.context.enemies);
     this._sinceSnapshot += STEP_SECONDS;
@@ -118,20 +138,63 @@ export class SessionRoomGame extends RoomGame {
 
   sendSnapshots(room, time) {
     const frame = this.writer.frame(this.session, { tick: this.tickCount, time });
-    for (const [id, controller] of this.controllers) room.sendTo(id, this.writer.forViewer(frame, controller.ack));
+    frame.level = room.level;
+    frame.cleared = [...this.cleared].filter(key => key.startsWith(this.session.context.level.name + ':'));
+
+    for (const [id, controller] of this.controllers) room.sendTo(id, { ...this.writer.forViewer(frame, controller.ack), flow: this.levelFlow.status.get(id) ?? null });
+  }
+
+  /** Prepare the destination before replacing the live run; a failed load leaves this room intact. */
+  changeLevel(room, { target, from }) {
+    const players = this.session.context.players;
+    if (players.some(player => !player.damageable.alive)) return false;
+    let next;
+    try {
+      const level = this.loadLevel(target);
+      const carry = new Map(players.map(player => [player.id, CarryOverState.capture(player)]));
+      next = new SessionRoomGame({ loadLevel: () => level, now: this.now, sessionOptions: this.sessionOptions });
+      next.cleared = this.cleared;
+      next.start({ level: target, players: room.players, broadcast: () => {} });
+      next.levelFlow.arriveFrom(from);
+      const catalog = createWeaponCatalog();
+      for (const player of next.session.context.players) carry.get(player.id).applyTo(player, id => catalog.create(id));
+    } catch (error) {
+      next?.end();
+      room.broadcast({ t: 'error', code: 'level-failed' });
+      return false;
+    }
+    this.relay.detach();
+    this.session.dispose();
+    this.history.clear();
+    this.session = next.session;
+    this.controllers = next.controllers;
+    this.inputs = next.inputs;
+    this.levelFlow = next.levelFlow;
+    for (const flow of this.levelFlow.flows.values()) flow.navigate = (target, from) => { this.pendingLevel ??= { target, from }; };
+    next.relay.detach();
+    this.relay.attach(this.session.context.events, message => room.broadcast(message));
+    this.writer = new SnapshotWriter();
+    this.levelFlow.notify = message => room.broadcast(message);
+    // The old pages keep sending poses for the previous floor until they reload.
+    this.reloading = new Set(this.controllers.keys());
+    room.level = target;
+    room.broadcast({ t: 'event', name: 'level.changed', detail: { level: target, from } });
+    room.announce();
+    return true;
   }
 
   input(room, playerId, message) {
+    if (this.reloading.has(playerId)) return;
     this.inputs.get(playerId)?.offer(message, this.now());
   }
 
   action(room, playerId, message) {
     const controller = this.controllers.get(playerId);
-    if (!controller || !this.session) return;
+    if (!controller || !this.session || this.reloading.has(playerId)) return;
     // The browser sends its pose right before an action; aim with it, not with an older one.
     this.inputs.get(playerId)?.flush(this.now());
     this.actions.dispatch({
-      session: this.session, playerId, controller, message, now: this.now(), rewind: this.rewind,
+      session: this.session, levelFlow: this.levelFlow, playerId, controller, message, now: this.now(), rewind: this.rewind,
     });
   }
 
@@ -141,16 +204,19 @@ export class SessionRoomGame extends RoomGame {
    */
   memberAway(room, playerId) {
     this.session?.revives.hold(playerId, false);
+    this.levelFlow?.hold(playerId, false);
   }
 
   /** The player is back on a new connection, which numbers its inputs from scratch. */
   memberBack(room, playerId) {
+    this.reloading.delete(playerId);
     this.controllers.get(playerId)?.resume(this.now());
     this.inputs.get(playerId)?.reset();
   }
 
   /** The player leaves the run (or their held seat expired); everyone else keeps playing. */
   memberLeft(room, playerId) {
+    this.reloading.delete(playerId);
     this.inputs.delete(playerId);
     if (!this.controllers.delete(playerId) || !this.session) return;
     const ctx = this.session.context;

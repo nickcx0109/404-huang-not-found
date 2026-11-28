@@ -115,6 +115,11 @@ export class OnlineHost {
       client, room,
       onLeave: notice => this._leave(notice),
       onRenamed: next => this._play(client, next),
+      onLevel: next => {
+        this.tickets.save(next);
+        this._reloadOn(next);
+        client.disconnect();
+      },
     }));
   }
 
@@ -129,6 +134,8 @@ export class OnlineHost {
     const params = new URLSearchParams(globalThis.location.search);
     params.set('level', room.level);
     params.set('join', room.code);
+    params.delete('from');
+    params.delete('spawn');
     globalThis.location.search = params.toString();
   }
 }

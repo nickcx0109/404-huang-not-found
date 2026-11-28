@@ -106,14 +106,15 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 - **模式。** `installGameplay` 用 `ModeSwitch` 在 `LocalMode`（瀏覽器裡跑 `GameSession`）和 `OnlineMode` 之間切換（Strategy，`GameMode`）。`OnlineMode` 不建 `GameSession`：
   - `PlayerController` 照舊每格算移動，`InputSender` 每秒送 30 次姿勢；`PoseReconciler` 拿 snapshot 的位置和同一個 `ack` 送出的姿勢比，差超過 1 m 才直接拉回（第一張 snapshot 把玩家放到 server 的出生點）。動作送出前先補送一次姿勢，因為 server 用最後收到的姿勢瞄準。自己的 `rooted`（倒地、死亡、正在包紮）和 `speed`（腎上腺素等速度倍率）照 snapshot 套到 `PlayerController`，所以本機走法和 server 的檢查一致，包紮時不會一直被拉回。
   - `PlayerCombat` 照舊發 `*_REQUESTED`，`ActionForwarder` 轉成 `action`。開火用 `FireCadence` 控制：每按一下送一次，自動武器按住時每「冷卻 + 8 ms」（最多每秒 30 次）再送一次。槍和近戰在本機立刻播槍聲、槍口火光、後座力和第一人稱動畫（本機 `weapon.fired`，`hit: null`）；server 回來的同一槍改成 `net.shot-confirmed`，只用來顯示命中標記，傷害數字、擊殺都等 server。投擲物和治療物不預測。
-  - 畫別人用 `SnapshotBuffer` 在 `clock.now() − 100 ms` 取樣：殭屍用和單機一樣的 `createEnemyBox`，隊友是依編號上色的膠囊加名字。server 的 `event` 由 `NetEventTranslator` 用同樣的事件名稱發到網頁的 bus，需要 entity 的地方放 `EntityStandIns`（從各殭屍類別的 prototype 建，`instanceof` 和聲音的類別對照照常可用），所以單機的音效、HUD 元件、爆炸效果不用改。隊友的 `weapon.fired` 照常發成 `weapon.fired`，`TeammateWeaponSounds` 用 `ownerId` 找 `EntityStandIns` 裡那個隊友（快照插值後的位置），在那裡播他那把武器的槍聲（左右聲道跟著自己的 yaw，60 m 外聽不到）；自己的槍已經在本機播過，server 回來的那一槍是 `net.shot-confirmed`，不會再播一次。`event` 的 `detail` 不用加欄位。
+  - 畫別人用 `SnapshotBuffer` 在 `clock.now() − 100 ms` 取樣：殭屍用和單機一樣的 `createEnemyBox`，隊友是依編號上色的膠囊加名字。server 的 `event` 由 `NetEventTranslator` 用同樣的事件名稱發到網頁的 bus，需要 entity 的地方放 `EntityStandIns`（從各殭屍類別的 prototype 建，`instanceof` 和聲音的類別對照照常可用），所以單機的音效、HUD 元件、爆炸效果不用改。隊友的 `weapon.fired` 照常發成 `weapon.fired`，`TeammateWeaponSounds` 用 `ownerId` 從插值後的快照找隊友位置，在那裡播他那把武器的槍聲（左右聲道跟著自己的 yaw，60 m 外聽不到）；自己的槍已經在本機播過，server 回來的那一槍是 `net.shot-confirmed`，不會再播一次。`event` 的 `detail` 不用加欄位。
+  - 隊友音效（G8o）：`TeammateWeaponSounds` 讀取插值後的武器和位置，用 `teammate:<id>` 分別播放電鋸循環聲。手持電鋸時播怠速聲，每次 `weapon.fired` 讓切割聲延長 0.2 秒。每格依位置調整音量與左右聲道，音源持續播放。切換武器、倒地、離開或斷線時停止對應循環聲，本機斷線或退出模式時停止所有循環聲，重連後依快照恢復。隊友的 `weapon.reloaded` 照位置播放換彈聲，本機換彈由 `WeaponSounds` 播放。沿用既有協定。
   - HUD 讀 `SnapshotStatus`（`PlayerStatus` 的子類別）：血量、彈藥（`reserve: null` 有彈匣時是無限備彈）、波次、擊殺、道具欄、隊友、倒地／救人、腳下的東西，自己的彈數會先扣掉還沒被 server 確認的子彈。
   - 地上的槍位置來自關卡 marker，上面放什麼只看 snapshot 的 `pickups`（`PickupMirror`）。
   - 彈藥箱位置來自關卡的 `ammo` marker，能不能用只看 snapshot 的 `crates`（`AmmoCrateMirror`，形狀和 `AmmoCrateField` 一樣，交給同一個 `AmmoCrateViews`）；第一張有 `crates` 的快照之前都當作可以用（舊 server 不送）。冷卻中的箱子外框變暗、不閃。
   - 手榴彈、汽油彈和燃燒的地面：`SnapshotBuffer` 也插值 `effects`（照 id 配對，沒有就是空的），`EffectMirror` 每格把插值後的清單變成 `EffectViews` 讀的 `ctx.effects`（同一個 id 同一個物件，有在動的才有 `velocity`，所以飛行中會轉、停下來不轉）。效果和別人一樣晚 100 ms 畫，爆炸閃光是 `effect.exploded` 事件，會比畫面上的手榴彈早一點點。
 - **重開。** 線上沒有「同一隊再來一局」：GameOver／Victory 的按鈕或 Enter 會離開隊伍、回到開始畫面，要再玩就重新建立或加入隊伍。
 - **燈光預算。** 能連線的網頁（`play=1` 且有 server）建場景前用 `LightBudget` 把 `alarm.light.count` 降到 1（第二章原本 3 盞），線上每格還要多畫遠端玩家和插值。
-- **關卡出口與障礙物**（`installLevelFlow`）線上一律不反應 E，由 server 的遊戲決定。
+- **Online exits and obstacles** (`installLevelFlow`): server-owned interactions, transitions and snapshots; see G8k below.
 - 除錯：`&debug=1` 時 `window.__netDebug` 有 `state()`、`start()`、`aimAt(x, z, y)`、`fire()`、`leave()`。
 
 ## 部署
@@ -128,3 +129,13 @@ JSON 文字訊息，每則都有 `t`（type）。數字座標四捨五入到小�
 ## 拆分
 
 見 `TODO.md` 的 G8a～G8m。相依：G8a、G8b、G8c 可以同時做；G8d 要等 G8a、G8b；G8e 要等 G8c、G8d；G8f 部署準備之後，G8m 實際部署和實測最後。
+
+## Online level flow (G8k)
+
+- `action {kind: "interact", seq, at, holding: boolean}` is a held-E heartbeat every 100 ms. No target or position is accepted in this action. The server uses the seat's accepted `RemoteController` pose and advances `RoomLevelFlow` at 30 Hz. Release, blur/pointer unlock, away seats, downing, rooted items, lost range and revive priority cancel clearing; a missing heartbeat expires after 350 ms.
+- Exit markers use the existing `to_<level>` convention; only `block_<exit id>` colliders are clearable. Reach is 1.6 m from the block AABB and clearing takes 2.5 s continuously. Clearing removes collision for every seat and invalidates navigation walkability. The server broadcasts `event level.block-cleared {level, exitId}`. Cleared keys belong to the room, survive return visits and are never read from browser storage.
+- An armed unblocked exit requires E inside its marker radius. One member moves the whole room; any downed teammate prevents departure. Arrival at the reciprocal marker uses its yaw and stays disarmed until the player steps out. Without a reciprocal exit, normal per-seat spawns are used. Destination preparation failure reports `level-failed` and retains the original session; step out and re-enter to retry.
+- The server broadcasts `event level.changed {level, from}`, changes `room.level` and announces the room. The browser saves the existing rejoin ticket, reloads that level and reclaims its seat. Away seats move with the room and rejoin into its current level. Tokens and player IDs remain unchanged. Until a seat comes back on its new connection, the server ignores its `input` and `action` messages: the old page keeps sending previous-floor poses (and a held E) until it reloads, and they would overwrite the arrival pose or travel back.
+- Snapshots include optional `level`, `cleared: string[]` (current-level `<level>:<exit id>` keys), and per-viewer `flow: {exitId?, kind?: "exit", progress} | null`. These full states restore collision, visuals and the interaction prompt after reconnect, independently of one-shot events. Frames for another level are ignored during navigation.
+- Each player's `CarryOverState` preserves health, selected slot and weapon-specific rounds/reserve/stacks/battery. Destination waves, enemies, effects, pickup contents, ammo-crate cooldowns and temporary buffs start fresh. Single-player automatic exits, local persistence and carry-over remain unchanged; leaving online restores the browser's prior local block state.
+- Validation: `npm.cmd test` (579 passing); all eight ch2 walk-only before/after PNGs compare `same`. Captures are outside the repository.

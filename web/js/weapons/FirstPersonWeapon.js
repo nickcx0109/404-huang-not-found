@@ -55,6 +55,7 @@ export class FirstPersonWeapon {
     if (this.frozen) return;
     this.driver.update(this.clock());
     this.rig.update(dt, time, this.player, this.flashlight.on);
+    this.driver.presentSwing();
     this.muzzleLight?.update(dt);
   }
 

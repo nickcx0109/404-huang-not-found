@@ -24,7 +24,7 @@ export const SERVER_MESSAGES = Object.freeze({
 });
 
 /** `kind` values allowed in an `action` message. */
-export const ACTION_KINDS = Object.freeze(['fire', 'reload', 'secondary', 'switch', 'cycle', 'pickup', 'revive']);
+export const ACTION_KINDS = Object.freeze(['fire', 'reload', 'secondary', 'switch', 'cycle', 'pickup', 'revive', 'interact']);
 
 /** Rounds a coordinate to 2 decimals. */
 export function roundCoord(value) {
@@ -86,6 +86,9 @@ const SERVER_SHAPES = Object.freeze({
     && isString(m.state) && isFiniteNumber(m.wave) && isFiniteNumber(m.kills)
     && isList(m.players, isSnapshotPlayer) && isList(m.enemies, isSnapshotEnemy)
     && (m.pickups === undefined || isArray(m.pickups))
+    && (m.level === undefined || isString(m.level))
+    && (m.cleared === undefined || (isArray(m.cleared) && m.cleared.every(isString)))
+    && (m.flow === undefined || m.flow === null || (isObject(m.flow) && isFiniteNumber(m.flow.progress)))
     && isOptionalList(m.crates, isSnapshotCrate) && isOptionalList(m.effects, isSnapshotEffect),
   [SERVER_MESSAGES.EVENT]: (m) => isString(m.name) && isObject(m.detail),
 });
