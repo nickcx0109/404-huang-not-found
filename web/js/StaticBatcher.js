@@ -1,7 +1,7 @@
 import * as THREE from 'three';
+import { WholeLevelGrid } from './core/StaticChunkGrid.js';
 
-// StaticBatcher: merges static meshes that share a material into one mesh per material,
-// so a level costs a handful of draw calls instead of one per box (PERFORMANCE_PLAN 3.2-2).
+// Batch nearby meshes with the same material so both cameras can cull each batch independently.
 const _position = new THREE.Vector3();
 const _normal = new THREE.Vector3();
 const _normalMatrix = new THREE.Matrix3();
@@ -12,10 +12,12 @@ export class StaticBatcher {
    * A mesh is left alone when it is marked userData.dynamic, has several materials, or its
    * material needs attributes the batch does not carry (vertex colours, tangents).
    * Texture coordinates are carried, so boxes with a tiling surface texture merge as well.
+   * @param {THREE.Object3D} root
+   * @param {{grid?:{keyForCenter:(c:THREE.Vector3)=>string}}} [options] how batches are split; default one batch per material
    * @returns {{before:number, after:number}} mesh counts
    */
-  static merge(root) {
-    root.updateMatrixWorld(true);
+  static merge(root, { grid = new WholeLevelGrid() } = {}) {
+    root.updateWorldMatrix(true, true);
     const rootInverse = new THREE.Matrix4().copy(root.matrixWorld).invert();
     const groups = new Map();
     let before = 0;
@@ -33,13 +35,32 @@ export class StaticBatcher {
     let after = before;
     groups.forEach((meshes) => {
       if (meshes.length < 2) return;
-      const merged = StaticBatcher._mergeGroup(meshes, rootInverse);
-      meshes.forEach((mesh) => mesh.parent.remove(mesh));
-      root.add(merged);
-      after -= meshes.length - 1;
+      // Keep every formerly batched mesh in root space, including singletons in a cell.
+      // This preserves vertex precision and the material batches' transparent draw order.
+      StaticBatcher._chunkMeshes(meshes, grid).forEach((chunk) => {
+        const merged = StaticBatcher._mergeGroup(chunk, rootInverse);
+        chunk.forEach((mesh) => mesh.parent.remove(mesh));
+        root.add(merged);
+        after -= chunk.length - 1;
+      });
     });
     StaticBatcher._pruneEmptyGroups(root);
     return { before, after };
+  }
+
+  static _chunkMeshes(meshes, grid) {
+    const chunks = new Map();
+    const center = new THREE.Vector3();
+    meshes.forEach((mesh) => {
+      const geometry = mesh.geometry;
+      if (geometry.boundingBox === null) geometry.computeBoundingBox();
+      // An affine transform preserves the center of the box, including for rotated meshes.
+      geometry.boundingBox.getCenter(center).applyMatrix4(mesh.matrixWorld);
+      const key = grid.keyForCenter(center);
+      if (!chunks.has(key)) chunks.set(key, []);
+      chunks.get(key).push(mesh);
+    });
+    return chunks;
   }
 
   /** Removes groups that lost all their meshes to a batch. */

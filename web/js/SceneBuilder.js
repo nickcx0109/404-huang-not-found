@@ -4,6 +4,7 @@ import { StaticBatcher } from './StaticBatcher.js';
 import { ModelInstancer } from './ModelInstancer.js';
 import { PathFinder } from './PathFinder.js';
 import { Palette } from './Palette.js';
+import { StaticChunkGrid } from './core/StaticChunkGrid.js';
 
 // SceneBuilder: LevelData -> collision world + visuals.
 // Collision is built only from level.colliders. Visuals come from PropFactory and can be
@@ -105,7 +106,7 @@ export class SceneBuilder {
 
     built.unknownProps = Array.from(this.props.unknownNames);
     built.modelProps = new Map(this.props.modelCounts);
-    built.meshCount = StaticBatcher.merge(root);
+    built.meshCount = StaticBatcher.merge(root, { grid: StaticChunkGrid.forBounds(level.bounds) });
     built.instanced = ModelInstancer.instance(root);
   }
 
